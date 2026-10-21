@@ -1,0 +1,11 @@
+{
+  "name": "lights-out",
+  "version": "1.0.0",
+  "description": "Lights Out: a formula racing career life simulator that runs in the browser.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "test": "node --test tests/"
+  }
+}
