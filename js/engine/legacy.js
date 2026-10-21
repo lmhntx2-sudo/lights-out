@@ -1,5 +1,6 @@
 // Retirement: the career summary, the epilogue and the share text.
-import { nation } from '../data/nations.js';
+import { nation, flagOf } from '../data/nations.js';
+import { LEGENDS } from '../data/legends.js';
 import { SINFO, BACKGROUNDS, STYLES } from './constants.js';
 import { netWorth } from './achievements.js';
 import { overall } from './player.js';
@@ -55,6 +56,38 @@ function epilogue(s, how) {
   return lines;
 }
 
+// Everyone who ever started a Grand Prix in this world: the fictional legends
+// from before 2026, every AI driver since, and you.
+export function allTime(s) {
+  const rows = LEGENDS.map((l) => ({ ...l, flag: flagOf(l.nat), kind: 'legend' }));
+  for (const d of Object.values(s.drivers)) {
+    if (d.isPlayer || d.reserve || !(d.starts > 0)) continue;
+    rows.push({
+      name: `${d.first} ${d.last}`, nat: d.nat, flag: flagOf(d.nat), titles: d.titles, wins: d.wins, podiums: d.podiums, starts: d.starts,
+      era: d.out ? 'Retired' : 'Active', kind: d.id === s.rivalId ? 'rival' : 'ai',
+    });
+  }
+  const f = s.career.tot.F1;
+  if (f.starts > 0) rows.push({ name: s.driver.name, nat: s.driver.nat, flag: flagOf(s.driver.nat), titles: f.titles, wins: f.wins, podiums: f.podiums, starts: f.starts, era: 'You', kind: 'me' });
+  return rows.sort((a, b) => b.titles - a.titles || b.wins - a.wins || b.podiums - a.podiums);
+}
+
+export function allTimeRanks(s) {
+  const rows = allTime(s);
+  const me = rows.find((r) => r.kind === 'me');
+  if (!me) return null;
+  const byWins = [...rows].sort((a, b) => b.wins - a.wins || b.titles - a.titles);
+  return { titles: rows.indexOf(me) + 1, wins: byWins.indexOf(me) + 1, of: rows.length };
+}
+
+// The colours of the team you had your best season with.
+function liveryOf(s) {
+  const seasons = s.career.hist.filter((h) => h.role === 'race');
+  const best = [...seasons].sort((a, b) => SINFO[b.series].lvl - SINFO[a.series].lvl || b.pts - a.pts)[0];
+  const t = s.teams[best?.team] || s.teams[s.career.team];
+  return { color: t?.color || '#E10600', accent: t?.accent || '#FFFFFF' };
+}
+
 export function buildSummary(s, how) {
   const d = s.driver;
   const c = s.career;
@@ -86,6 +119,9 @@ export function buildSummary(s, how) {
     lines: epilogue(s, how),
     best: best ? `${best.year}: ${best.pos ? `P${best.pos}` : 'reserve'} in ${SINFO[best.series].name}${best.teamName ? ` with ${best.teamName}` : ''}` : null,
     ach: s.ach.length,
+    number: s.driver.number,
+    ranks: allTimeRanks(s),
+    livery: liveryOf(s),
     at: Date.now(),
   };
 }

@@ -300,6 +300,7 @@ ev({
 ev({
   id: 'safety_car',
   phase: 'race',
+  banner: 'sc',
   w: (s, c) => (c.sc ? 4 : 1.5),
   gap: 4,
   title: (s, c) => `${c.track}: safety car`,
@@ -322,6 +323,7 @@ ev({
 ev({
   id: 'rain_call',
   phase: 'race',
+  banner: 'rain',
   w: (s, c) => (c.wet ? 5 : 0.6),
   gap: 4,
   title: (s, c) => `${c.track}: rain`,
@@ -786,6 +788,7 @@ ev({
 ev({
   id: 'brazil_chaos',
   phase: 'race',
+  banner: 'red',
   w: (s, c) => (c.wet ? 8 : 3),
   gap: 12,
   when: (s, c) => c.trackId === 'brazil',
@@ -1294,6 +1297,352 @@ ev({
   choices: [
     { label: 'Sign with the agent', ok: { text: 'Your phone suddenly starts ringing with better offers.', fx: { flag: 'agent', fame: 2 } } },
     { label: 'Manage yourself', ok: { text: 'You keep a hundred per cent of a smaller pie.', fx: { stats: { composure: 1 } } } },
+  ],
+});
+
+// ------------------------------------------------------ more race moments
+
+ev({
+  id: 'stall_grid',
+  phase: 'race',
+  w: 1.2,
+  gap: 10,
+  title: (s, c) => `${c.track}: on the grid`,
+  text: 'Formation lap done. You select first gear, the revs drop, and the anti-stall kicks in just as the first red light comes on.',
+  choices: [
+    {
+      label: 'Feather the clutch and save it', stat: 'technical', base: 50,
+      ok: { text: 'You catch it with a flick of the paddle. Nobody even noticed.', fx: {} },
+      ko: { text: 'You bog down and half the field streams past on both sides.', fx: { mod: -3 } },
+    },
+    {
+      label: 'Dump it and pray', p: 35,
+      ok: { text: 'Wheelspin, then grip, then glory. Best start of your life.', fx: { mod: 2 } },
+      ko: { text: 'You stall. Completely. The marshals have to push you away.', fx: { mod: -5 } },
+    },
+  ],
+});
+
+ev({
+  id: 'red_flag',
+  phase: 'race',
+  banner: 'red',
+  w: 1.4,
+  gap: 8,
+  title: (s, c) => `${c.track}: red flag`,
+  text: 'A big crash ahead and a barrier needs rebuilding. The cars file into the pit lane. Standing restart, fresh tyres for everyone, and a lot of nervous drivers.',
+  choices: [
+    {
+      label: 'Nail the restart', stat: 'composure', base: 50,
+      ok: { text: 'Perfect launch. You gain two places before the first corner.', fx: { mod: 2.5 } },
+      ko: { text: 'Too much wheelspin. Swallowed up on the run to Turn 1.', fx: { mod: -2 } },
+    },
+    { label: 'Play it safe into Turn 1', ok: { text: 'You avoid the chaos and keep your position.', fx: { mod: 0.3 } } },
+  ],
+});
+
+ev({
+  id: 'unsafe_release',
+  phase: 'race',
+  w: 1.2,
+  gap: 10,
+  title: (s, c) => `${c.track}: pit lane`,
+  text: 'The lollipop lifts and you are waved out straight into the path of another car arriving at the next box.',
+  choices: [
+    {
+      label: 'Floor it', p: 55,
+      ok: { text: 'You squeeze out ahead by a wheel. The stewards decide it was fine.', fx: { mod: 1 } },
+      ko: { text: 'Unsafe release. Five-second penalty, and an apology to the team next door.', fx: { lose: 2 } },
+    },
+    { label: 'Give way', ok: { text: 'You wait half a second. Sensible, slow, legal.', fx: { mod: -0.8 } } },
+  ],
+});
+
+ev({
+  id: 'teammate_contact',
+  phase: 'race',
+  w: 2,
+  gap: 12,
+  when: (s, c) => c.tm && (c.tmAhead || c.tmBehind),
+  title: (s, c) => `${c.track}: friendly fire`,
+  text: (s, c) => `You and ${c.tm.last} bang wheels fighting over P${c.pos}. Both cars survive. On the pit wall, your team principal has their head in their hands.`,
+  choices: [
+    { label: 'Blame him on the radio', ok: { text: 'Every broadcaster plays your radio message on a loop. The team asks you both to "calm down".', fx: { teamRel: -4, fame: 2 } } },
+    { label: 'Apologise in the debrief', ok: { text: 'Mature. The team appreciates it, even if your teammate pretends not to.', fx: { teamRel: 3 } } },
+  ],
+});
+
+ev({
+  id: 'drs_stuck',
+  phase: 'race',
+  series: F1,
+  w: 1,
+  gap: 14,
+  title: (s, c) => `${c.track}: rear wing problem`,
+  radio: (s, c) => `${c.eng}: "Your DRS is stuck open. Careful in the fast stuff."`,
+  text: 'Faster on the straights, terrifying in the corners. Every high-speed turn now feels like a coin toss.',
+  choices: [
+    {
+      label: 'Keep pushing', stat: 'consistency', base: 45,
+      ok: { text: 'You adapt your lines and use the extra speed. It is almost an advantage.', fx: { mod: 1.5 } },
+      ko: { text: 'A huge slide through the fast chicane costs you seconds and places.', fx: { mod: -3 } },
+    },
+    { label: 'Box to fix it', ok: { text: 'A long stop, but the wing closes properly again.', fx: { mod: -2 } } },
+  ],
+});
+
+ev({
+  id: 'engine_penalty',
+  phase: 'race',
+  series: F1,
+  w: 1,
+  gap: 24,
+  title: (s, c) => `${c.track}: grid penalty`,
+  radio: (s, c) => `${c.eng}: "We need a fresh power unit. Where do you want to take the penalty?"`,
+  text: 'A new engine means a trip to the back of the grid. Your engineer thinks this track is a good place to overtake. You are not so sure.',
+  choices: [
+    { label: 'Take it here', ok: { text: 'You start near the back, but the fresh engine is a rocket on the straights.', fx: { qmod: -4, mod: 1.2 } } },
+    {
+      label: 'Push the old engine one more race', p: 65,
+      ok: { text: 'It survives. Somehow it survives.', fx: {} },
+      ko: { text: 'It does not survive. Smoke, flames, a long walk.', fx: { dnf: true } },
+    },
+  ],
+});
+
+ev({
+  id: 'track_invader',
+  phase: 'race',
+  banner: 'sc',
+  w: 0.6,
+  gap: 40,
+  title: (s, c) => `${c.track}: something on track`,
+  text: 'A fan in a cow costume has climbed the fence and is jogging down the pit straight. Race control is, apparently, thinking about it.',
+  choices: [
+    { label: 'Give the cow a wave', ok: { text: 'A clip of you waving at a cow is the most-watched moment of the season.', fx: { fame: 3 } } },
+    { label: 'Stay focused', ok: { text: 'You stare straight ahead. The cow is escorted off. You gain a place at the restart.', fx: { mod: 0.8 } } },
+  ],
+});
+
+ev({
+  id: 'wet_quali',
+  phase: 'race',
+  banner: 'rain',
+  w: (s, c) => (c.wet ? 4 : 0),
+  gap: 8,
+  title: (s, c) => `${c.track}: wet qualifying`,
+  text: 'Standing water, intermediate tyres and ten minutes left on the clock. The track could get better or much, much worse.',
+  choices: [
+    {
+      label: 'Go out now', stat: 'wet', base: 52,
+      ok: { text: 'You bank a lap before the next shower. It holds up for a great grid slot.', fx: { qmod: 3 } },
+      ko: { text: 'You aquaplane at the first corner and abort the lap.', fx: { qmod: -2 } },
+    },
+    {
+      label: 'Wait for the final minute', stat: 'wet', base: 42,
+      ok: { text: 'The track dries just in time and your last lap is stunning.', fx: { qmod: 4, fame: 1 } },
+      ko: { text: 'It rains harder. Your only lap is three seconds off.', fx: { qmod: -4 } },
+    },
+  ],
+});
+
+ev({
+  id: 'grid_walk',
+  phase: 'race',
+  series: F1,
+  w: 1,
+  gap: 20,
+  title: (s, c) => `${c.track}: the grid walk`,
+  text: 'Ten minutes to the start. A famous TV pundit shoves a microphone in your face: "Is this make or break for you?"',
+  choices: [
+    {
+      label: 'Laugh it off', stat: 'composure', base: 50,
+      ok: { text: 'You crack a joke, the pundit laughs, and you walk to the car relaxed.', fx: { fame: 2 } },
+      ko: { text: 'Your joke dies on live television. You think about it for the whole first stint.', fx: { fame: -1, mod: -0.8 } },
+    },
+    { label: 'Walk past without a word', ok: { text: 'Cold. Focused. The clip gets a million views anyway.', fx: { fame: 1 } } },
+  ],
+});
+
+// ------------------------------------------------------ more off-track moments
+
+ev({
+  id: 'shoey',
+  phase: 'between',
+  w: (s, c) => (c.prev && !c.prev.dnf && c.prev.pos <= 3 ? 4 : 0),
+  gap: 30,
+  title: (s, c) => `${c.prev?.track || 'Podium'}: on the podium`,
+  text: 'The race winner pours champagne into a sweaty race boot and holds it out to you. Thirty thousand people are watching.',
+  choices: [
+    { label: 'Do the shoey', ok: { text: 'The crowd goes wild. It tastes exactly how you expected.', fx: { fame: 3 } } },
+    { label: 'Politely decline', ok: { text: 'You raise your bottle instead. Classy. Slightly boring.', fx: { stats: { composure: 1 } } } },
+  ],
+});
+
+ev({
+  id: 'trophy_drop',
+  phase: 'between',
+  once: true,
+  w: (s, c) => (c.prev && !c.prev.dnf && c.prev.pos === 1 ? 3 : 0),
+  title: 'The trophy',
+  text: 'You lift the winner’s trophy above your head and the lid flies off and shatters on the podium.',
+  choices: [
+    {
+      label: 'Pretend it was planned', stat: 'composure', base: 50,
+      ok: { text: 'You strike a pose with the broken lid. It becomes the photo of the year.', fx: { fame: 3 } },
+      ko: { text: 'You try to catch it, miss, and step on it. Twice.', fx: { fame: 1 } },
+    },
+    { label: 'Apologise to the organisers', ok: { text: 'They send you a replacement. It is slightly smaller.', fx: { fame: 1 } } },
+  ],
+});
+
+ev({
+  id: 'hot_mic',
+  phase: 'between',
+  w: 1.2,
+  title: 'Live on air',
+  text: 'Your radio rant about the stewards was broadcast live, swear words and all. The governing body has opinions.',
+  choices: (s) => [
+    { label: 'Stand by every word', ok: { text: `A ${s.career.series === 'F1' ? '€20,000' : 'small'} fine and a lot of new fans.`, fx: { fame: 3, money: -Math.min(s.driver.money, pay(s, 20000)), teamRel: -2 } } },
+    { label: 'Apologise to the stewards', ok: { text: 'They accept. You are now on their nice list, for about a week.', fx: { teamRel: 1, stats: { composure: 1 } } } },
+  ],
+});
+
+ev({
+  id: 'team_takeover',
+  phase: 'between',
+  series: F1,
+  once: true,
+  w: 0.8,
+  when: (s) => s.career.role === 'race',
+  title: 'New owners',
+  text: (s, c) => `A tech billionaire has bought ${c.team}. There is a press conference, a new logo, and a lot of talk about "disruption".`,
+  choices: [
+    { label: 'Welcome the new owner', ok: { text: 'The new owner likes you. The budget grows.', fx: { teamRel: 3, budget: 0.06 } } },
+    {
+      label: 'Ask about the budget, live on stage', stat: 'composure', base: 50,
+      ok: { text: 'The owner promises a bigger budget on the spot. Everyone heard it.', fx: { fame: 2, budget: 0.1, carPerf: 0.5 } },
+      ko: { text: 'Awkward silence. The owner does not forget.', fx: { teamRel: -5 } },
+    },
+  ],
+});
+
+ev({
+  id: 'boss_fired',
+  phase: 'between',
+  series: F1,
+  gap: 40,
+  w: (s, c) => (c.struggling ? 3 : 0),
+  when: (s) => s.career.role === 'race',
+  title: 'The boss is gone',
+  text: (s, c) => `${c.team} have fired their team principal after a string of bad results. The new boss wants a word with you before the next race.`,
+  choices: [
+    {
+      label: 'Ask for number-one status', stat: 'composure', base: 45,
+      ok: { text: 'The new boss agrees. The car is built around you from now on.', fx: { teamRel: 6, flag: 'numberOne' } },
+      ko: { text: '"Earn it." Fair, but cold.', fx: { teamRel: -4 } },
+    },
+    { label: 'Promise to work harder than anyone', ok: { text: 'A firm handshake and a fresh start.', fx: { teamRel: 3 } } },
+  ],
+});
+
+ev({
+  id: 'fan_kid',
+  phase: 'between',
+  w: 1.2,
+  title: 'At the paddock gate',
+  text: 'A kid wearing a homemade cardboard copy of your helmet has waited outside the paddock gate for three hours.',
+  choices: [
+    { label: 'Give them your race gloves', ok: { text: 'They burst into tears. You very nearly do too.', fx: { fame: 3 } } },
+    { label: 'Sign the cardboard helmet', ok: { text: 'They hold it up like a trophy all the way to the car park.', fx: { fame: 1 } } },
+  ],
+});
+
+ev({
+  id: 'kid_karting',
+  phase: 'between',
+  once: true,
+  w: 3,
+  when: (s) => s.flags.parent && s.driver.age >= 30,
+  title: 'A family race',
+  text: 'Your kid’s first ever kart race is on the same day as a sponsor event you are contractually obliged to attend.',
+  choices: (s) => [
+    { label: 'Skip the sponsor event', ok: { text: 'You stand at the fence and scream louder than any race engineer. They finish fourth. You are unbearably proud.', fx: { fame: -1, stats: { composure: 2 } } } },
+    { label: 'Watch the stream from the hotel', ok: { text: 'You smile for the sponsor photos and watch on your phone under the table.', fx: { money: pay(s, 200000) } } },
+  ],
+});
+
+ev({
+  id: 'silly_season',
+  phase: 'between',
+  series: F1,
+  w: (s, c) => (c.rumourTeam ? 1.2 : 0),
+  gap: 30,
+  when: (s) => s.career.role === 'race',
+  title: 'Silly season',
+  text: (s, c) => `Social media is convinced you are joining ${c.rumourTeam} next year. Someone has photoshopped you into their overalls.`,
+  choices: [
+    { label: 'Post a cryptic emoji', ok: { text: 'One emoji, eleven million views, and a very tense call from your team principal.', fx: { fame: 3, teamRel: -3 } } },
+    { label: 'Shut the rumour down', ok: { text: '"I am happy here." Your team relaxes, a little.', fx: { teamRel: 3 } } },
+  ],
+});
+
+ev({
+  id: 'rookie_pranks',
+  phase: 'preseason',
+  w: 0,
+  once: true,
+  title: 'Welcome to Formula 1',
+  text: 'Your first day in the F1 paddock. Your seat in the motorhome has been filled with three hundred rubber ducks.',
+  choices: [
+    { label: 'Laugh and line them up on the pit wall', ok: { text: 'The mechanics decide you are alright.', fx: { teamRel: 3, fame: 1 } } },
+    {
+      label: 'Plot your revenge', stat: 'composure', base: 50,
+      ok: { text: 'By Friday every veteran’s helmet bag is full of ducks. Legend status, achieved.', fx: { fame: 3 } },
+      ko: { text: 'Your revenge targets the team principal by mistake.', fx: { teamRel: -3, fame: 1 } },
+    },
+  ],
+});
+
+ev({
+  id: 'number_one',
+  phase: 'preseason',
+  w: 0,
+  title: 'The number one',
+  text: (s, c) => `As world champion you have earned the right to run the number 1 on your car this year. Your #${c.number} is on a lot of merchandise, though.`,
+  choices: (s, c) => [
+    { label: 'Run the #1', ok: { text: 'A big gold 1 on the nose. Everyone knows who to beat.', fx: { useOne: true, fame: 2 } } },
+    { label: `Keep the #${c.number}`, ok: { text: 'Your number is your brand. The merch team is relieved.', fx: { fame: 1 } } },
+  ],
+});
+
+ev({
+  id: 'charity_helmet',
+  phase: 'between',
+  once: true,
+  w: 1,
+  series: F1,
+  title: 'Charity auction',
+  text: 'A children’s hospital asks if you would donate one of your race helmets to its auction.',
+  choices: [
+    { label: 'Donate this year’s helmet', ok: { text: 'It sells for a ridiculous amount. You visit the ward with the cheque.', fx: { fame: 3 } } },
+    { label: 'Send a signed cap', ok: { text: 'They are grateful. It raises enough for a new games console.', fx: { fame: 1 } } },
+  ],
+});
+
+ev({
+  id: 'simulator_record',
+  phase: 'between',
+  w: 1,
+  title: 'Factory day',
+  text: 'Between races you spend a day at the factory. Two hundred engineers stop working when you walk in.',
+  choices: [
+    { label: 'Thank every department in person', ok: { text: 'It takes six hours. The factory will remember it for years.', fx: { teamRel: 4 } } },
+    {
+      label: 'Hunt for a sim lap record', stat: 'pace', base: 55,
+      ok: { text: 'You smash the simulator record. The data helps the car, too.', fx: { stats: { technical: 1 }, carPerf: 0.2 } },
+      ko: { text: 'The test driver’s record stands. He is insufferable about it.', fx: {} },
+    },
   ],
 });
 

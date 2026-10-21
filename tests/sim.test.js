@@ -16,6 +16,7 @@ function setup(seed, i = 0) {
     style: STYLE_KEYS[i % STYLE_KEYS.length],
     bg: BG_KEYS[(i >> 2) % BG_KEYS.length],
     helmet: { c1: '#F2F2F2', c2: '#E8002D' },
+    number: 2 + (i % 97),
   };
 }
 

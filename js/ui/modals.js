@@ -8,6 +8,8 @@ import { overall } from '../engine/player.js';
 import { ACHIEVEMENTS, netWorth } from '../engine/achievements.js';
 import { nation } from '../data/nations.js';
 import { GAME } from '../config.js';
+import { allTime } from '../engine/legacy.js';
+import { setSound } from './sfx.js';
 
 export function openDialog(title, body, { onClose } = {}) {
   const dlg = h('dialog', { 'aria-label': title });
@@ -233,6 +235,31 @@ export function openHallOfFame(app) {
   dlg = openDialog('Hall of fame', body);
 }
 
+export function openRecords(app) {
+  const s = app.s;
+  if (!s) return;
+  const rows = allTime(s);
+  const byWins = [...rows].sort((a, b) => b.wins - a.wins || b.titles - a.titles);
+  const table = (list) =>
+    h(
+      'table',
+      { class: 'table' },
+      h('thead', null, h('tr', null, h('th', { class: 'r' }, '#'), h('th', null, 'Driver'), h('th', { class: 'r' }, 'Titles'), h('th', { class: 'r' }, 'Wins'), h('th', { class: 'r' }, 'Starts'), h('th', null, 'Era'))),
+      h(
+        'tbody',
+        null,
+        list.slice(0, 25).map((r, i) =>
+          h('tr', { class: r.kind === 'me' ? 'me' : r.kind === 'rival' ? 'rival' : '' }, h('td', { class: 'r' }, i + 1), h('td', null, `${r.flag} ${r.name}`), h('td', { class: 'r' }, r.titles), h('td', { class: 'r' }, r.wins), h('td', { class: 'r' }, r.starts), h('td', null, r.era)),
+        ),
+      ),
+    );
+  const me = rows.find((r) => r.kind === 'me');
+  const intro = me
+    ? `You rank #${rows.indexOf(me) + 1} for titles and #${byWins.indexOf(me) + 1} for wins among ${rows.length} Grand Prix drivers.`
+    : 'Start a Formula 1 race to appear here.';
+  openDialog('All-time records', h('div', null, h('p', { style: 'margin-top:0;color:var(--ink-2)' }, intro), tabs([['Most titles', () => table(rows)], ['Most wins', () => table(byWins)]])));
+}
+
 // ------------------------------------------------------------ settings, backup, about
 
 export function openSettings(app) {
@@ -245,7 +272,8 @@ export function openSettings(app) {
   const body = h(
     'div',
     null,
-    h('div', { class: 'setting' }, h('div', null, h('b', null, 'Race animations'), h('p', null, 'The timing tower shuffles positions after each race.')), seg([['full', 'Full'], ['fast', 'Fast'], ['off', 'Off']], app.settings.anim, (v) => { app.settings.anim = v; store.saveSettings(app.settings); })),
+    h('div', { class: 'setting' }, h('div', null, h('b', null, 'Race animations'), h('p', null, 'Start lights, the timing tower and confetti.')), seg([['full', 'Full'], ['fast', 'Fast'], ['off', 'Off']], app.settings.anim, (v) => { app.settings.anim = v; store.saveSettings(app.settings); })),
+    h('div', { class: 'setting' }, h('div', null, h('b', null, 'Sound effects'), h('p', null, 'Start lights, team radio beeps and victory fanfares.')), seg([[true, 'On'], [false, 'Off']], app.settings.sound !== false, (v) => { app.settings.sound = v; setSound(v); store.saveSettings(app.settings); })),
   );
   openDialog('Settings', body);
 }

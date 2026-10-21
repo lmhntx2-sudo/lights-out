@@ -2,6 +2,7 @@ import { renderTitle, lightsOverlay } from './ui/title.js';
 import { mountGame } from './ui/game.js';
 import { newGame } from './engine/game.js';
 import { store } from './store.js';
+import { setSound } from './ui/sfx.js';
 
 const app = {
   s: null,
@@ -39,6 +40,8 @@ const app = {
     mountGame(app);
   },
 };
+
+setSound(app.settings.sound !== false);
 
 const params = new URLSearchParams(location.search);
 renderTitle(app, { seed: params.get('seed') || undefined, daily: params.has('daily') });

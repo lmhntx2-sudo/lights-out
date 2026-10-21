@@ -5,7 +5,13 @@ You start with a battered kart at eight, climb through Formula 4, 3 and 2, and s
 far you get in Formula 1. Every race can throw up a decision: safety car calls, team
 orders, last-lap lunges, sponsors, rivals, contracts, money and life off track.
 
-Plain HTML, CSS and JavaScript. No build step, no dependencies, no backend.
+Plain HTML, CSS and JavaScript. No dependencies, no backend.
+
+What's in it: a race number you pick, team liveries, an F1-broadcast-style timing tower,
+Race Control banners, team targets each season, podium and championship celebrations,
+an all-time records table against fictional legends, shareable career-card images,
+achievements, a daily challenge, seeds you can share, optional sound effects, and a
+"Fuel the dev" tip jar.
 
 ## Play locally
 
@@ -78,6 +84,9 @@ Where things live:
 | `js/ui/` | Title screen, game screen, dialogs, donations. |
 
 The same seed plus the same choices always replays the same career.
+
+The social preview image (`assets/og.png`) and app icons were drawn in the browser and saved
+through the local dev server's `/__save/` endpoint, which only exists in `tools/serve.mjs`.
 
 ## Credits
 

@@ -1,7 +1,7 @@
 // Tiny static file server for local play-testing. No dependencies.
 // Usage: node tools/serve.mjs [port]
 import { createServer } from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, stat, writeFile, mkdir } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -19,11 +19,29 @@ const TYPES = {
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',
   '.txt': 'text/plain; charset=utf-8',
+  '.webmanifest': 'application/manifest+json',
 };
+
+// Dev helper: POST /__save/assets/og.png (or /__save/tmp/x.png) with a PNG body writes it
+// to disk. Used to export images rendered in the browser (social preview, app icons).
+async function save(req, res, path) {
+  const m = /^\/__save\/(assets|tmp)\/([a-z0-9-]+\.png)$/.exec(path);
+  if (!m) {
+    res.writeHead(400).end('bad name');
+    return;
+  }
+  const chunks = [];
+  for await (const c of req) chunks.push(c);
+  const dir = join(root, m[1]);
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, m[2]), Buffer.concat(chunks));
+  res.writeHead(200).end('saved');
+}
 
 createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost');
+    if (req.method === 'POST' && url.pathname.startsWith('/__save/')) return await save(req, res, url.pathname);
     let path = normalize(decodeURIComponent(url.pathname)).replace(/^([/\\])+/, '');
     let file = join(root, path);
     if (!file.startsWith(root)) throw new Error('outside root');

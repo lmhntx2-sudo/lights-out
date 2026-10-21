@@ -7,7 +7,7 @@ import { TRACKS, CALENDARS } from '../data/tracks.js';
 import { nation, flagOf } from '../data/nations.js';
 import { ACADEMY_TEAMS, F1_TEAMS } from '../data/teams.js';
 import { createWorld, makeAIDriver, teamsOf, seatsOf, nameOf, teammateOf, carTier, carRank } from './world.js';
-import { createPlayer, growPlayer, overall, ovr } from './player.js';
+import { createPlayer, growPlayer, overall, ovr, raceNumber } from './player.js';
 import { prepareRace, classify, pointsFor } from './race.js';
 import { EVENTS, PROLOGUE, PROLOGUE_AGE } from './events.js';
 import { pickEvent, present, resolve } from './story.js';
@@ -212,6 +212,11 @@ function contextBase(s, r) {
   };
   const rv = s.drivers[s.rivalId];
   if (rv && !rv.out) ctx.rival = { name: nameOf(s, rv.id), last: rv.last };
+  if (s.season?.lastMe && s.season.series === c.series) ctx.prev = s.season.lastMe;
+  if (c.series === 'F1') {
+    const others = teamsOf(s, 'F1').filter((x) => x.id !== c.team).sort((a, b) => b.prestige - a.prestige);
+    ctx.rumourTeam = others[0]?.name;
+  }
   if (s.season && s.season.round >= 4 && c.role === 'race') {
     const pos = standingsOrder(s.season.stand).indexOf('P') + 1;
     ctx.struggling = pos > ctx.rank * 2 + 5;
@@ -237,6 +242,9 @@ function startSeason(s, r) {
   delete s.flags.academyWarn;
 
   const tmId = c.role === 'race' ? teammateOf(s) : null;
+  s.season.goal = c.role === 'race' ? seasonGoal(s, t, series) : null;
+  const lastH = c.hist[c.hist.length - 1];
+  const reigning = lastH && lastH.series === 'F1' && lastH.champion && c.role === 'race';
   pushFeed(s, {
     k: 'chapter',
     year: s.year,
@@ -245,18 +253,44 @@ function startSeason(s, r) {
     sub: c.role === 'reserve'
       ? 'No race seat. You test, you simulate, you wait for the phone to ring.'
       : `Age ${s.driver.age}. Car rated ${'★'.repeat(carTier(s, t))}${'☆'.repeat(5 - carTier(s, t))}.${tmId ? ` Teammate: ${nameOf(s, tmId)}.` : ''}`,
+    goal: s.season.goal?.text || null,
     color: t.color,
+    car: c.role === 'race' ? { color: t.color, accent: t.accent || '#FFFFFF', number: raceNumber(s) } : null,
     series,
   });
 
   const ctx = contextBase(s, r);
   s.stage = 'race';
   present(s, EVENTS.training, ctx, null);
+  if (reigning) s.queue.push({ id: 'number_one', c: { ...ctx, number: s.driver.number }, after: null });
   if (tmId && s.flags.lastTm !== tmId) {
     s.queue.push({ id: 'teammate', c: ctx, after: null });
     s.flags.lastTm = tmId;
   }
-  if (series === 'F1' && c.role === 'race') s.queue.push({ id: 'car_launch', c: ctx, after: null });
+  if (series === 'F1' && c.role === 'race') {
+    s.queue.push({ id: 'car_launch', c: ctx, after: null });
+    if (c.rookieYear == null && !s.seen.rookie_pranks) s.queue.push({ id: 'rookie_pranks', c: ctx, after: null });
+  }
+}
+
+// What the team expects this season, judged on the championship position or points.
+function seasonGoal(s, t, series) {
+  const rank = carRank(s, t);
+  const f1 = series === 'F1';
+  if (rank === 1) return { type: 'top', n: 1, text: 'Win the championship' };
+  if (rank <= 3) {
+    const n = rank * 2;
+    return { type: 'top', n, text: `Finish in the top ${n}` };
+  }
+  if (f1 && rank >= 9) return { type: 'points', n: 10, text: 'Score at least 10 points' };
+  const n = Math.min(14, rank * 2 + 1);
+  return { type: 'top', n, text: `Finish in the top ${n}` };
+}
+
+function goalMet(goal, pos, pts) {
+  if (!goal) return null;
+  if (goal.type === 'points') return pts >= goal.n;
+  return pos > 0 && pos <= goal.n;
 }
 
 function titleCtx(s) {
@@ -427,10 +461,14 @@ function finishRace(s, r) {
     if (pe.dnf && pe.dnfWhy !== 'mech') d.teamRel = Math.max(0, d.teamRel - 1);
 
     me = { pos, grid: pe.grid, dnf: pe.dnf, why: pe.dnfWhy, pts, pole, fl: isFl };
+    se.lastMe = { pos, dnf: pe.dnf, track: track.short };
     x = { series, pos, dnf: pe.dnf, grid: pe.grid, pole, fl: isFl, wet: race.wet, trackId: track.id, home: nation(d.nat).home.includes(track.id), standin: race.mode === 'standin', pts, team: pe.team };
 
     if (f1) {
       if (tot.starts === 1) mile(s, 'f1start', '🏎️', 'Formula 1 driver', `Race one done at ${track.short}. Whatever happens now, you are one of only a few hundred people in history to start a Grand Prix.`, 'purple');
+      if (tot.starts === 100) mile(s, 'f1start100', '💯', '100 Grands Prix', `Race one hundred, at ${track.short}. The team gives you a cake shaped like your helmet. It tastes like fondant and pride.`);
+      if (tot.starts === 200) mile(s, 'f1start200', '🎂', '200 Grands Prix', 'Two hundred starts. The mechanics who were there for your first race are now in charge of the garage.');
+      if (tot.starts === 300) mile(s, 'f1start300', '🦾', '300 Grands Prix', 'Three hundred starts. You have now spent more time in a Formula 1 car than in your own kitchen.', 'purple');
       if (pts > 0) mile(s, 'f1pts', '🔟', 'First Formula 1 points', `P${pos} at ${track.short}. ${pts} ${pts === 1 ? 'point' : 'points'} that nobody can ever take away.`);
       if (!pe.dnf && pos <= 3) mile(s, 'f1pod', '🍾', 'First Formula 1 podium', `P${pos} at the ${track.name}. You spray champagne badly and get most of it in your own eye.`);
       if (pole) mile(s, 'f1pole', '⏱️', 'First pole position', `Fastest of all on Saturday at ${track.short}.`, 'purple');
@@ -525,10 +563,21 @@ function endSeason(s, r) {
   const tmPos = tmId ? order.indexOf(tmId) + 1 : 0;
   const beatTm = !!(pos && tmPos && pos < tmPos);
   const team = s.teams[c.team];
+  const goal = se.goal;
+  const met = goalMet(goal, pos, st.pts);
+  let goalBonus = 0;
+  if (goal && met) {
+    d.teamRel = Math.min(100, d.teamRel + 8);
+    d.fame = Math.min(100, d.fame + 2);
+    if (series === 'F1' && c.contract) goalBonus = Math.round(c.contract.salary * 0.15);
+    d.money += goalBonus;
+  } else if (goal) {
+    d.teamRel = Math.max(0, d.teamRel - 10);
+  }
   c.hist.push({
     year: s.year, series, team: c.team, teamName: team?.name, color: team?.color, role: c.role,
     pos, pts: st.pts, wins: st.w, podiums: st.pod, poles: st.pole, starts: st.starts, champion, beatTm,
-    tm: tmId ? nameOf(s, tmId) : null, tmPos,
+    tm: tmId ? nameOf(s, tmId) : null, tmPos, goalMet: met,
   });
   if (champion) {
     if (series === 'F1') c.tot.F1.titles++;
@@ -573,6 +622,8 @@ function endSeason(s, r) {
     pos, pts: st.pts, wins: st.w, podiums: st.pod, poles: st.pole, champion,
     top, deltas, sl, slTotal, newLicence, licensed: c.licensed,
     income: prize + sponsor + family, tm: tmId ? nameOf(s, tmId) : null, tmPos, beatTm,
+    goal: goal?.text || null, goalMet: met, goalBonus,
+    car: champion && team ? { color: team.color, accent: team.accent || '#FFFFFF', number: raceNumber(s) } : null,
     f1Champ: series !== 'F1' ? `${nameOf(s, f1Champ)}${champTeam ? ` (${champTeam.short})` : ''}` : null,
   });
   if (academyNote) story(s, academyNote, { title: 'Dropped', tone: 'red' });

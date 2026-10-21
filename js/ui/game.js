@@ -16,6 +16,12 @@ import {
   openDialog, confirmDialog, statBars,
 } from './modals.js';
 import { openDonate, maybeNudge, coffeeButton } from './donate.js';
+import { openRecords } from './modals.js';
+import { car } from './car.js';
+import { raceNumber } from '../engine/player.js';
+import { confetti, takeover } from './celebrate.js';
+import { sfx } from './sfx.js';
+import { openShare } from './share.js';
 
 const ROW = 26;
 
@@ -52,16 +58,46 @@ function act(app, fn, { animate = false } = {}) {
     store.addLife(s.retired);
   }
   const freshAch = app.save();
+  const prevN = app.view.lastN;
   const updated = pendN ? rerender(app, pendN) : null;
-  const added = appendNew(app, animate && app.settings.anim !== 'off');
+  const animated = animate && app.settings.anim !== 'off';
+  const added = appendNew(app, animated);
   app.refresh();
   for (const id of s.ach.slice(achBefore)) if (freshAch.includes(id)) achToast(id);
+  celebrate(app, s.feed.filter((e) => e.n > prevN), pendN ? s.feed.find((e) => e.n === pendN) : null, animated);
   if (s.nudge) {
-    maybeNudge(app, s.nudge);
+    const reason = s.nudge;
     delete s.nudge;
     app.save();
+    setTimeout(() => maybeNudge(app, reason), 2500);
   }
   reveal(app, updated, added);
+}
+
+// Sounds, confetti and the championship moment.
+function celebrate(app, fresh, resolved, animated) {
+  const motion = app.settings.anim !== 'off';
+  if (resolved?.rolled) (resolved.ok ? sfx.ok : sfx.ko)();
+  if (fresh.some((e) => e.k === 'event' && e.radio && e.picked == null)) setTimeout(sfx.radio, 300);
+  const champ = fresh.find((e) => e.k === 'season' && e.champion);
+  const win = fresh.filter((e) => e.k === 'race' && e.me && !e.me.dnf && e.me.pos === 1).pop();
+  if (champ) {
+    sfx.title();
+    if (motion) confetti([champ.car?.color || '#e10600', '#ffffff', '#d4af37', '#b05cff'], { count: 260, duration: 3400 });
+    takeover({
+      lines: champ.series === 'F1' ? ['World', 'Champion'] : [champ.seriesName, 'Champion'],
+      year: String(champ.year),
+      sub: `${plural(champ.pts, 'point')} and ${plural(champ.wins, 'win')}. ${champ.series === 'F1' ? 'Your name is on the trophy forever.' : 'The next rung of the ladder is waiting.'}`,
+      livery: champ.car ? { ...champ.car, helmet: app.s.driver.helmet?.c1 } : null,
+    });
+  } else if (win) {
+    const fire = () => {
+      sfx.win();
+      if (motion) confetti([win.winner.color, '#ffffff', '#ffd12e']);
+    };
+    if (animated) setTimeout(fire, 1450 * (app.settings.anim === 'fast' ? 0.5 : 1));
+    else fire();
+  }
 }
 
 function reveal(app, updated, added) {
@@ -122,14 +158,22 @@ function renderEntry(app, e, opts) {
 
 const toneClass = (t) => (t ? ` t-${t}` : '');
 
+const BANNERS = { sc: 'Safety car', red: 'Red flag', rain: 'Rain' };
+
 const R = {
   chapter: (app, e) =>
     h(
       'section',
       { class: 'f-chapter' },
       h('div', { class: 'big', 'aria-hidden': 'true' }, e.big),
-      h('h2', null, e.color ? h('span', { class: 'dot', style: `background:${e.color}` }) : null, e.title),
-      e.sub ? h('p', null, e.sub) : null,
+      e.car ? car({ ...e.car, helmet: app.s.driver.helmet?.c1 }, { label: `Your ${e.year} car, number ${e.car.number}` }) : null,
+      h(
+        'div',
+        { class: 'txt' },
+        h('h2', null, e.color ? h('span', { class: 'dot', style: `background:${e.color}` }) : null, e.title),
+        e.sub ? h('p', null, e.sub) : null,
+        e.goal ? h('div', { class: 'goal' }, '🎯', h('span', null, 'Team target: ', h('b', null, e.goal))) : null,
+      ),
     ),
 
   story: (app, e) => h('div', { class: `f-story${toneClass(e.tone)}` }, e.title ? h('b', null, e.title) : null, e.text),
@@ -156,7 +200,8 @@ const R = {
         e.notes?.length ? h('div', { class: 'notes' }, e.notes.map((nt) => h('span', { class: `note ${nt.good ? 'good' : 'bad'}` }, nt.t))) : null,
       );
     }
-    return h('article', { class: `f-event${open ? ' open' : ''}` }, h('h3', null, e.title), h('p', null, e.text), radio, picked);
+    const banner = e.banner ? h('div', { class: `banner ${e.banner}` }, BANNERS[e.banner], h('small', null, 'Race control')) : null;
+    return h('article', { class: `f-event${open ? ' open' : ''}` }, banner, h('h3', null, e.title), h('p', null, e.text), radio, picked);
   },
 
   race: (app, e, { latest, animate } = {}) => {
@@ -177,7 +222,17 @@ const R = {
       cls = me.pos === 1 ? 'c-win' : me.pos <= 3 ? 'c-pod' : me.pts ? 'c-pts' : 'c-nop';
       small = me.pts ? `+${me.pts} pts` : `from P${me.grid}`;
     }
-    const wx = [e.wet ? 'wet' : null, e.sc ? 'safety car' : null].filter(Boolean).join(', ');
+    const rc = [e.wet ? h('span', { class: 'rc wet' }, 'Wet') : null, e.sc ? h('span', { class: 'rc sc' }, 'SC') : null].filter(Boolean);
+    const podium = me && !me.dnf && me.pos <= 3 && e.rows.length >= 3
+      ? h(
+          'div',
+          { class: 'podium', 'aria-label': 'Podium' },
+          [1, 0, 2].map((i) => {
+            const r = e.rows.find((x) => x.pos === i + 1);
+            return h('div', { class: `p${i + 1}${r?.me ? ' me-p' : ''}` }, r?.code || '', h('span', null, i + 1));
+          }),
+        )
+      : null;
     const sumBits = [];
     if (e.winner.me) sumBits.push('You win the race.');
     else sumBits.push(`Won by ${e.winner.name}.`);
@@ -193,10 +248,11 @@ const R = {
         'div',
         { class: 'hd' },
         h('span', { class: 'rnd' }, `R${e.round}`),
-        h('span', { class: 'trk' }, `${e.flag} ${e.short}`, wx ? h('span', { class: 'wx' }, wx) : null),
+        h('span', { class: 'trk' }, `${e.flag} ${e.short}`, rc),
         h('span', { class: `res-pos ${cls}` }, pos, h('small', null, small)),
       ),
       h('div', { class: 'sum' }, sumBits.join(' ')),
+      podium,
       toggle,
       tw,
     ].filter(Boolean));
@@ -233,6 +289,14 @@ const R = {
       h('h3', null, `${e.year} ${e.seriesName}`),
       verdict,
       table,
+      e.goal
+        ? h(
+            'div',
+            { class: 'goal-line', style: 'margin:0 0 10px' },
+            h('span', { class: `res ${e.goalMet ? 'ok' : 'ko'}` }, e.goalMet ? 'Target met' : 'Target missed'),
+            h('span', null, `${e.goal}.`, e.goalMet ? ' The team is delighted.' : ' The team expected more.', e.goalBonus ? ` Bonus ${money(e.goalBonus)}.` : ''),
+          )
+        : null,
       h('div', { class: 'kv' }, bits.map(([k, v]) => h('span', null, `${k} `, h('b', null, v)))),
       e.tm ? h('div', { class: 'kv', style: 'margin-top:4px' }, h('span', null, `Teammate ${e.tm}: `, h('b', null, e.beatTm ? 'beaten' : e.tmPos ? 'ahead of you' : 'n/a'))) : null,
       deltas.length ? h('div', { class: 'notes', style: 'margin-top:10px' }, deltas.map(([k, v]) => h('span', { class: `note ${v > 0 ? 'good' : 'bad'}` }, `${v > 0 ? '+' : ''}${v} ${STAT_LABEL[k]}`))) : null,
@@ -320,23 +384,26 @@ function retireCard(app, e) {
   const stats = f.starts
     ? [['Titles', f.titles], ['Wins', f.wins], ['Podiums', f.podiums], ['Starts', f.starts]]
     : [['Junior titles', e.junior.titles], ['Junior wins', e.junior.wins], ['Seasons', e.seasons], ['Net worth', money(e.worth)]];
-  const shareBtn = h('button', {
+  const shareBtn = h('button', { class: 'btn btn-go', style: 'font-size:16px;padding:10px 18px', onClick: () => openShare(e) }, 'Share your career card');
+  const copyBtn = h('button', {
     class: 'btn',
     onClick: async () => {
       const ok = await copyText(shareText(e, location.origin + location.pathname));
       toast(ok ? 'Career summary copied. Paste it anywhere.' : 'Copy failed. Your browser blocked the clipboard.');
     },
-  }, 'Copy career summary');
+  }, 'Copy as text');
+  const rankLine = e.ranks && (f.titles || f.wins) ? h('p', { style: 'margin:0 0 12px;color:var(--ink)' }, `All-time: #${e.ranks.titles} for world titles and #${e.ranks.wins} for wins, out of ${e.ranks.of} Grand Prix drivers in history.`) : null;
   return h(
     'section',
     { class: 'f-retire' },
-    h('div', { style: 'display:flex;gap:12px;align-items:center' }, helmet(e.helmet, { gold: app.supporter }), h('div', null, h('b', null, `${e.name} ${e.flag}`), h('div', { style: 'color:var(--ink-3);font-size:14px' }, `${e.how === 'endurance' ? 'Left for endurance racing' : 'Retired'} at ${e.age}, ${e.endYear}. ${e.bg}, ${e.style.toLowerCase()}.`))),
+    h('div', { class: 'head' }, helmet(e.helmet, { gold: app.supporter }), h('div', null, h('b', null, `#${e.number ?? ''} ${e.name} ${e.flag}`), h('div', { style: 'color:var(--ink-3);font-size:14px' }, `${e.how === 'endurance' ? 'Left for endurance racing' : 'Retired'} at ${e.age}, ${e.endYear}. ${e.bg}, ${e.style.toLowerCase()}.`))),
     h('div', { class: 'tier' }, e.tier),
     h('div', { class: 'grid4' }, stats.map(([k, v]) => h('div', { class: 'big-stat' }, h('b', null, v), h('span', null, k)))),
+    rankLine,
     h('ul', null, e.lines.map((l) => h('li', null, l))),
     h('div', { class: 'kv' }, h('span', null, 'Net worth ', h('b', null, money(e.worth))), h('span', null, 'Legacy score ', h('b', null, e.score)), h('span', null, 'Seed ', h('b', null, e.seed))),
     e.daily ? h('div', { class: 'kv', style: 'margin-top:6px' }, h('span', null, `Daily goal: ${e.daily.goalText} `, h('b', null, e.daily.done ? 'Completed' : 'Not completed'))) : null,
-    h('div', { class: 'row', style: 'flex-wrap:wrap;margin-top:14px' }, shareBtn, h('button', { class: 'btn', onClick: () => openHallOfFame(app) }, 'Hall of fame')),
+    h('div', { class: 'row', style: 'flex-wrap:wrap;margin-top:14px' }, shareBtn, copyBtn, f.starts ? h('button', { class: 'btn', onClick: () => openRecords(app) }, 'All-time records') : null, h('button', { class: 'btn', onClick: () => openHallOfFame(app) }, 'Hall of fame')),
     app.supporter
       ? h('div', { class: 'thanks-box' }, h('p', { style: 'margin:0' }, '☕ Thank you for being in the pit crew. You keep this free for everyone.'))
       : h('div', { class: 'thanks-box' }, h('p', null, 'Enjoyed that career? Lights Out is free with no ads. A coffee keeps new teams, tracks and stories coming.'), coffeeButton(app, { reason: 'retire' })),
@@ -358,10 +425,12 @@ function renderHud(app) {
   const order = se && se.stand.P ? standingsOrder(se.stand) : [];
   const champ = order.indexOf('P') + 1;
   const age = s.stage === 'prologue' ? PROLOGUE_AGE[s.proStep] ?? d.age : d.age;
+  const num = raceNumber(s);
   app.view.hud.replaceChildren(
     h(
       'div',
       { class: 'who' },
+      h('span', { class: `racenum${num === 1 ? ' one' : ''}`, 'aria-label': `Race number ${num}` }, num),
       helmet(d.helmet, { gold: app.supporter }),
       h(
         'div',
@@ -403,9 +472,22 @@ function renderSide(app) {
   const parts = [];
   if (se) {
     const order = standingsOrder(se.stand);
+    let goalBox = null;
+    if (se.goal) {
+      const pos = order.indexOf('P') + 1;
+      const pts = se.stand.P?.pts || 0;
+      const on = se.goal.type === 'points' ? pts >= se.goal.n : pos > 0 && pos <= se.goal.n;
+      goalBox = h(
+        'div',
+        { class: `goal-box ${se.round ? (on ? 'on' : 'off') : ''}` },
+        h('b', null, `Team target: ${se.goal.text}`),
+        se.round ? (on ? `On track. You are P${pos} with ${plural(pts, 'point')}.` : `Behind target. You are P${pos} with ${plural(pts, 'point')}.`) : 'The season has not started yet.',
+      );
+    }
     parts.push(
       h('h3', null, `${se.year} ${SINFO[se.series].name}`),
       h('div', { class: 'meta' }, se.round >= se.cal.length ? 'Final standings' : `After round ${se.round} of ${se.cal.length}`),
+      goalBox,
       h(
         'ol',
         { class: 'stand' },
@@ -424,7 +506,7 @@ function renderSide(app) {
     );
   }
   parts.push(h('h3', { style: 'margin-top:22px' }, 'Your driver'), h('div', { class: 'meta' }, `Overall ${ovr(s)}`), statBars(s));
-  side.replaceChildren(...parts);
+  side.replaceChildren(...parts.filter(Boolean));
 }
 
 // ------------------------------------------------------------------ dock
@@ -529,6 +611,7 @@ function openMenu(app) {
     item('Save and go to the title screen', () => app.showTitle()),
     item('Achievements', () => openAchievements(app)),
     item('Hall of fame', () => openHallOfFame(app)),
+    item('All-time records', () => openRecords(app)),
     item('Settings', () => openSettings(app)),
     item('Backup', () => openBackup(app)),
     item('About', () => openAbout()),

@@ -20,8 +20,10 @@ export function createPlayer(setup, r) {
   }
   const first = setup.first.trim();
   const last = setup.last.trim();
+  const num = Math.round(Number(setup.number));
   return {
     first, last, name: `${first} ${last}`.trim(), code: driverCode(last || first),
+    number: num >= 2 && num <= 99 ? num : r.int(2, 99),
     nat: setup.nat, style: setup.style, bg: setup.bg, helmet: setup.helmet,
     age: 15, stats, caps, pot,
     fame: bg.fame, money: bg.money, teamRel: 60,
@@ -41,6 +43,9 @@ export function playerRatings(s, wet) {
 }
 
 export const ovr = (s) => Math.round(overall(s.driver.stats));
+
+// The reigning champion may run #1 for a season.
+export const raceNumber = (s) => (s.flags.useOne === s.year ? 1 : s.driver.number ?? 7);
 
 // End-of-season development. Returns rounded stat changes for the summary.
 export function growPlayer(s, r) {

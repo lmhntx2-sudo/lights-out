@@ -73,6 +73,7 @@ export function present(s, ev, c, after = null) {
     title: val(ev.title, s, c),
     text: val(ev.text, s, c),
     radio: val(ev.radio, s, c) || null,
+    banner: val(ev.banner, s, c) || null,
     eng: c.eng || null,
     color: c.color || null,
     choices,
@@ -150,6 +151,12 @@ export function applyFx(s, fx, c = {}) {
     s.teams[s.career.team].perf = clamp(s.teams[s.career.team].perf + fx.carPerf, 60, 99);
     notes.push({ t: 'Car upgraded', good: true });
   }
+  if (fx.budget && s.career.team && s.teams[s.career.team]) {
+    const t = s.teams[s.career.team];
+    t.budget = clamp(t.budget + fx.budget, 0.5, 1);
+    notes.push({ t: fx.budget > 0 ? 'Team budget up' : 'Team budget down', good: fx.budget > 0 });
+  }
+  if (fx.useOne) s.flags.useOne = s.year;
   if (fx.salaryUp && s.career.contract) {
     s.career.contract.salary = Math.round(s.career.contract.salary * (1 + fx.salaryUp));
     notes.push({ t: `Salary now ${money(s.career.contract.salary)}`, good: true });
