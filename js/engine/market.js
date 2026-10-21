@@ -51,7 +51,7 @@ export function simSeriesSeason(s, r, series) {
 
 // ---------------------------------------------------------------- valuation
 
-export const wantF1 = (t) => 73.5 + (t.perf - 72) * 0.45;
+export const wantF1 = (t) => 74 + (t.perf - 72) * 0.45;
 
 export function playerValue(s) {
   const d = s.driver;
@@ -59,18 +59,18 @@ export function playerValue(s) {
   const h = s.career.hist[s.career.hist.length - 1];
   if (h && h.pos) {
     const p = h.pos;
-    if (h.series === 'F1') v += p === 1 ? 4 : p <= 3 ? 2.5 : p <= 6 ? 1 : p > 14 ? -1.5 : 0;
-    else v += p === 1 ? 3 : p <= 3 ? 2 : p <= 6 ? 0.8 : p > 12 ? -1.5 : 0;
+    if (h.series === 'F1') v += p === 1 ? 3 : p <= 3 ? 2 : p <= 6 ? 1 : p > 14 ? -1.5 : 0;
+    else v += p === 1 ? 2.5 : p <= 3 ? 1.5 : p <= 6 ? 0.5 : p > 12 ? -1.5 : 0;
     if (h.beatTm) v += 0.8;
   }
-  v += (d.fame - 40) / 30;
+  v += (d.fame - 50) / 40;
   return v;
 }
 
 function teamBonus(s, t) {
   const d = s.driver;
   let b = 0;
-  if (d.academy && (d.academy === t.id || s.teams[d.academy]?.sister === t.id)) b += 4;
+  if (d.academy && (d.academy === t.id || s.teams[d.academy]?.sister === t.id)) b += 3;
   if (t.budget < 0.8 && d.money > 15e6) b += 2;
   if (t.id === s.career.team) b += (d.teamRel - 50) / 10;
   return b;
@@ -384,7 +384,7 @@ export function offseasonFill(s, r) {
         assign(t, k, best);
         best.contract = r.int(1, 3);
       } else {
-        const d = makeAIDriver(s, r, { series: 'F1', age: r.int(21, 25), skill: r.range(74, 79), pot: r.range(78, 86) });
+        const d = makeAIDriver(s, r, { series: 'F1', age: r.int(21, 25), skill: r.range(74, 80), pot: Math.min(95, r.normal(85, 4)) });
         assign(t, k, d);
         d.contract = 2;
       }
@@ -412,10 +412,10 @@ export function teamDevelopment(s, r, nextYear) {
   const reg = REG_YEARS.includes(nextYear);
   for (const t of Object.values(s.teams)) {
     if (t.series === 'F1') {
-      let delta = (80 - t.perf) * 0.18 + (t.budget - 0.82) * 8 + r.normal(0, 2.2);
-      if (s.career.team === t.id && s.career.role === 'race') delta += (s.driver.stats.technical - 70) * 0.04;
+      let delta = (80 - t.perf) * 0.24 + (t.budget - 0.82) * 8 + r.normal(0, 2);
+      if (s.career.team === t.id && s.career.role === 'race') delta += Math.max(0, s.driver.stats.technical - 75) * 0.025;
       if (reg) delta += r.normal(0, 4.5);
-      t.perf = Math.round(clamp(t.perf + delta, 68, 97) * 10) / 10;
+      t.perf = Math.round(clamp(t.perf + delta, 70, 96) * 10) / 10;
       t.budget = clamp(t.budget + r.normal(0, 0.02), 0.6, 1);
     } else {
       t.perf = Math.round(clamp(t.perf + r.normal(0, 1.5), 68, 93) * 10) / 10;

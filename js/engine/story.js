@@ -7,6 +7,7 @@ import { unlock } from './achievements.js';
 import { clamp, money } from '../core/fmt.js';
 
 const DEFAULT_GAP = { race: 5, between: 10 };
+const MOD_SCALE = { F1: 0.55, F2: 0.8, F3: 0.85, F4: 0.9 };
 const PER_YEAR = { between: true, offseason: true };
 
 export function statVal(s, k) {
@@ -21,7 +22,7 @@ function refLevel(s) {
 export function chanceOf(s, ch) {
   if (ch.p != null) return ch.p;
   if (!ch.stat) return 100;
-  return clamp(Math.round(ch.base + (statVal(s, ch.stat) - refLevel(s)) * 1.3), 5, 95);
+  return clamp(Math.round(ch.base + (statVal(s, ch.stat) - refLevel(s)) * 1.1), 5, 95);
 }
 
 export function choicesOf(ev, s, c) {
@@ -117,7 +118,9 @@ export function applyFx(s, fx, c = {}) {
   const notes = [];
   if (fx.stats) {
     for (const [k, v] of Object.entries(fx.stats)) {
-      d.stats[k] = clamp(d.stats[k] + v, 1, 99);
+      // Past your natural ceiling, extra work only helps a little.
+      const gain = v > 0 && d.stats[k] >= d.caps[k] ? v * 0.2 : v;
+      d.stats[k] = clamp(d.stats[k] + gain, 1, 99);
       notes.push({ t: `${sign(v)} ${STAT_LABEL[k]}`, good: v > 0 });
     }
   }
@@ -158,8 +161,10 @@ export function applyFx(s, fx, c = {}) {
   const race = s.season?.race;
   const pe = race?.entries.find((e) => e.id === 'P');
   if (pe) {
-    if (fx.mod) pe.mod += fx.mod;
-    if (fx.qmod) pe.qmod += fx.qmod;
+    // In F1 the car dominates, so a single call moves the needle less.
+    const scale = MOD_SCALE[race.series] ?? 1;
+    if (fx.mod) pe.mod += fx.mod * scale;
+    if (fx.qmod) pe.qmod += fx.qmod * scale;
     if (fx.gain) pe.gain += fx.gain;
     if (fx.lose) pe.gain -= fx.lose;
     if (fx.saveDnf) {

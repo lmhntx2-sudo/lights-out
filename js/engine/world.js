@@ -83,7 +83,8 @@ export function newJunior(s, r, series, ageOverride) {
   const info = SINFO[series];
   const age = ageOverride ?? r.int(info.age[0], info.age[1]);
   const skill = r.range(info.skill[0], info.skill[1] - 4) + (age - info.age[0]) * 1.2;
-  return makeAIDriver(s, r, { series, age, skill, pot: skill + r.range(4, 22) });
+  const pot = Math.min(97, Math.max(skill + 3, r.normal(80, 7)));
+  return makeAIDriver(s, r, { series, age, skill, pot });
 }
 
 export const teamsOf = (s, series) => Object.values(s.teams).filter((t) => t.series === series);

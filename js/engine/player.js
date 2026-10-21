@@ -16,7 +16,7 @@ export function createPlayer(setup, r) {
     const bias = style.bias[k] || 0;
     const bonus = bg.bonus[k] || 0;
     stats[k] = clamp(bg.base + r.normal(0, 2.2) + bias + bonus - (k === 'wet' ? 4 : 0), 20, 75);
-    caps[k] = clamp(pot + bias * 0.6 + bonus * 0.4 + r.normal(0, 2.5), 50, 99);
+    caps[k] = clamp(pot + bias * 0.5 + bonus * 0.3 + r.normal(0, 2), 50, 99);
   }
   const first = setup.first.trim();
   const last = setup.last.trim();
@@ -46,15 +46,16 @@ export const ovr = (s) => Math.round(overall(s.driver.stats));
 export function growPlayer(s, r) {
   const d = s.driver;
   const age = d.age;
-  const f = age <= 17 ? 0.3 : age <= 20 ? 0.27 : age <= 24 ? 0.2 : age <= 28 ? 0.12 : age <= 31 ? 0.05 : 0;
+  const f = age <= 18 ? 0.19 : age <= 21 ? 0.21 : age <= 24 ? 0.2 : age <= 27 ? 0.16 : age <= 30 ? 0.08 : age <= 31 ? 0.03 : 0;
   const focus = TRAINING[d.training]?.stats || [];
   const deltas = {};
   for (const k of STATS) {
     const v = d.stats[k];
-    let g = Math.max(0, d.caps[k] - v) * f * (focus.includes(k) ? 1.45 : 1) + r.normal(0.2, 0.6);
-    if (age >= 32) {
+    const room = d.caps[k] - v;
+    let g = room > 0 ? room * f * (focus.includes(k) ? 1.45 : 1) + r.normal(0, 0.5) : Math.min(0, room * 0.15);
+    if (age >= 31) {
       const physical = k === 'pace' || k === 'consistency' || k === 'racecraft' || k === 'wet';
-      g = physical ? -(age - 31) * r.range(0.35, 0.85) : r.range(0, 0.6);
+      g = physical ? -(age - 30) * r.range(0.35, 0.8) : r.range(0, 0.4);
     }
     const nv = clamp(v + g, 1, 99);
     d.stats[k] = nv;
@@ -67,9 +68,8 @@ export function growPlayer(s, r) {
 export function developAI(d, r) {
   const a = d.age;
   let g;
-  if (a <= 20) g = (d.pot - d.skill) * 0.28;
-  else if (a <= 24) g = (d.pot - d.skill) * 0.2;
-  else if (a <= 28) g = (d.pot - d.skill) * 0.1;
+  if (a <= 24) g = (d.pot - d.skill) * 0.3;
+  else if (a <= 28) g = (d.pot - d.skill) * 0.2;
   else if (a <= 31) g = 0;
   else g = -(a - 31) * r.range(0.3, 0.8);
   d.skill = Math.round(clamp(d.skill + g + r.normal(0, 0.8), 20, 97) * 10) / 10;
