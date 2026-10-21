@@ -443,6 +443,10 @@ dialog::backdrop { background: rgba(5, 9, 15, .72); backdrop-filter: blur(3px); 
 .tier span { display: block; font-size: 12px; color: var(--ink-3); line-height: 1.35; }
 .tier .amt { font-weight: 800; font-size: 18px; color: var(--yellow); font-variant-numeric: tabular-nums; }
 .platforms { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 6px; }
+.seg.methods { display: flex; width: 100%; margin-bottom: 12px; }
+.seg.methods button { flex: 1; padding: 8px 10px; }
+.suggest { margin: 10px 0 0; color: var(--ink-3); font-size: 13px; text-align: center; }
+div.tier { cursor: default; }
 .qr { margin: 14px 0 0; display: grid; justify-items: center; gap: 8px; }
 .qr img { width: 200px; height: 200px; object-fit: contain; background: #fff; border-radius: 12px; padding: 8px; }
 .qr figcaption { color: var(--ink-2); font-size: 14px; text-align: center; }

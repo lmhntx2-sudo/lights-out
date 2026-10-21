@@ -1,5 +1,5 @@
 // "Fuel the dev": the donation modal, the gentle nudges and the supporter badge.
-import { DONATE, isPlaceholder, tierUrl, tipJarOpen } from '../config.js';
+import { DONATE, isPlaceholder, liveMethods, price, tierLink, tipJarOpen } from '../config.js';
 import { h, toast } from './dom.js';
 import { openDialog } from './modals.js';
 import { store } from '../store.js';
@@ -10,36 +10,66 @@ const linkProps = (url) => ({ href: url, target: '_blank', rel: 'noopener norefe
 
 const isLocal = () => ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname) || location.hostname.endsWith('.localhost');
 
+function tierCard(t, url, app) {
+  const kids = [
+    h('span', { class: 'e', 'aria-hidden': 'true' }, t.emoji),
+    h('div', null, h('b', null, t.name), h('span', null, t.blurb)),
+    h('span', { class: 'amt' }, price(t.amount)),
+  ];
+  return url ? h('a', { class: 'tier', ...linkProps(url), onClick: () => onDonateClick(app) }, kids) : h('div', { class: 'tier' }, kids);
+}
+
+// What to show for one payment method: amount cards that link out, or a QR code.
+function methodPanel(id, app) {
+  const m = DONATE.methods[id];
+  if (id === 'payme') {
+    const amounts = DONATE.tiers.map((t) => price(t.amount));
+    return [
+      m.qr ? h('figure', { class: 'qr' }, h('img', { src: m.qr, alt: 'PayMe QR code', width: 200, height: 200 }), h('figcaption', null, 'Scan with PayMe to send any amount')) : null,
+      !isPlaceholder(m.url) ? h('div', { class: 'platforms', style: 'justify-content:center' }, h('a', { class: 'btn btn-sm btn-coffee', ...linkProps(m.url), onClick: () => onDonateClick(app) }, 'Open PayMe')) : null,
+      h('p', { class: 'suggest' }, `Suggested: ${amounts.slice(0, -1).join(', ')} or ${amounts[amounts.length - 1]}.`),
+    ];
+  }
+  const links = DONATE.tiers.map((t) => ({ t, url: tierLink(t, id) }));
+  const note = id === 'paypal' && m.me ? 'Each amount opens PayPal with it filled in.' : id === 'bmc' ? 'You can change the amount on the next page.' : null;
+  return [h('div', { class: 'tiers' }, links.map(({ t, url }) => tierCard(t, url, app))), note ? h('p', { class: 'suggest' }, note) : null];
+}
+
 export function openDonate(app, reason = '') {
   const open = tipJarOpen();
+  const methods = liveMethods();
   const intro = {
     retire: 'That was a whole career. If it made you grin, a coffee keeps the next update coming.',
     first_win: 'Your first Grand Prix win deserves champagne. The developer would settle for a coffee.',
     title: 'World champion! The developer is celebrating too, with a very small coffee.',
   }[reason];
+  const lead = open
+    ? 'Lights Out is free, has no ads and no paywalls. It is made by one person in their spare time. Amounts are in Hong Kong dollars.'
+    : 'Lights Out is free, has no ads and no paywalls. It is made by one person in their spare time. The tip jar opens very soon. Thanks for wanting to chip in!';
 
-  const linked = DONATE.tiers.map((t) => ({ t, url: tierUrl(t) })).filter((x) => x.url);
-  const tiers = linked.map(({ t, url }) =>
-    h(
-      'a',
-      { class: 'tier', ...linkProps(url), onClick: () => onDonateClick(app) },
-      h('span', { class: 'e', 'aria-hidden': 'true' }, t.emoji),
-      h('div', null, h('b', null, t.name), h('span', null, t.blurb)),
-      h('span', { class: 'amt' }, `${DONATE.currency}${t.amount}`),
-    ),
-  );
-  const qr = DONATE.qr.image
-    ? h('figure', { class: 'qr' }, h('img', { src: DONATE.qr.image, alt: DONATE.qr.alt, width: 200, height: 200 }), h('figcaption', null, DONATE.qr.label))
-    : null;
-  const platforms = DONATE.platforms
-    .filter((p) => !isPlaceholder(p.url))
-    .map((p) => h('a', { class: 'btn btn-sm', ...linkProps(p.url), onClick: () => onDonateClick(app) }, p.label));
-
-  const lead = !open
-    ? 'Lights Out is free, has no ads and no paywalls. It is made by one person in their spare time. The tip jar opens very soon. Thanks for wanting to chip in!'
-    : tiers.length
-      ? 'Lights Out is free, has no ads and no paywalls. It is made by one person in their spare time. Pick an amount below.'
-      : 'Lights Out is free, has no ads and no paywalls. It is made by one person in their spare time.';
+  const panel = h('div', { role: methods.length > 1 ? 'tabpanel' : null });
+  let picker = null;
+  if (open) {
+    const show = (id) => panel.replaceChildren(...methodPanel(id, app).filter(Boolean));
+    if (methods.length > 1) {
+      picker = h('div', { class: 'seg methods', role: 'tablist', 'aria-label': 'Payment method' });
+      const btns = methods.map((id, i) =>
+        h('button', {
+          role: 'tab',
+          'aria-selected': i === 0 ? 'true' : 'false',
+          'aria-pressed': i === 0 ? 'true' : 'false',
+          onClick: (e) => {
+            btns.forEach((b) => { b.setAttribute('aria-pressed', 'false'); b.setAttribute('aria-selected', 'false'); });
+            e.currentTarget.setAttribute('aria-pressed', 'true');
+            e.currentTarget.setAttribute('aria-selected', 'true');
+            show(id);
+          },
+        }, DONATE.methods[id].label),
+      );
+      picker.append(...btns);
+    }
+    show(methods[0]);
+  }
 
   const supporter = store.supporter();
   let dlg;
@@ -59,13 +89,12 @@ export function openDonate(app, reason = '') {
   const body = h(
     'div',
     null,
-    isLocal() && isPlaceholder(DONATE.primaryUrl)
-      ? h('div', { class: 'dev-warning' }, 'Only you see this, on localhost: the main donation link is still a placeholder. Set it in ', h('code', null, 'js/config.js'), '.')
+    isLocal() && !open
+      ? h('div', { class: 'dev-warning' }, 'Only you see this, on localhost: no payment method is set up yet. Fill one in ', h('code', null, 'js/config.js'), '.')
       : null,
     h('div', { class: 'donate-hero' }, h('span', { class: 'cup', 'aria-hidden': 'true' }, '☕'), h('p', null, intro ? h('b', null, intro, ' ') : null, lead)),
-    tiers.length ? h('div', { class: 'tiers' }, tiers) : null,
-    qr,
-    platforms.length ? h('div', { class: 'platforms' }, h('span', { style: 'color:var(--ink-3);font-size:13px;align-self:center' }, tiers.length || qr ? 'Or use:' : 'Chip in with:'), platforms) : null,
+    picker,
+    open ? panel : null,
     claim,
   );
   dlg = openDialog('Fuel the dev', body);

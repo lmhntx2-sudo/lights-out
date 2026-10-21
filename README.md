@@ -18,18 +18,24 @@ because browsers block JavaScript modules on `file://` pages.
 
 ## Set up donations ("Fuel the dev")
 
-Edit `js/config.js`:
+Amounts are in Hong Kong dollars: HK$30, HK$50, HK$100 and HK$200. Edit `js/config.js` and
+fill in any of these payment methods. Each one you fill in shows up in the donation window,
+with a switcher when there is more than one.
 
-- `primaryUrl`: your main donation page, for example `https://www.buymeacoffee.com/yourname`
-  or `https://ko-fi.com/yourname`. Every button falls back to this.
-- `platforms`: fill in any of Buy Me a Coffee, Ko-fi or PayPal. Empty ones are hidden.
-- `tiers`: the four amounts shown in the modal. Give a tier its own `url` (for example a
-  Stripe Payment Link for exactly $5) to send people straight to that amount.
+- **Card (Stripe)**: put a Stripe payment page in `methods.card.url`, or give each amount its
+  own Stripe Payment Link in `tiers[].stripe`.
+- **PayPal**: put your PayPal.me name in `methods.paypal.me`. Each amount card then opens
+  `paypal.me/yourname/50HKD` and so on, with the amount filled in. Any other PayPal link
+  can go in `methods.paypal.url`.
+- **PayMe**: save your QR code as `assets/donate-qr.png` and set
+  `methods.payme.qr: 'assets/donate-qr.png'`. Your `payme.hsbc` link can go in
+  `methods.payme.url` for people on their phones.
+- **Buy Me a Coffee**: `methods.bmc.url` (currently a placeholder).
 - `nudgeCooldownDays`: the game shows a small, dismissable coffee reminder after a first
   Grand Prix win or a world title, at most once per this many days. Supporters never see it.
 
-While `primaryUrl` still contains `YOUR_NAME`, the donation dialog shows a red developer
-note so you can't forget. It disappears once a real link is set.
+Until at least one method is filled in, the donation window says the tip jar opens soon
+and the reminders stay off. On localhost it also shows a red note so you don't forget.
 
 Where the donation prompt appears:
 

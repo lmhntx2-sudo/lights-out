@@ -6,43 +6,61 @@ export const GAME = {
   storagePrefix: 'lightsout.v1.',
 };
 
-// "Fuel the dev" donations.
+// "Fuel the dev" donations, in Hong Kong dollars.
 //
-// While nothing below is filled in, the donation window says the tip jar opens
-// soon, and the coffee reminders stay off. Fill in any one of these to open it:
+// Fill in any payment method below and it appears in the donation window, with a
+// switcher when there is more than one. While none is filled in, the window says
+// the tip jar opens soon and the coffee reminders stay off.
 //
-//   primaryUrl   your main donation page. Buy Me a Coffee, a Stripe Payment Link,
-//                a PayMe link: any URL works. Every amount card falls back to it.
-//   qr.image     a QR code to scan, for example your PayMe QR. Save the picture as
-//                assets/donate-qr.png and set image: 'assets/donate-qr.png'.
-//   tiers[].url  a link for one exact amount, such as a Stripe Payment Link for $5.
-//   platforms    extra buttons under the amounts. Empty ones are hidden.
+//   card     Stripe. Put one payment page in url, or give each amount its own
+//            Stripe Payment Link in tiers[].stripe.
+//   paypal   Your PayPal.me name in me (for paypal.me/yourname). Each amount card
+//            then opens PayPal with that amount filled in. Or put any PayPal link in url.
+//   payme    Save your PayMe QR as assets/donate-qr.png and set qr to that path.
+//            url can hold your payme.hsbc link for people on their phone.
+//   bmc      Buy Me a Coffee page.
 export const DONATE = {
   enabled: true,
-  primaryUrl: 'https://www.buymeacoffee.com/YOUR_NAME',
-  qr: { image: '', label: 'Scan with PayMe to send any amount', alt: 'PayMe QR code' },
-  platforms: [
-    { id: 'bmc', label: 'Buy Me a Coffee', url: '' },
-    { id: 'stripe', label: 'Pay by card', url: '' },
-    { id: 'payme', label: 'PayMe', url: '' },
-  ],
+  currency: 'HKD',
+  symbol: 'HK$',
+  methods: {
+    card: { label: 'Card', url: '' },
+    paypal: { label: 'PayPal', me: '', url: '' },
+    payme: { label: 'PayMe', qr: '', url: '' },
+    bmc: { label: 'Buy Me a Coffee', url: 'https://www.buymeacoffee.com/YOUR_NAME' },
+  },
   tiers: [
-    { id: 'espresso', emoji: '☕', name: 'Espresso shot', amount: 3, blurb: 'Keeps the dev awake through a red flag.', url: '' },
-    { id: 'softs', emoji: '🛞', name: 'Fresh set of softs', amount: 5, blurb: 'Pays for an evening of new events.', url: '' },
-    { id: 'wing', emoji: '🔧', name: 'Front wing upgrade', amount: 10, blurb: 'Funds a new feature, like new tracks or teams.', url: '' },
-    { id: 'champagne', emoji: '🍾', name: 'Podium champagne', amount: 25, blurb: 'You are officially part of the pit crew.', url: '' },
+    { id: 'espresso', emoji: '☕', name: 'Espresso shot', amount: 30, blurb: 'Keeps the dev awake through a red flag.', stripe: '' },
+    { id: 'softs', emoji: '🛞', name: 'Fresh set of softs', amount: 50, blurb: 'Pays for an evening of new events.', stripe: '' },
+    { id: 'wing', emoji: '🔧', name: 'Front wing upgrade', amount: 100, blurb: 'Funds a new feature, like new tracks or teams.', stripe: '' },
+    { id: 'champagne', emoji: '🍾', name: 'Podium champagne', amount: 200, blurb: 'You are officially part of the pit crew.', stripe: '' },
   ],
-  currency: '$',
   // Gentle reminders after big moments (first win, a title). Never more often than this.
   nudgeCooldownDays: 7,
 };
 
+const ORDER = ['card', 'paypal', 'payme', 'bmc'];
+
 export const isPlaceholder = (url) => !url || url.includes('YOUR_NAME');
 
-export const tierUrl = (t) => (!isPlaceholder(t.url) ? t.url : !isPlaceholder(DONATE.primaryUrl) ? DONATE.primaryUrl : null);
+function methodLive(id) {
+  const m = DONATE.methods[id];
+  if (!m) return false;
+  if (id === 'card') return !isPlaceholder(m.url) || DONATE.tiers.some((t) => !isPlaceholder(t.stripe));
+  if (id === 'paypal') return !!m.me || !isPlaceholder(m.url);
+  if (id === 'payme') return !!m.qr || !isPlaceholder(m.url);
+  return !isPlaceholder(m.url);
+}
 
-export const tipJarOpen = () =>
-  !isPlaceholder(DONATE.primaryUrl) ||
-  !!DONATE.qr.image ||
-  DONATE.platforms.some((p) => !isPlaceholder(p.url)) ||
-  DONATE.tiers.some((t) => !isPlaceholder(t.url));
+export const liveMethods = () => ORDER.filter(methodLive);
+export const tipJarOpen = () => DONATE.enabled && liveMethods().length > 0;
+export const price = (amount) => `${DONATE.symbol}${amount}`;
+
+// Where an amount card should send people for a given payment method (null if nowhere).
+export function tierLink(t, id) {
+  const m = DONATE.methods[id];
+  if (id === 'card') return !isPlaceholder(t.stripe) ? t.stripe : !isPlaceholder(m.url) ? m.url : null;
+  if (id === 'paypal') return m.me ? `https://paypal.me/${encodeURIComponent(m.me)}/${t.amount}${DONATE.currency}` : !isPlaceholder(m.url) ? m.url : null;
+  if (id === 'payme') return null;
+  return !isPlaceholder(m.url) ? m.url : null;
+}
