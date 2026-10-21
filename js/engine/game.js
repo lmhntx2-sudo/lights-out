@@ -69,7 +69,7 @@ export function newGame(setup) {
     k: 'chapter',
     year: START_YEAR - 7,
     big: 'Prologue',
-    title: `${s.driver.name}, ${n.adj.toLowerCase()} and eight years old`,
+    title: `${s.driver.name}, ${n.adj} and eight years old`,
     sub: BACKGROUNDS[s.driver.bg].desc,
   });
   presentPrologue(s);
@@ -116,7 +116,8 @@ export function prompt(s) {
     case 'race': {
       const se = s.season;
       const t = TRACKS[se.cal[se.round]];
-      return { type: 'race', round: se.round + 1, of: se.cal.length, next: t.name, flag: flagOf(t.nat) };
+      const next = se.series === 'F1' || t.name.endsWith('round') ? t.name : `${t.short} round`;
+      return { type: 'race', round: se.round + 1, of: se.cal.length, next, flag: flagOf(t.nat) };
     }
     case 'seasonEnd':
       return { type: 'continue', label: 'Season review' };
@@ -490,7 +491,7 @@ function raceCard(s, race, track, grid, order, me) {
     series: se.series,
     round: se.round + 1,
     of: se.cal.length,
-    track: track.name,
+    track: se.series === 'F1' || track.name.endsWith('round') ? track.name : `${track.short} round`,
     short: track.short,
     flag: flagOf(track.nat),
     wet: race.wet,
