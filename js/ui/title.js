@@ -8,7 +8,7 @@ import { todayKey, dailySetup } from '../engine/daily.js';
 import { ACHIEVEMENTS } from '../engine/achievements.js';
 import { store } from '../store.js';
 import { coffeeButton } from './donate.js';
-import { openHallOfFame, openAchievements, openSettings, openBackup, openAbout, allUnlocked } from './modals.js';
+import { openHallOfFame, openAchievements, openSettings, openBackup, openAbout, allUnlocked, openLeaderboard } from './modals.js';
 import { car } from './car.js';
 import { sfx } from './sfx.js';
 
@@ -89,6 +89,7 @@ export function renderTitle(app, { seed, daily } = {}) {
     h(
       'nav',
       { class: 'title-links', 'aria-label': 'More' },
+      h('button', { class: 'btn btn-ghost', onClick: () => openLeaderboard(app, { tab: dly ? 'daily' : 'all' }) }, '🏆 Global leaderboard'),
       h('button', { class: 'btn btn-ghost', onClick: () => openHallOfFame(app) }, 'Hall of fame'),
       h('button', { class: 'btn btn-ghost', onClick: () => openAchievements(app) }, `Achievements ${ach.size}/${ACHIEVEMENTS.length}`),
       h('button', { class: 'btn btn-ghost', onClick: () => openBackup(app) }, 'Backup'),

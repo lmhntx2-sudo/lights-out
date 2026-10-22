@@ -1,0 +1,105 @@
+// Rebuild a finished career from its setup and action log (s.setup, s.log).
+// The engine is deterministic, so the same setup and the same calls give the
+// same life. The global leaderboard replays every submission with this.
+//
+// Only calls the game's own buttons could have made are accepted: an action
+// that the engine would ignore, a choice that isn't on screen, or a seat the
+// driver can't afford is rejected rather than skipped.
+import { newGame, prompt, advance, choose, pickOffer, retireNow } from './game.js';
+import { cleanSeed } from '../core/rng.js';
+import { NATIONS } from '../data/nations.js';
+import { STYLES, BACKGROUNDS } from './constants.js';
+import { dailySetup } from './daily.js';
+
+// A long career is about 1,500 calls; this leaves plenty of room.
+export const MAX_ACTIONS = 12000;
+
+export class ReplayError extends Error {
+  constructor(code, message) {
+    super(message);
+    this.code = code;
+  }
+}
+
+const fail = (code, message) => {
+  throw new ReplayError(code, message);
+};
+
+const own = (obj, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(obj, k);
+const HEX = /^#[0-9a-f]{6}$/i;
+const DAILY_SEED = /^daily-(\d{4}-\d{2}-\d{2})$/;
+
+// Check a setup as the title screen builds it, and return a clean copy with only
+// the fields newGame reads. Anything the title screen could not produce is refused.
+export function validateSetup(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) fail('setup', 'The career setup is missing.');
+  const { seed, first, last, nat, style, bg, helmet, number, daily } = raw;
+  if (typeof seed !== 'string' || !seed || cleanSeed(seed) !== seed) fail('setup', 'The world seed is not valid.');
+  if (typeof first !== 'string' || typeof last !== 'string' || first.length > 30 || last.length > 30) fail('setup', 'The driver name is not valid.');
+  if (!first.trim() && !last.trim()) fail('setup', 'The driver needs a name.');
+  if (!NATIONS.some((n) => n.id === nat)) fail('setup', 'The nationality is not valid.');
+  if (!own(STYLES, style)) fail('setup', 'The driving style is not valid.');
+  if (!own(BACKGROUNDS, bg)) fail('setup', 'The background is not valid.');
+  if (!helmet || !HEX.test(helmet.c1) || !HEX.test(helmet.c2)) fail('setup', 'The helmet colours are not valid.');
+  if (!Number.isInteger(number) || number < 2 || number > 99) fail('setup', 'The race number is not valid.');
+
+  const setup = { seed, first, last, nat, style, bg, helmet: { c1: helmet.c1, c2: helmet.c2 }, number, daily: null };
+  if (daily != null) {
+    // A daily challenge has to be exactly the one the title screen hands out for
+    // that date: same seed, driver and goal, and never already completed. The goal
+    // text is only for display (and may be translated), so it isn't compared.
+    const m = DAILY_SEED.exec(seed);
+    const want = m && typeof daily === 'object' && daily.date === m[1] ? dailySetup(m[1]) : null;
+    if (!want || nat !== want.nat || style !== want.style || bg !== want.bg || daily.goal !== want.goal) {
+      fail('setup', 'This daily challenge does not match the one for its date.');
+    }
+    setup.daily = { date: want.date, goal: want.goal, goalText: want.goalText };
+  }
+  return setup;
+}
+
+function step(s, a, k) {
+  const m = typeof a === 'string' ? /^(?:(a|r)|(c|o)(\d{1,2}))$/.exec(a) : null;
+  if (!m) fail('log', `Action ${k} is not a game action.`);
+  if (s.stage === 'retired') fail('log', `Action ${k} comes after retirement.`);
+  const kind = m[1] || m[2];
+  const i = m[3] == null ? -1 : Number(m[3]);
+  if (kind === 'a') {
+    if (s.pending) fail('log', `Action ${k} skips a decision.`);
+    return () => advance(s);
+  }
+  if (kind === 'c') {
+    const p = prompt(s);
+    if (p.type !== 'choice' || i >= p.choices.length) fail('log', `Action ${k} picks a choice that was not offered.`);
+    return () => choose(s, i);
+  }
+  if (kind === 'o') {
+    const o = !s.pending && s.stage === 'offers' ? s.offers?.[i] : null;
+    if (!o) fail('log', `Action ${k} picks an offer that was not on the table.`);
+    const priced = o.kind !== 'retire' && o.kind !== 'endurance';
+    if (priced && o.cost && o.cost > s.driver.money) fail('log', `Action ${k} buys a seat the driver could not afford.`);
+    return () => pickOffer(s, i);
+  }
+  return () => retireNow(s);
+}
+
+// Returns the retired career state. Throws ReplayError if the log is not a
+// complete, legal career.
+export function replayCareer(rawSetup, actions, { maxActions = MAX_ACTIONS } = {}) {
+  const setup = validateSetup(rawSetup);
+  if (!Array.isArray(actions) || !actions.length) fail('log', 'The career log is empty.');
+  if (actions.length > maxActions) fail('log', `The career log is longer than ${maxActions} actions.`);
+  const s = newGame(setup);
+  for (let k = 0; k < actions.length; k++) {
+    const run = step(s, actions[k], k);
+    // The UI catches an engine error on one click and carries on from there,
+    // so the replay does the same to stay in step with what the player saw.
+    try {
+      run();
+    } catch {
+      // keep going, exactly like the browser did
+    }
+  }
+  if (s.stage !== 'retired' || !s.retired) fail('unfinished', 'The career has not ended in retirement yet.');
+  return s;
+}

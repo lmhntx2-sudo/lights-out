@@ -9,6 +9,9 @@ import { ACHIEVEMENTS, netWorth } from '../engine/achievements.js';
 import { nation } from '../data/nations.js';
 import { GAME } from '../config.js';
 import { allTime } from '../engine/legacy.js';
+import { todayKey, dailySetup } from '../engine/daily.js';
+import { checkDisplayName, NAME_MIN, NAME_MAX } from '../core/displayname.js';
+import { fetchBoard, submitCareer } from '../api.js';
 import { setSound } from './sfx.js';
 
 export function openDialog(title, body, { onClose } = {}) {
@@ -43,13 +46,13 @@ export function confirmDialog(title, text, okLabel, onOk) {
   dlg = openDialog(title, body);
 }
 
-function tabs(spec) {
+function tabs(spec, start = 0) {
   const bar = h('div', { class: 'tabs', role: 'tablist' });
   const panel = h('div', { role: 'tabpanel' });
   const btns = spec.map(([label, render], i) => {
     const b = h('button', {
       role: 'tab',
-      'aria-selected': i === 0 ? 'true' : 'false',
+      'aria-selected': i === start ? 'true' : 'false',
       onClick: () => {
         btns.forEach((x) => x.setAttribute('aria-selected', 'false'));
         b.setAttribute('aria-selected', 'true');
@@ -59,7 +62,7 @@ function tabs(spec) {
     return b;
   });
   bar.append(...btns);
-  panel.append(spec[0][1]());
+  panel.append(spec[start][1]());
   return h('div', null, spec.length > 1 ? bar : null, panel);
 }
 
@@ -258,6 +261,132 @@ export function openRecords(app) {
     ? `You rank #${rows.indexOf(me) + 1} for titles and #${byWins.indexOf(me) + 1} for wins among ${rows.length} Grand Prix drivers.`
     : 'Start a Formula 1 race to appear here.';
   openDialog('All-time records', h('div', null, h('p', { style: 'margin-top:0;color:var(--ink-2)' }, intro), tabs([['Most titles', () => table(rows)], ['Most wins', () => table(byWins)]])));
+}
+
+// ------------------------------------------------------------ global leaderboard
+
+function boardTable(entries, mine, daily) {
+  return h(
+    'table',
+    { class: 'table lb-table' },
+    h('thead', null, h('tr', null, h('th', { class: 'r' }, '#'), h('th', null, 'Driver'), h('th', { class: 'r' }, 'Score'))),
+    h(
+      'tbody',
+      null,
+      entries.map((e, i) => {
+        const record = e.starts ? `${plural(e.titles, 'title')}, ${plural(e.wins, 'win')}` : 'No Grand Prix start';
+        return h(
+          'tr',
+          { class: mine.has(e.id) ? 'me' : '' },
+          h('td', { class: 'r lb-pos' }, i + 1),
+          h(
+            'td',
+            null,
+            h('div', { class: 'lb-name' }, e.name, mine.has(e.id) ? h('span', { class: 'lb-you' }, 'You') : null),
+            h(
+              'div',
+              { class: 'lb-sub' },
+              daily ? h('span', { class: `lb-goal${e.daily?.done ? ' ok' : ''}` }, e.daily?.done ? 'Goal met' : 'Goal missed') : null,
+              [e.flag, [e.driver, e.tier, record].filter(Boolean).join(' · ')].filter(Boolean).join(' '),
+            ),
+          ),
+          h('td', { class: 'r lb-score' }, e.score),
+        );
+      }),
+    ),
+  );
+}
+
+export function openLeaderboard(app, { tab = 'all' } = {}) {
+  const mine = store.boardMine();
+  const date = todayKey();
+  const canPlay = !app.s || app.s.stage === 'retired';
+  let dlg;
+  const load = (board) => {
+    const box = h('div', { 'aria-busy': 'true' }, h('p', { class: 'empty' }, 'Loading the leaderboard…'));
+    fetchBoard(board, board === 'daily' ? date : null)
+      .then((data) => {
+        const empty = board === 'daily' ? 'Nobody has submitted today’s challenge yet. Be the first.' : 'No careers on the board yet. Finish one and be the first.';
+        box.replaceChildren(data.entries.length ? boardTable(data.entries, mine, board === 'daily') : h('p', { class: 'empty' }, empty));
+      })
+      .catch((e) => {
+        box.replaceChildren(h('p', { class: 'empty' }, 'The leaderboard could not be loaded.'));
+        toast(e.message);
+      })
+      .finally(() => box.removeAttribute('aria-busy'));
+    return box;
+  };
+  const allTab = () => h('div', null, h('p', { class: 'lb-intro' }, 'The top 100 careers by legacy score. The server replays every one from its seed before it goes on the board.'), load('all'));
+  const dailyTab = () =>
+    h(
+      'div',
+      null,
+      h('p', { class: 'lb-intro' }, h('b', null, `Goal for ${date}: `), dailySetup(date).goalText, ' Meeting it puts you above everyone who missed it, then legacy score decides.'),
+      canPlay ? h('button', { class: 'btn btn-sm', style: 'margin-bottom:12px', onClick: () => { dlg.close(); app.showTitle({ daily: true }); } }, 'Play today’s challenge') : null,
+      load('daily'),
+    );
+  dlg = openDialog('Global leaderboard', tabs([['All-time', allTab], ['Today’s daily challenge', dailyTab]], tab === 'daily' ? 1 : 0));
+}
+
+export function boardResultText(b, duplicate = false) {
+  if (duplicate) return 'This career is already on the global leaderboard.';
+  const daily = b.daily ? `#${b.daily} in the daily challenge` : null;
+  if (b.rank) return `You are #${b.rank} on the global leaderboard${daily ? ` and ${daily}` : ''}.`;
+  return `Career verified. It did not make the all-time top 100${daily ? `, but you are ${daily}` : ''}.`;
+}
+
+export function openSubmitDialog(app, onDone) {
+  const s = app.s;
+  const sum = s.retired;
+  const hint = `Everyone can see it next to your score. ${NAME_MIN} to ${NAME_MAX} characters: letters, numbers, spaces and basic punctuation.`;
+  let dlg;
+  const input = h('input', { class: 'input', id: 'lb-name', maxlength: NAME_MAX, autocomplete: 'nickname', spellcheck: 'false', 'aria-describedby': 'lb-name-hint' });
+  input.value = store.boardName() || '';
+  const msg = h('p', { class: 'hint', id: 'lb-name-hint' }, hint);
+  const go = h('button', { class: 'btn btn-go', type: 'submit' }, 'Submit career');
+  const form = h(
+    'form',
+    { class: 'lb-form', novalidate: true },
+    h('p', { style: 'margin-top:0;color:var(--ink-2)' }, `${sum.name}, legacy score ${sum.score}. The server replays the whole career from its seed to check it.`),
+    sum.daily ? h('p', { style: 'color:var(--ink-2)' }, `It also goes on the daily challenge board for ${sum.daily.date}, goal ${sum.daily.done ? 'met' : 'missed'}.`) : null,
+    h('label', { for: 'lb-name' }, 'Display name'),
+    input,
+    msg,
+    h('div', { class: 'row', style: 'justify-content:flex-end;margin-top:16px' }, h('button', { class: 'btn btn-ghost', type: 'button', onClick: () => dlg.close() }, 'Cancel'), go),
+  );
+  input.addEventListener('input', () => {
+    msg.classList.remove('bad');
+    msg.textContent = hint;
+  });
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const c = checkDisplayName(input.value);
+    if (!c.ok) {
+      msg.textContent = c.error;
+      msg.classList.add('bad');
+      input.focus();
+      return;
+    }
+    go.disabled = true;
+    go.textContent = 'Checking your career…';
+    try {
+      const res = await submitCareer(s, c.name);
+      store.setBoardName(c.name);
+      store.addBoardMine(res.entry.id);
+      sum.board = { id: res.entry.id, name: res.entry.name, rank: res.ranks.all, daily: res.ranks.daily, dailyDate: res.dailyBoard };
+      app.save();
+      dlg.close();
+      toast(boardResultText(sum.board, res.duplicate));
+      onDone?.();
+    } catch (e) {
+      toast(e.message);
+      go.disabled = false;
+      go.textContent = 'Submit career';
+    }
+  });
+  dlg = openDialog('Submit to the global leaderboard', form);
+  input.focus();
+  input.select();
 }
 
 // ------------------------------------------------------------ settings, backup, about

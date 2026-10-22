@@ -2,6 +2,11 @@
   command = "node tools/build.mjs"
   publish = "dist"
 
+# The leaderboard function imports the game engine from js/, so bundle it with esbuild.
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
 [[headers]]
   for = "/*"
   [headers.values]

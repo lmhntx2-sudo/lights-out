@@ -1,4 +1,5 @@
-// Tiny static file server for local play-testing. No dependencies.
+// Tiny static file server for local play-testing. No dependencies for the game
+// itself; after `npm install` it also runs the global leaderboard function.
 // Usage: node tools/serve.mjs [port]
 import { createServer } from 'node:http';
 import { readFile, stat, writeFile, mkdir } from 'node:fs/promises';
@@ -38,9 +39,41 @@ async function save(req, res, path) {
   res.writeHead(200).end('saved');
 }
 
+// Dev helper: /api/leaderboard runs the real Netlify Function against Netlify's
+// local Blobs server (data in tmp/blobs). Without `npm install` the game still
+// runs and the leaderboard just shows its "not available" message.
+async function startLeaderboard() {
+  try {
+    const { startLocalBlobs } = await import('./local-blobs.mjs');
+    const { default: fn } = await import('../netlify/functions/leaderboard.mjs');
+    await startLocalBlobs();
+    return fn;
+  } catch {
+    console.log('Global leaderboard is off. Run npm install to try it locally.');
+    return null;
+  }
+}
+
+const leaderboard = await startLeaderboard();
+
+async function api(req, res) {
+  if (!leaderboard) {
+    res.writeHead(503, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'The global leaderboard is not running. Run npm install, then npm start.' }));
+    return;
+  }
+  const chunks = [];
+  for await (const c of req) chunks.push(c);
+  const body = req.method === 'GET' || req.method === 'HEAD' ? undefined : Buffer.concat(chunks);
+  const request = new Request(new URL(req.url, `http://localhost:${port}`), { method: req.method, headers: req.headers, body });
+  const out = await leaderboard(request, { ip: req.socket.remoteAddress, deploy: { context: 'dev' } });
+  res.writeHead(out.status, Object.fromEntries(out.headers));
+  res.end(Buffer.from(await out.arrayBuffer()));
+}
+
 createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost');
+    if (url.pathname === '/api/leaderboard') return await api(req, res);
     if (req.method === 'POST' && url.pathname.startsWith('/__save/')) return await save(req, res, url.pathname);
     let path = normalize(decodeURIComponent(url.pathname)).replace(/^([/\\])+/, '');
     let file = join(root, path);
