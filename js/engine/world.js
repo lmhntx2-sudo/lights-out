@@ -98,6 +98,7 @@ export function seatsOf(s, series) {
 export const isPlayer = (id) => id === 'P';
 
 export function nameOf(s, id) {
+  if (id === 'P' && s.driver?.name) return s.driver.name;
   const d = s.drivers[id];
   return d ? `${d.first} ${d.last}` : 'Unknown';
 }

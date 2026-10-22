@@ -1,5 +1,6 @@
 import { h } from './dom.js';
 import { car } from './car.js';
+import { t } from '../i18n.js';
 
 const reduced = () => {
   try {
@@ -55,14 +56,14 @@ export function confetti(colors = ['#e10600', '#ffffff', '#ffd12e'], { count = 1
 
 // Full-screen moment for a championship.
 export function takeover({ lines, year, sub, livery, onClose }) {
-  const btn = h('button', { class: 'btn btn-go' }, 'Continue');
+  const btn = h('button', { class: 'btn btn-go' }, t('Continue'));
   const el = h(
     'div',
     { class: 'takeover', role: 'dialog', 'aria-modal': 'true', 'aria-label': lines.join(' ') },
     h(
       'div',
       { class: 'in' },
-      livery ? car(livery, { label: 'Your championship-winning car' }) : null,
+      livery ? car(livery, { label: t('Your championship-winning car') }) : null,
       h('div', { class: 'yr' }, year),
       h('h2', null, h('span', null, lines[0]), lines[1]),
       sub ? h('p', null, sub) : null,

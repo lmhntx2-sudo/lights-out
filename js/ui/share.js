@@ -3,12 +3,15 @@ import { h, toast, copyText } from './dom.js';
 import { openDialog } from './modals.js';
 import { carSvg } from './car.js';
 import { helmetSvg } from './helmet.js';
-import { shareText } from '../engine/legacy.js';
+import { shareText, summaryWords } from '../engine/legacy.js';
 import { money } from '../core/fmt.js';
+import { t } from '../i18n.js';
 
 const W = 1080;
 const H = 1350;
 const RED = '#e10600';
+// Saira and Titillium have no Chinese, so names and text in Chinese fall back to these.
+const CJK = '"PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif';
 
 function svgImage(markup) {
   return new Promise((resolve) => {
@@ -35,18 +38,23 @@ function fit(g, text, base, maxW, make) {
   return size;
 }
 
+// Latin text breaks between words. Chinese has no spaces and may break between
+// any two characters, but never just before a comma or a full stop.
+const CJK_CHAR = '\u2E80-\u2FFF\u3000-\u9FFF\uF900-\uFAFF\uFF00-\uFFEF';
+const CLOSING = '、。，．：；！？」』）〉》】';
+const TOKENS = new RegExp(`[${CJK_CHAR}][${CLOSING}]*|[^\\s${CJK_CHAR}]+[${CLOSING}]*\\s*|\\s+`, 'g');
+
 function wrap(g, text, maxW) {
-  const words = text.split(' ');
   const lines = [];
   let line = '';
-  for (const w of words) {
-    const next = line ? `${line} ${w}` : w;
-    if (g.measureText(next).width > maxW && line) {
-      lines.push(line);
-      line = w;
+  for (const tok of text.match(TOKENS) || []) {
+    const next = line + tok;
+    if (g.measureText(next.trimEnd()).width > maxW && line.trim()) {
+      lines.push(line.trimEnd());
+      line = tok.trimStart();
     } else line = next;
   }
-  if (line) lines.push(line);
+  if (line.trim()) lines.push(line.trimEnd());
   return lines;
 }
 
@@ -65,7 +73,7 @@ export async function renderCard(sum) {
     await Promise.all([
       document.fonts.load('italic 900 80px Saira'),
       document.fonts.load('700 60px "Titillium Web"'),
-      document.fonts.load('600 30px "Titillium Web"'),
+      document.fonts.load(`600 30px "Titillium Web", ${CJK}`),
       document.fonts.load('60px "Twemoji Country Flags"', sum.flag),
     ]);
   } catch {
@@ -94,11 +102,11 @@ export async function renderCard(sum) {
 
   // brand and start lights
   g.fillStyle = '#ffffff';
-  setFont(g, 'italic 900 46px Saira', 'expanded');
+  setFont(g, `italic 900 46px Saira, ${CJK}`, 'expanded');
   g.fillText('LIGHTS OUT', 64, 100);
-  setFont(g, '600 26px "Titillium Web"');
+  setFont(g, `600 26px "Titillium Web", ${CJK}`);
   g.fillStyle = '#b9b9c6';
-  g.fillText('Racing career simulator', 66, 136);
+  g.fillText(t('Racing career simulator'), 66, 136);
   for (let i = 0; i < 5; i++) {
     const x = W - 64 - (5 - i) * 56 + 8;
     g.fillStyle = '#050508';
@@ -127,21 +135,23 @@ export async function renderCard(sum) {
 
   // name and tier
   g.fillStyle = '#ffffff';
-  const nameSize = fit(g, `${sum.name} ${sum.flag}`, 62, W - 260, (s) => `700 ${s}px "Twemoji Country Flags", "Titillium Web"`);
-  setFont(g, `700 ${nameSize}px "Twemoji Country Flags", "Titillium Web"`);
+  const nameSize = fit(g, `${sum.name} ${sum.flag}`, 62, W - 260, (s) => `700 ${s}px "Twemoji Country Flags", "Titillium Web", ${CJK}`);
+  setFont(g, `700 ${nameSize}px "Twemoji Country Flags", "Titillium Web", ${CJK}`);
   g.fillText(`${sum.name} ${sum.flag}`, 180, 568);
-  setFont(g, '600 28px "Titillium Web"');
+  setFont(g, `600 28px "Titillium Web", ${CJK}`);
   g.fillStyle = '#b9b9c6';
-  g.fillText(`#${sum.number ?? ''}  ${sum.bg}, ${sum.style.toLowerCase()}`, 182, 606);
+  const words = summaryWords(sum);
+  g.fillText(`#${sum.number ?? ''}  ${t('{bg}, {style}', { bg: words.bg, style: words.style.toLowerCase() })}`, 182, 606);
 
   g.fillStyle = champ ? '#d4af37' : '#ffffff';
-  setFont(g, 'italic 900 86px Saira', 'expanded');
+  setFont(g, `italic 900 86px Saira, ${CJK}`, 'expanded');
   let size = 86;
-  let lines = wrap(g, sum.tier.toUpperCase(), W - 128);
+  const tier = words.tier.toUpperCase();
+  let lines = wrap(g, tier, W - 128);
   while (lines.length > 2 && size > 40) {
     size -= 6;
-    setFont(g, `italic 900 ${size}px Saira`, 'expanded');
-    lines = wrap(g, sum.tier.toUpperCase(), W - 128);
+    setFont(g, `italic 900 ${size}px Saira, ${CJK}`, 'expanded');
+    lines = wrap(g, tier, W - 128);
   }
   lines.forEach((l, i) => g.fillText(l, 60, 712 + i * size * 0.95));
   const tierBottom = 712 + (lines.length - 1) * size * 0.95;
@@ -149,8 +159,8 @@ export async function renderCard(sum) {
   // stat boxes
   const f = sum.f1;
   const stats = f.starts
-    ? [['Titles', f.titles], ['Wins', f.wins], ['Podiums', f.podiums], ['Starts', f.starts]]
-    : [['Junior titles', sum.junior.titles], ['Junior wins', sum.junior.wins], ['Seasons', sum.seasons], ['Net worth', money(sum.worth)]];
+    ? [[t('Titles'), f.titles], [t('Wins'), f.wins], [t('Podiums'), f.podiums], [t('Starts'), f.starts]]
+    : [[t('Junior titles'), sum.junior.titles], [t('Junior wins'), sum.junior.wins], [t('Seasons'), sum.seasons], [t('Net worth'), money(sum.worth)]];
   const bw = (W - 128 - 3 * 20) / 4;
   const by = tierBottom + 50;
   stats.forEach(([k, v], i) => {
@@ -159,20 +169,21 @@ export async function renderCard(sum) {
     roundRect(g, x, by, bw, 168, 14);
     g.fill();
     g.fillStyle = i === 0 && champ ? '#d4af37' : '#ffffff';
-    fit(g, String(v), 76, bw - 40, (s) => `italic 900 ${s}px Saira`);
+    fit(g, String(v), 76, bw - 40, (s) => `italic 900 ${s}px Saira, ${CJK}`);
     g.fillText(String(v), x + 22, by + 96);
-    setFont(g, '600 26px "Titillium Web"');
+    setFont(g, `600 26px "Titillium Web", ${CJK}`);
     g.fillStyle = '#82828f';
     g.fillText(k, x + 24, by + 140);
   });
 
   // story lines
   let y = by + 230;
-  setFont(g, '600 30px "Titillium Web"');
+  setFont(g, `600 30px "Titillium Web", ${CJK}`);
   g.fillStyle = '#f7f7f9';
   const facts = [];
-  if (sum.ranks && (f.titles || f.wins)) facts.push(`#${sum.ranks.titles} all-time for titles, #${sum.ranks.wins} for wins.`);
-  facts.push(`${sum.how === 'endurance' ? 'Left for endurance racing' : 'Retired'} at ${sum.age} in ${sum.endYear}. Net worth ${money(sum.worth)}.`);
+  if (sum.ranks && (f.titles || f.wins)) facts.push(t('#{titles} all-time for titles, #{wins} for wins.', sum.ranks));
+  const end = { age: sum.age, year: sum.endYear, money: money(sum.worth) };
+  facts.push(sum.how === 'endurance' ? t('Left for endurance racing at {age} in {year}. Net worth {money}.', end) : t('Retired at {age} in {year}. Net worth {money}.', end));
   for (const fact of facts) {
     for (const l of wrap(g, fact, W - 128)) {
       g.fillText(l, 64, y);
@@ -181,7 +192,7 @@ export async function renderCard(sum) {
   }
   if (sum.lines?.[0] && y < H - 230) {
     g.fillStyle = '#b9b9c6';
-    setFont(g, 'italic 600 28px "Titillium Web"');
+    setFont(g, `italic 600 28px "Titillium Web", ${CJK}`);
     for (const l of wrap(g, sum.lines[0], W - 128).slice(0, 2)) {
       g.fillText(l, 64, y + 6);
       y += 40;
@@ -196,11 +207,11 @@ export async function renderCard(sum) {
     g.fillRect(x, H - 150, 60, 8);
   }
   g.fillStyle = '#ffffff';
-  setFont(g, '700 36px "Titillium Web"');
-  g.fillText(`Play free at ${location.host}`, 64, H - 82);
-  setFont(g, '600 26px "Titillium Web"');
+  setFont(g, `700 36px "Titillium Web", ${CJK}`);
+  g.fillText(t('Play free at {host}', { host: location.host }), 64, H - 82);
+  setFont(g, `600 26px "Titillium Web", ${CJK}`);
   g.fillStyle = '#82828f';
-  g.fillText(`Seed ${sum.seed}: same seed, same world`, 64, H - 40);
+  g.fillText(t('Seed {seed}: same seed, same world', { seed: sum.seed }), 64, H - 40);
   return c;
 }
 
@@ -214,23 +225,23 @@ export async function openShare(sum) {
   const canShareFile = !!(file && navigator.canShare && navigator.canShare({ files: [file] }));
 
   const buttons = [
-    h('a', { class: 'btn btn-go', href: url, download: `lights-out-${slug}.png`, style: 'font-size:16px;padding:10px 18px' }, 'Download image'),
+    h('a', { class: 'btn btn-go', href: url, download: `lights-out-${slug}.png`, style: 'font-size:16px;padding:10px 18px' }, t('Download image')),
     canShareFile
       ? h('button', {
           class: 'btn',
           onClick: async () => {
             try {
-              await navigator.share({ files: [file], title: 'My Lights Out career', text });
+              await navigator.share({ files: [file], title: t('My Lights Out career'), text });
             } catch {
               // the player closed the share sheet
             }
           },
-        }, 'Share')
+        }, t('Share'))
       : null,
     h('button', {
       class: 'btn',
-      onClick: async () => toast((await copyText(text)) ? 'Career summary copied. Paste it anywhere.' : 'Copy failed. Your browser blocked the clipboard.'),
-    }, 'Copy text'),
+      onClick: async () => toast((await copyText(text)) ? t('Career summary copied. Paste it anywhere.') : t('Copy failed. Your browser blocked the clipboard.')),
+    }, t('Copy text')),
   ];
-  openDialog('Share your career', h('div', { class: 'share-preview' }, h('img', { src: url, alt: `Career card for ${sum.name}: ${sum.tier}` }), h('div', { class: 'row' }, buttons)));
+  openDialog(t('Share your career'), h('div', { class: 'share-preview' }, h('img', { src: url, alt: t('Career card for {name}: {tier}', { name: sum.name, tier: summaryWords(sum).tier }) }), h('div', { class: 'row' }, buttons)));
 }

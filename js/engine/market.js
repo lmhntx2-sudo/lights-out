@@ -4,7 +4,8 @@ import { TRACKS, CALENDARS } from '../data/tracks.js';
 import { teamsOf, seatsOf, newJunior, makeAIDriver, removeFromSeats, carTier, nameOf } from './world.js';
 import { developAI, overall } from './player.js';
 import { quickRace, pointsFor } from './race.js';
-import { clamp } from '../core/fmt.js';
+import { clamp, plural } from '../core/fmt.js';
+import { t as tr, seriesName } from '../i18n.js';
 
 export const newStand = () => ({ pts: 0, w: 0, pod: 0, pole: 0, best: 99, starts: 0 });
 
@@ -117,7 +118,7 @@ export function offseasonAI(s, r) {
         d.out = true;
         d.team = null;
         t.seats[k] = null;
-        if (d.wins > 0 || d.titles > 0) news.push(`${d.first} ${d.last} retires with ${d.titles ? `${d.titles} ${d.titles === 1 ? 'title' : 'titles'} and ` : ''}${d.wins} ${d.wins === 1 ? 'win' : 'wins'}.`);
+        if (d.wins > 0 || d.titles > 0) news.push(tr('{name} retires with {record}.', { name: `${d.first} ${d.last}`, record: d.titles ? tr('{titles} and {wins}', { titles: plural(d.titles, 'title'), wins: plural(d.wins, 'win') }) : plural(d.wins, 'win') }));
         return;
       }
       if (d.contract > 0) return;
@@ -133,6 +134,34 @@ export function offseasonAI(s, r) {
 }
 
 // ------------------------------------------------------------ offers
+
+// Offer labels and notes are stored as keys, so they read right in whichever
+// language is active when the offers are on screen.
+const OFFER_NOTES = {
+  dropped: (v) => tr('{name} would be dropped to make room.', v),
+  body: () => tr('Your body has made the decision for you.'),
+  farewell: () => tr('The farewell tour is over.'),
+  endurance: () => tr('Swap single-seaters for Le Mans. This ends your formula career.'),
+  signed: () => tr('The pre-contract you signed takes effect.'),
+  years: (v) => tr('{years} left on your contract.', { years: plural(v.n, 'year') }),
+  buyout: (v) => tr('{team} will pay your release clause.', v),
+  keep: () => tr('Your current team wants to keep you.'),
+  reserve: () => tr('Test, simulate, and wait for a call. Someone always gets ill.'),
+  believe: () => tr('They will take what you can pay. Someone believes in you.'),
+};
+
+const OFFER_LABELS = {
+  retire: () => tr('Retire'),
+  terms: () => tr('Retire on your own terms'),
+  instead: () => tr('Retire instead'),
+  walk: () => tr('Walk away from racing'),
+  endurance: () => tr('Join a factory endurance team'),
+};
+
+// Older saves hold plain English strings here.
+const word = (x, table) => (!x ? null : typeof x === 'string' ? x : table[x.k]?.(x) ?? null);
+export const offerNote = (o) => word(o.note, OFFER_NOTES);
+export const offerLabel = (o) => word(o.label, OFFER_LABELS);
 
 const offerFrom = (s, t, extra) => ({ kind: 'seat', series: t.series, team: t.id, name: t.name, color: t.color, tier: carTier(s, t), ...extra });
 
@@ -168,7 +197,7 @@ function f1SeatOffers(s, r, pv, exclude) {
     const score = pv + teamBonus(s, t) + r.normal(0, 1.5);
     if (score >= wantF1(t) && score >= rival - 0.5) {
       const years = s.driver.age >= 33 ? 1 : pv >= 86 ? r.int(2, 3) : 2;
-      offers.push(offerFrom(s, t, { years, salary: salaryFor(pv, t), note: open ? null : `${s.drivers[t.seats[weak.k]].last} would be dropped to make room.` }));
+      offers.push(offerFrom(s, t, { years, salary: salaryFor(pv, t), note: open ? null : { k: 'dropped', name: s.drivers[t.seats[weak.k]].last } }));
     }
   }
   return offers.sort((a, b) => b.tier - a.tier).slice(0, 4);
@@ -196,32 +225,32 @@ function feederOffers(s, r, pv, series, tag) {
 export function generateOffers(s, r) {
   const d = s.driver;
   const c = s.career;
-  const retire = (label, note) => ({ kind: 'retire', label, note });
-  if (d.age + 1 >= RETIRE_AGE) return [retire('Retire', 'Your body has made the decision for you.')];
-  if (s.flags.farewell) return [retire('Retire on your own terms', 'The farewell tour is over.')];
+  const retire = (label, note) => ({ kind: 'retire', label: { k: label }, note: note ? { k: note } : null });
+  if (d.age + 1 >= RETIRE_AGE) return [retire('retire', 'body')];
+  if (s.flags.farewell) return [retire('terms', 'farewell')];
 
   const pv = playerValue(s);
   const offers = [];
-  const endurance = { kind: 'endurance', label: 'Join a factory endurance team', note: 'Swap single-seaters for Le Mans. This ends your formula career.' };
+  const endurance = { kind: 'endurance', label: { k: 'endurance' }, note: { k: 'endurance' } };
 
   if (s.flags.signFor && s.teams[s.flags.signFor]) {
     const t = s.teams[s.flags.signFor];
     delete s.flags.signFor;
-    offers.push(offerFrom(s, t, { years: 2, salary: salaryFor(pv, t), tag: 'signed', note: 'The pre-contract you signed takes effect.' }));
-    if (d.age >= 30) offers.push(retire('Retire instead'));
+    offers.push(offerFrom(s, t, { years: 2, salary: salaryFor(pv, t), tag: 'signed', note: { k: 'signed' } }));
+    if (d.age >= 30) offers.push(retire('instead'));
     return offers;
   }
 
   if (c.series === 'F1' && c.role === 'race') {
     const own = s.teams[c.team];
     if (c.contract && c.contract.years > 0) {
-      offers.push({ kind: 'stay', series: 'F1', team: own.id, name: own.name, color: own.color, tier: carTier(s, own), years: c.contract.years, salary: c.contract.salary, note: `${c.contract.years} ${c.contract.years === 1 ? 'year' : 'years'} left on your contract.` });
+      offers.push({ kind: 'stay', series: 'F1', team: own.id, name: own.name, color: own.color, tier: carTier(s, own), years: c.contract.years, salary: c.contract.salary, note: { k: 'years', n: c.contract.years } });
       const better = f1SeatOffers(s, r, pv, own.id).filter((o) => s.teams[o.team].perf > own.perf + 2);
-      if (better[0]) offers.push({ ...better[0], tag: 'buyout', note: `${s.teams[better[0].team].short} will pay your release clause.` });
+      if (better[0]) offers.push({ ...better[0], tag: 'buyout', note: { k: 'buyout', team: s.teams[better[0].team].short } });
     } else {
       const want = wantF1(own);
       if (pv + teamBonus(s, own) + r.normal(0, 1.5) >= want - 3) {
-        offers.push(offerFrom(s, own, { years: d.age >= 33 ? 1 : r.int(1, 3), salary: Math.round(salaryFor(pv, own) * 1.05), tag: 'renew', note: 'Your current team wants to keep you.' }));
+        offers.push(offerFrom(s, own, { years: d.age >= 33 ? 1 : r.int(1, 3), salary: Math.round(salaryFor(pv, own) * 1.05), tag: 'renew', note: { k: 'keep' } }));
       }
       offers.push(...f1SeatOffers(s, r, pv, own.id).slice(0, 3));
     }
@@ -259,7 +288,7 @@ export function generateOffers(s, r) {
     if (series === 'F2' && d.age >= 21) offers.push(endurance);
     makeOneAffordable(s, offers);
   }
-  offers.push(retire(d.age < 28 ? 'Walk away from racing' : 'Retire'));
+  offers.push(retire(d.age < 28 ? 'walk' : 'retire'));
   return offers;
 }
 
@@ -267,7 +296,7 @@ function reserveOffer(s, r, pv, current) {
   if (pv < 70 || !hasLicence(s)) return null;
   const tops = teamsOf(s, 'F1').sort((a, b) => b.prestige - a.prestige).slice(0, 5);
   const t = (current && s.teams[current]) || tops[r.int(0, tops.length - 1)];
-  return { kind: 'reserve', series: 'F1', team: t.id, name: t.name, color: t.color, tier: carTier(s, t), years: 1, salary: 500000, note: 'Test, simulate, and wait for a call. Someone always gets ill.' };
+  return { kind: 'reserve', series: 'F1', team: t.id, name: t.name, color: t.color, tier: carTier(s, t), years: 1, salary: 500000, note: { k: 'reserve' } };
 }
 
 function makeOneAffordable(s, offers) {
@@ -276,7 +305,7 @@ function makeOneAffordable(s, offers) {
   if (offers.some((o) => o.kind === 'seat' && (o.cost || 0) <= s.driver.money)) return;
   const cheapest = paid.sort((a, b) => a.cost - b.cost)[0];
   cheapest.cost = Math.floor((s.driver.money * 0.6) / 5000) * 5000;
-  cheapest.note = 'They will take what you can pay. Someone believes in you.';
+  cheapest.note = { k: 'believe' };
 }
 
 export function takeOffer(s, o) {
@@ -430,5 +459,5 @@ export function rivalNews(s) {
   if (d.out) return null;
   const t = s.teams[d.team];
   if (!t) return null;
-  return `${nameOf(s, d.id)}, your old karting rival, will race in ${SINFO[t.series].name} with ${t.name}.`;
+  return tr('{name}, your old karting rival, will race in {series} with {team}.', { name: nameOf(s, d.id), series: seriesName(t.series), team: t.name });
 }

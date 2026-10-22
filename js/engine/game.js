@@ -19,7 +19,20 @@ import {
 import { pushFeed, story } from './helpers.js';
 import { buildSummary } from './legacy.js';
 import { checkDaily } from './daily.js';
-import { money } from '../core/fmt.js';
+import { money, plural } from '../core/fmt.js';
+import { t as tr, cat, natName, bgText, seriesName, trackName, trackShort } from '../i18n.js';
+
+// "Australian Grand Prix" in F1, "Bahrain round" in the junior series.
+export function roundName(track, series) {
+  return series === 'F1' || track.name.endsWith('round') ? trackName(track) : tr('{track} round', { track: trackShort(track) });
+}
+
+// The team's target for the season, in words.
+export function goalText(goal) {
+  if (!goal) return '';
+  if (goal.type === 'points') return tr('Score at least {n} points', { n: goal.n });
+  return goal.n === 1 ? tr('Win the championship') : tr('Finish in the top {n}', { n: goal.n });
+}
 
 // ------------------------------------------------------------------ setup
 
@@ -68,9 +81,9 @@ export function newGame(setup) {
   pushFeed(s, {
     k: 'chapter',
     year: START_YEAR - 7,
-    big: 'Prologue',
-    title: `${s.driver.name}, ${n.adj} and eight years old`,
-    sub: BACKGROUNDS[s.driver.bg].desc,
+    big: tr('Prologue'),
+    title: tr('{name}, {adj} and eight years old', { name: s.driver.name, adj: n.adj, nation: natName(n) }),
+    sub: bgText(s.driver.bg, 'desc'),
   });
   presentPrologue(s);
   return s;
@@ -110,21 +123,20 @@ export function prompt(s) {
   }
   switch (s.stage) {
     case 'prologue':
-      return { type: 'continue', label: 'Continue' };
+      return { type: 'continue', label: tr('Continue') };
     case 'preseason':
-      return { type: 'continue', label: `Start the ${s.year} season` };
+      return { type: 'continue', label: tr('Start the {year} season', { year: s.year }) };
     case 'race': {
       const se = s.season;
       const t = TRACKS[se.cal[se.round]];
-      const next = se.series === 'F1' || t.name.endsWith('round') ? t.name : `${t.short} round`;
-      return { type: 'race', round: se.round + 1, of: se.cal.length, next, flag: flagOf(t.nat) };
+      return { type: 'race', round: se.round + 1, of: se.cal.length, next: roundName(t, se.series), flag: flagOf(t.nat) };
     }
     case 'seasonEnd':
-      return { type: 'continue', label: 'Season review' };
+      return { type: 'continue', label: tr('Season review') };
     case 'offers':
       return { type: 'offers', offers: s.offers };
     default:
-      return { type: 'continue', label: 'Continue' };
+      return { type: 'continue', label: tr('Continue') };
   }
 }
 
@@ -148,7 +160,10 @@ export function choose(s, i) {
     else {
       s.stage = 'preseason';
       const t = s.teams[s.career.team];
-      story(s, `It's ${START_YEAR}. You're fifteen, and ${t.name} have given you a seat in ${SINFO.F4.name}. ${s.driver.academy ? `The ${s.teams[s.driver.academy].academy} is paying the bills.` : `You pay your own way: ${money(s.driver.money)} in the bank.`}`, { title: 'Into the cars' });
+      const bills = s.driver.academy
+        ? tr('The {academy} is paying the bills.', { academy: s.teams[s.driver.academy].academy })
+        : tr('You pay your own way: {money} in the bank.', { money: money(s.driver.money) });
+      story(s, cat(tr("It's {year}. You're fifteen, and {team} have given you a seat in {series}.", { year: START_YEAR, team: t.name, series: seriesName('F4') }), bills), { title: tr('Into the cars') });
     }
   }
   if (!s.pending && s.queue.length) {
@@ -199,13 +214,14 @@ function contextBase(s, r) {
     year: s.year,
     series: c.series,
     seriesName: SINFO[c.series].name,
-    team: t?.short || 'the team',
+    team: t?.short || tr('the team'),
     teamId: t?.id,
     color: t?.color,
-    eng: t?.engineer || 'Your engineer',
+    eng: t?.engineer || tr('Your engineer'),
     rank: t ? carRank(s, t) : 0,
     ovr: ovr(s),
     city: cityTrack.place,
+    cityId: cityTrack.id,
     contractYears: c.contract?.years ?? 0,
     academy: s.driver.academy ? s.teams[s.driver.academy].academy : null,
     tm: tmId ? { id: tmId, name: nameOf(s, tmId), last: s.drivers[tmId].last, ovr: Math.round(s.drivers[tmId].skill) } : null,
@@ -249,11 +265,12 @@ function startSeason(s, r) {
     k: 'chapter',
     year: s.year,
     big: String(s.year),
-    title: c.role === 'reserve' ? `Reserve driver, ${t.name}` : `${SINFO[series].name} with ${t.name}`,
+    title: c.role === 'reserve' ? tr('Reserve driver, {team}', { team: t.name }) : tr('{series} with {team}', { series: seriesName(series), team: t.name }),
     sub: c.role === 'reserve'
-      ? 'No race seat. You test, you simulate, you wait for the phone to ring.'
-      : `Age ${s.driver.age}. Car rated ${'★'.repeat(carTier(s, t))}${'☆'.repeat(5 - carTier(s, t))}.${tmId ? ` Teammate: ${nameOf(s, tmId)}.` : ''}`,
+      ? tr('No race seat. You test, you simulate, you wait for the phone to ring.')
+      : cat(tr('Age {age}. Car rated {stars}.', { age: s.driver.age, stars: `${'★'.repeat(carTier(s, t))}${'☆'.repeat(5 - carTier(s, t))}` }), tmId && tr('Teammate: {name}.', { name: nameOf(s, tmId) })),
     goal: s.season.goal?.text || null,
+    gs: s.season.goal ? { type: s.season.goal.type, n: s.season.goal.n } : null,
     color: t.color,
     car: c.role === 'race' ? { color: t.color, accent: t.accent || '#FFFFFF', number: raceNumber(s) } : null,
     series,
@@ -277,14 +294,11 @@ function startSeason(s, r) {
 function seasonGoal(s, t, series) {
   const rank = carRank(s, t);
   const f1 = series === 'F1';
-  if (rank === 1) return { type: 'top', n: 1, text: 'Win the championship' };
-  if (rank <= 3) {
-    const n = rank * 2;
-    return { type: 'top', n, text: `Finish in the top ${n}` };
-  }
-  if (f1 && rank >= 9) return { type: 'points', n: 10, text: 'Score at least 10 points' };
-  const n = Math.min(14, rank * 2 + 1);
-  return { type: 'top', n, text: `Finish in the top ${n}` };
+  const goal = (type, n) => ({ type, n, text: goalText({ type, n }) });
+  if (rank === 1) return goal('top', 1);
+  if (rank <= 3) return goal('top', rank * 2);
+  if (f1 && rank >= 9) return goal('points', 10);
+  return goal('top', Math.min(14, rank * 2 + 1));
 }
 
 function goalMet(goal, pos, pts) {
@@ -393,7 +407,7 @@ function runRound(s, r) {
   se.race = race;
   if (mode === 'standin') {
     const vt = race.entries.find((e) => e.id === 'P');
-    story(s, `${nameOf(s, victim)} has food poisoning. ${s.teams[vt.team].name} call you at midnight: you are racing in ${track.short} tomorrow.`, { title: 'The phone rings', tone: 'purple' });
+    story(s, tr('{name} has food poisoning. {team} call you at midnight: you are racing in {track} tomorrow.', { name: nameOf(s, victim), team: s.teams[vt.team].name, track: trackShort(track) }), { title: tr('The phone rings'), tone: 'purple' });
   }
   if (mode === 'race' || mode === 'standin') {
     const c = raceCtx(s, race, track);
@@ -461,28 +475,31 @@ function finishRace(s, r) {
     if (pe.dnf && pe.dnfWhy !== 'mech') d.teamRel = Math.max(0, d.teamRel - 1);
 
     me = { pos, grid: pe.grid, dnf: pe.dnf, why: pe.dnfWhy, pts, pole, fl: isFl };
-    se.lastMe = { pos, dnf: pe.dnf, track: track.short };
+    se.lastMe = { pos, dnf: pe.dnf, track: track.short, trackId: track.id };
     x = { series, pos, dnf: pe.dnf, grid: pe.grid, pole, fl: isFl, wet: race.wet, trackId: track.id, home: nation(d.nat).home.includes(track.id), standin: race.mode === 'standin', pts, team: pe.team };
 
+    const at = { track: trackShort(track), gp: trackName(track), pos };
     if (f1) {
-      if (tot.starts === 1) mile(s, 'f1start', '🏎️', 'Formula 1 driver', `Race one done at ${track.short}. Whatever happens now, you are one of only a few hundred people in history to start a Grand Prix.`, 'purple');
-      if (tot.starts === 100) mile(s, 'f1start100', '💯', '100 Grands Prix', `Race one hundred, at ${track.short}. The team gives you a cake shaped like your helmet. It tastes like fondant and pride.`);
-      if (tot.starts === 200) mile(s, 'f1start200', '🎂', '200 Grands Prix', 'Two hundred starts. The mechanics who were there for your first race are now in charge of the garage.');
-      if (tot.starts === 300) mile(s, 'f1start300', '🦾', '300 Grands Prix', 'Three hundred starts. You have now spent more time in a Formula 1 car than in your own kitchen.', 'purple');
-      if (pts > 0) mile(s, 'f1pts', '🔟', 'First Formula 1 points', `P${pos} at ${track.short}. ${pts} ${pts === 1 ? 'point' : 'points'} that nobody can ever take away.`);
-      if (!pe.dnf && pos <= 3) mile(s, 'f1pod', '🍾', 'First Formula 1 podium', `P${pos} at the ${track.name}. You spray champagne badly and get most of it in your own eye.`);
-      if (pole) mile(s, 'f1pole', '⏱️', 'First pole position', `Fastest of all on Saturday at ${track.short}.`, 'purple');
+      if (tot.starts === 1) mile(s, 'f1start', '🏎️', tr('Formula 1 driver'), tr('Race one done at {track}. Whatever happens now, you are one of only a few hundred people in history to start a Grand Prix.', at), 'purple');
+      if (tot.starts === 100) mile(s, 'f1start100', '💯', tr('100 Grands Prix'), tr('Race one hundred, at {track}. The team gives you a cake shaped like your helmet. It tastes like fondant and pride.', at));
+      if (tot.starts === 200) mile(s, 'f1start200', '🎂', tr('200 Grands Prix'), tr('Two hundred starts. The mechanics who were there for your first race are now in charge of the garage.'));
+      if (tot.starts === 300) mile(s, 'f1start300', '🦾', tr('300 Grands Prix'), tr('Three hundred starts. You have now spent more time in a Formula 1 car than in your own kitchen.'), 'purple');
+      if (pts > 0) mile(s, 'f1pts', '🔟', tr('First Formula 1 points'), tr('P{pos} at {track}. {pts} that nobody can ever take away.', { ...at, pts: plural(pts, 'point') }));
+      if (!pe.dnf && pos <= 3) mile(s, 'f1pod', '🍾', tr('First Formula 1 podium'), tr('P{pos} at the {gp}. You spray champagne badly and get most of it in your own eye.', at));
+      if (pole) mile(s, 'f1pole', '⏱️', tr('First pole position'), tr('Fastest of all on Saturday at {track}.', at), 'purple');
       if (!pe.dnf && pos === 1) {
         if (!s.career.firsts.f1win) s.nudge = 'first_win';
-        mile(s, 'f1win', '🏁', 'Grand Prix winner', `You win the ${track.name}. ${s.flags.remortgage ? 'Your parents are in the garage, holding each other, crying.' : 'The team carries you on their shoulders.'}${s.flags.kebab ? ' Dönerland Express gives free kebabs to the whole town.' : ''}`, 'purple');
+        const crowd = s.flags.remortgage ? tr('Your parents are in the garage, holding each other, crying.') : tr('The team carries you on their shoulders.');
+        const kebab = s.flags.kebab && tr('Dönerland Express gives free kebabs to the whole town.');
+        mile(s, 'f1win', '🏁', tr('Grand Prix winner'), cat(tr('You win the {gp}.', at), crowd, kebab), 'purple');
       }
     } else if (!pe.dnf && pos === 1) {
-      mile(s, 'jrwin', '🥇', 'First win in cars', `You win at ${track.short} in ${SINFO[series].name}. You scream so loudly on the radio your engineer has to take the headset off.`);
+      mile(s, 'jrwin', '🥇', tr('First win in cars'), tr('You win at {track} in {series}. You scream so loudly on the radio your engineer has to take the headset off.', { ...at, series: seriesName(series) }));
     }
 
     if (pe.dnf && pe.dnfWhy === 'crash' && r.next() < 0.06) {
       d.injured = r.int(1, 3);
-      story(s, `The crash at ${track.short} was heavier than it looked. A fractured wrist: you will miss the next ${d.injured === 1 ? 'race' : `${d.injured} races`}.`, { title: 'Injury', tone: 'red' });
+      story(s, tr('The crash at {track} was heavier than it looked. A fractured wrist: you will miss the next {races}.', { ...at, races: d.injured === 1 ? tr('race') : plural(d.injured, 'race') }), { title: tr('Injury'), tone: 'red' });
     }
   }
   if (race.mode === 'injured') d.injured = Math.max(0, d.injured - 1);
@@ -529,8 +546,9 @@ function raceCard(s, race, track, grid, order, me) {
     series: se.series,
     round: se.round + 1,
     of: se.cal.length,
-    track: se.series === 'F1' || track.name.endsWith('round') ? track.name : `${track.short} round`,
+    track: roundName(track, se.series),
     short: track.short,
+    trackId: track.id,
     flag: flagOf(track.nat),
     wet: race.wet,
     sc: race.sc,
@@ -609,7 +627,7 @@ function endSeason(s, r) {
     const warned = s.flags.academyWarn === s.year && pos > 3;
     const ruthless = d.academy === 'torque' && series !== 'F4' && pos > 6;
     if (warned || ruthless) {
-      academyNote = `The ${s.teams[d.academy].academy} has dropped you. From now on, you pay your own way.`;
+      academyNote = tr('The {academy} has dropped you. From now on, you pay your own way.', { academy: s.teams[d.academy].academy });
       d.academy = null;
     }
   }
@@ -622,11 +640,11 @@ function endSeason(s, r) {
     pos, pts: st.pts, wins: st.w, podiums: st.pod, poles: st.pole, champion,
     top, deltas, sl, slTotal, newLicence, licensed: c.licensed,
     income: prize + sponsor + family, tm: tmId ? nameOf(s, tmId) : null, tmPos, beatTm,
-    goal: goal?.text || null, goalMet: met, goalBonus,
+    goal: goal?.text || null, gs: goal ? { type: goal.type, n: goal.n } : null, goalMet: met, goalBonus,
     car: champion && team ? { color: team.color, accent: team.accent || '#FFFFFF', number: raceNumber(s) } : null,
     f1Champ: series !== 'F1' ? `${nameOf(s, f1Champ)}${champTeam ? ` (${champTeam.short})` : ''}` : null,
   });
-  if (academyNote) story(s, academyNote, { title: 'Dropped', tone: 'red' });
+  if (academyNote) story(s, academyNote, { title: tr('Dropped'), tone: 'red' });
 
   checkAch(s, 'season', { series, pos, champion });
   if (champion && series === 'F1') {
@@ -636,7 +654,7 @@ function endSeason(s, r) {
   checkDaily(s);
 
   const news = offseasonAI(s, r);
-  if (news.length) pushFeed(s, { k: 'news', title: 'Paddock news', lines: news });
+  if (news.length) pushFeed(s, { k: 'news', title: tr('Paddock news'), lines: news });
 
   s.offers = generateOffers(s, r);
   s.stage = 'offers';
@@ -662,13 +680,16 @@ export function pickOffer(s, i) {
   const t = s.teams[s.career.team];
   if (o.kind === 'seat' && t.series === 'F1' && !wasF1 && !s.career.firsts.f1seat) {
     s.career.firsts.f1seat = s.year;
-    pushFeed(s, { k: 'mile', icon: '📝', title: 'You are a Formula 1 driver', text: `${t.name} sign you on a ${o.years}-year deal worth ${money(o.salary)} a year. ${s.flags.remortgage ? 'You call your parents. Nobody can speak for a while.' : 'You read the contract four times to make sure it is real.'}`, tone: 'purple' });
+    const deal = tr('{team} sign you on a {years}-year deal worth {money} a year.', { team: t.name, years: o.years, money: money(o.salary) });
+    const call = s.flags.remortgage ? tr('You call your parents. Nobody can speak for a while.') : tr('You read the contract four times to make sure it is real.');
+    pushFeed(s, { k: 'mile', icon: '📝', title: tr('You are a Formula 1 driver'), text: cat(deal, call), tone: 'purple' });
   } else if (o.kind === 'seat' && (prevTeam !== t.id || o.tag === 'renew')) {
-    const cost = o.cost ? ` The seat costs ${money(o.cost)}.` : t.series !== 'F1' && s.driver.academy ? ' The academy pays.' : '';
-    const pay = t.series === 'F1' ? ` ${o.years} ${o.years === 1 ? 'year' : 'years'}, ${money(o.salary)} a year.` : '';
-    story(s, `${o.tag === 'renew' ? 'You re-sign with' : 'You sign for'} ${t.name} in ${SINFO[t.series].name}.${pay}${cost}`, { title: 'Contract' });
+    const cost = o.cost ? tr('The seat costs {money}.', { money: money(o.cost) }) : t.series !== 'F1' && s.driver.academy ? tr('The academy pays.') : '';
+    const pay = t.series === 'F1' ? tr('{years}, {money} a year.', { years: plural(o.years, 'year'), money: money(o.salary) }) : '';
+    const vars = { team: t.name, series: seriesName(t.series) };
+    story(s, cat(o.tag === 'renew' ? tr('You re-sign with {team} in {series}.', vars) : tr('You sign for {team} in {series}.', vars), pay, cost), { title: tr('Contract') });
   } else if (o.kind === 'reserve') {
-    story(s, `You join ${t.name} as reserve driver. Good money for sitting still, terrible for the soul.`, { title: 'Contract' });
+    story(s, tr('You join {team} as reserve driver. Good money for sitting still, terrible for the soul.', { team: t.name }), { title: tr('Contract') });
   }
 
   offseasonFill(s, r);
@@ -676,8 +697,8 @@ export function pickOffer(s, i) {
   const lines = [];
   const rn = rivalNews(s);
   if (rn) lines.push(rn);
-  if (reg) lines.push(`New technical regulations arrive for ${s.year + 1}. Nobody knows who will be fast.`);
-  if (lines.length) pushFeed(s, { k: 'news', title: 'Over the winter', lines });
+  if (reg) lines.push(tr('New technical regulations arrive for {year}. Nobody knows who will be fast.', { year: s.year + 1 }));
+  if (lines.length) pushFeed(s, { k: 'news', title: tr('Over the winter'), lines });
 
   s.year++;
   s.driver.age++;

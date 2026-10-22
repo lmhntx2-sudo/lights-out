@@ -1,4 +1,5 @@
 import { pushFeed } from './helpers.js';
+import { loc } from '../i18n.js';
 
 // on: when the check runs. 'manual' ones are unlocked directly by events or the UI.
 // x for race: { series, pos, dnf, grid, pole, fl, wet, trackId, home, standin, pts }
@@ -69,6 +70,9 @@ export const ACHIEVEMENTS = [
 
 export const ACH_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));
 
+// Name and description in the current language.
+export const achWords = (a) => ({ name: loc('ach', a.id, 'name', a.name), desc: loc('ach', a.id, 'desc', a.desc) });
+
 export function netWorth(s) {
   return s.driver.money + s.driver.assets.reduce((a, b) => a + b.value, 0);
 }
@@ -81,7 +85,7 @@ export function unlock(s, id) {
   if (!ACH_BY_ID[id] || s.ach.includes(id)) return false;
   s.ach.push(id);
   const a = ACH_BY_ID[id];
-  pushFeed(s, { k: 'ach', id, icon: a.icon, name: a.name, desc: a.desc });
+  pushFeed(s, { k: 'ach', id, icon: a.icon, ...achWords(a) });
   return true;
 }
 

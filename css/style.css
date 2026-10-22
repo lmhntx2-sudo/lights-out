@@ -33,6 +33,13 @@
   color-scheme: dark;
 }
 
+/* Saira and Titillium have no Chinese. In 繁體中文, Latin text keeps them and
+   Chinese falls back to a Traditional Chinese system font. */
+:root:lang(zh-Hant), [lang='zh-Hant'] {
+  --font: 'Twemoji Country Flags', 'Titillium Web', 'PingFang TC', 'Noto Sans TC', 'Microsoft JhengHei', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Twemoji Country Flags', 'Saira', 'Titillium Web', 'PingFang TC', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+}
+
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body {
@@ -344,6 +351,7 @@ a { color: var(--yellow); }
 .trow.me { background: #fff; color: #111; }
 .trow.me .tn { color: #444; }
 .trow.rival .tn::after { content: ' (rival)'; color: #ff8a80; }
+:lang(zh-Hant) .trow.rival .tn::after { content: '（宿敵）'; }
 .trow.out { opacity: .55; }
 .td.up { color: var(--green); }
 .td.down { color: #ff7a70; }
@@ -469,6 +477,7 @@ dialog::backdrop { background: rgba(5, 5, 8, .75); backdrop-filter: blur(3px); }
 .table td { padding: 6px; border-bottom: 1px solid #2c2c35; font-variant-numeric: tabular-nums; }
 .table tr.me td { color: var(--yellow); font-weight: 700; }
 .table tr.rival td:nth-child(2)::after { content: ' (rival)'; color: #ff8a80; font-weight: 400; }
+:lang(zh-Hant) .table tr.rival td:nth-child(2)::after { content: '（宿敵）'; }
 .table .r { text-align: right; }
 .sec { margin: 18px 0 8px; font-size: 15px; font-weight: 700; }
 .ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
