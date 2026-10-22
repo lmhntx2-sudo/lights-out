@@ -1,13 +1,22 @@
 import { renderTitle, lightsOverlay } from './ui/title.js';
 import { mountGame } from './ui/game.js';
 import { newGame } from './engine/game.js';
+import { relocalize } from './engine/story.js';
 import { store } from './store.js';
 import { setSound } from './ui/sfx.js';
+import { setLang, htmlLang, t } from './i18n.js';
+
+function applyLang(lang) {
+  setLang(lang, store.langVariant());
+  document.documentElement.lang = htmlLang();
+  document.title = t('Lights Out: racing career simulator');
+}
 
 const app = {
   s: null,
   view: null,
   refresh: null,
+  title: null,
   settings: store.settings(),
   supporter: store.supporter(),
 
@@ -28,6 +37,7 @@ const app = {
   },
 
   startGame(setup) {
+    app.title = null;
     app.s = newGame(setup);
     app.save();
     lightsOverlay(app, () => mountGame(app));
@@ -36,11 +46,28 @@ const app = {
   continueGame() {
     const s = store.loadGame();
     if (!s || s.v !== 1) return app.showTitle();
+    app.title = null;
     app.s = s;
     mountGame(app);
   },
+
+  // Switch language and redraw whatever is on screen. A career in progress keeps
+  // its story so far as written; the open decision and everything new switch.
+  setLanguage(lang) {
+    app.settings.lang = lang;
+    store.saveSettings(app.settings);
+    applyLang(lang);
+    if (app.s) {
+      relocalize(app.s);
+      app.save();
+      mountGame(app);
+    } else if (app.title) {
+      renderTitle(app, { ...app.title.opts, form: app.title.form });
+    }
+  },
 };
 
+applyLang(app.settings.lang);
 setSound(app.settings.sound !== false);
 
 const params = new URLSearchParams(location.search);

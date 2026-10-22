@@ -1,19 +1,20 @@
 import { h, download, toast } from './dom.js';
 import { store } from '../store.js';
 import { money, stars, plural } from '../core/fmt.js';
-import { STATS, STAT_LABEL, STAT_HINT, SINFO, TRAINING } from '../engine/constants.js';
+import { STATS } from '../engine/constants.js';
 import { standingsOrder, slPoints } from '../engine/market.js';
 import { nameOf } from '../engine/world.js';
 import { overall } from '../engine/player.js';
-import { ACHIEVEMENTS, netWorth } from '../engine/achievements.js';
+import { ACHIEVEMENTS, netWorth, achWords } from '../engine/achievements.js';
 import { nation } from '../data/nations.js';
 import { GAME } from '../config.js';
-import { allTime } from '../engine/legacy.js';
+import { allTime, summaryWords } from '../engine/legacy.js';
 import { setSound } from './sfx.js';
+import { t, tn, LANGS, getLang, statName, statHint, seriesName, trainingText } from '../i18n.js';
 
 export function openDialog(title, body, { onClose } = {}) {
   const dlg = h('dialog', { 'aria-label': title });
-  const close = h('button', { class: 'btn btn-ghost icon-btn', 'aria-label': 'Close', onClick: () => dlg.close() }, '✕');
+  const close = h('button', { class: 'btn btn-ghost icon-btn', 'aria-label': t('Close'), onClick: () => dlg.close() }, '✕');
   dlg.append(h('div', { class: 'dlg-head' }, h('h2', null, title), close), h('div', { class: 'dlg-body' }, body));
   dlg.addEventListener('click', (e) => {
     if (e.target === dlg) dlg.close();
@@ -36,7 +37,7 @@ export function confirmDialog(title, text, okLabel, onOk) {
     h(
       'div',
       { class: 'row', style: 'justify-content:flex-end;margin-top:16px' },
-      h('button', { class: 'btn btn-ghost', onClick: () => dlg.close() }, 'Cancel'),
+      h('button', { class: 'btn btn-ghost', onClick: () => dlg.close() }, t('Cancel')),
       h('button', { class: 'btn btn-go', style: 'font-size:16px;padding:10px 16px', onClick: () => { dlg.close(); onOk(); } }, okLabel),
     ),
   );
@@ -63,7 +64,7 @@ function tabs(spec) {
   return h('div', null, spec.length > 1 ? bar : null, panel);
 }
 
-const teamOf = (s, id) => Object.values(s.teams).find((t) => t.seats.includes(id));
+const teamOf = (s, id) => Object.values(s.teams).find((x) => x.seats.includes(id));
 
 // ------------------------------------------------------------ standings
 
@@ -73,19 +74,19 @@ export function standingsTable(s, limit = 99) {
   return h(
     'table',
     { class: 'table' },
-    h('thead', null, h('tr', null, h('th', { class: 'r' }, 'Pos'), h('th', null, 'Driver'), h('th', null, 'Team'), h('th', { class: 'r' }, 'Wins'), h('th', { class: 'r' }, 'Pts'))),
+    h('thead', null, h('tr', null, h('th', { class: 'r' }, t('Pos')), h('th', null, t('Driver')), h('th', null, t('Team')), h('th', { class: 'r' }, t('Wins')), h('th', { class: 'r' }, t('Pts')))),
     h(
       'tbody',
       null,
       order.map((id, i) => {
-        const t = teamOf(s, id);
+        const team = teamOf(s, id);
         const st = se.stand[id];
         return h(
           'tr',
           { class: id === 'P' ? 'me' : '' },
           h('td', { class: 'r' }, i + 1),
-          h('td', null, h('span', { class: 'dot', style: `background:${t?.color || '#555'};margin-right:8px` }), nameOf(s, id)),
-          h('td', null, t?.short || 'Reserve'),
+          h('td', null, h('span', { class: 'dot', style: `background:${team?.color || '#555'};margin-right:8px` }), nameOf(s, id)),
+          h('td', null, team?.short || t('Reserve')),
           h('td', { class: 'r' }, st.w),
           h('td', { class: 'r' }, st.pts),
         );
@@ -103,11 +104,11 @@ export function openStandings(app) {
     return h(
       'table',
       { class: 'table' },
-      h('thead', null, h('tr', null, h('th', { class: 'r' }, 'Pos'), h('th', null, 'Team'), h('th', { class: 'r' }, 'Pts'))),
+      h('thead', null, h('tr', null, h('th', { class: 'r' }, t('Pos')), h('th', null, t('Team')), h('th', { class: 'r' }, t('Pts')))),
       h('tbody', null, rows.map(([id, pts], i) => h('tr', { class: id === s.career.team ? 'me' : '' }, h('td', { class: 'r' }, i + 1), h('td', null, h('span', { class: 'dot', style: `background:${s.teams[id].color};margin-right:8px` }), s.teams[id].name), h('td', { class: 'r' }, pts)))),
     );
   };
-  openDialog(`${se.year} ${SINFO[se.series].name}`, tabs([['Drivers', () => standingsTable(s)], ['Teams', teamsTable]]));
+  openDialog(t('{year} {series}', { year: se.year, series: seriesName(se.series) }), tabs([[t('Drivers'), () => standingsTable(s)], [t('Teams'), teamsTable]]));
 }
 
 // ------------------------------------------------------------ driver profile
@@ -119,10 +120,10 @@ export function statBars(s) {
     return h(
       'div',
       { class: 'statbar' },
-      h('span', null, STAT_LABEL[k]),
+      h('span', null, statName(k)),
       h('div', { class: 'track' }, h('i', { class: v >= 88 ? 'hi' : v >= 75 ? 'good' : '', style: `width:${v}%` })),
       h('b', null, v),
-      h('small', null, STAT_HINT[k]),
+      h('small', null, statHint(k)),
     );
   });
   return h('div', { class: 'statbars' }, rows);
@@ -136,7 +137,7 @@ export function openProfile(app) {
     h(
       'div',
       null,
-      h('p', { style: 'margin-top:0;color:var(--ink-2)' }, `Overall ${Math.round(overall(d.stats))}. Scouts rate your potential ${stars((d.pot - 66) / 6)}. Winter focus: ${TRAINING[d.training]?.name || 'rest'}.`),
+      h('p', { style: 'margin-top:0;color:var(--ink-2)' }, t('Overall {n}. Scouts rate your potential {stars}. Winter focus: {focus}.', { n: Math.round(overall(d.stats)), stars: stars((d.pot - 66) / 6), focus: trainingText(d.training, 'name') || t('rest') })),
       statBars(s),
     );
   const careerTab = () => {
@@ -146,49 +147,50 @@ export function openProfile(app) {
       'div',
       null,
       h('div', { class: 'kv' }, ...[
-        ['F1 starts', f.starts], ['Wins', f.wins], ['Podiums', f.podiums], ['Poles', f.poles], ['Points', f.points], ['Titles', f.titles],
+        [t('F1 starts'), f.starts], [t('Wins'), f.wins], [t('Podiums'), f.podiums], [t('Poles'), f.poles], [t('Points'), f.points], [t('Titles'), f.titles],
       ].map(([k, v]) => h('span', null, `${k} `, h('b', null, v)))),
       h('div', { class: 'kv', style: 'margin-top:6px' }, ...[
-        ['Junior starts', j.starts], ['Junior wins', j.wins], ['Junior titles', j.titles], ['Superlicence points (3 yrs)', slPoints(s)],
+        [t('Junior starts'), j.starts], [t('Junior wins'), j.wins], [t('Junior titles'), j.titles], [t('Superlicence points (3 yrs)'), slPoints(s)],
       ].map(([k, v]) => h('span', null, `${k} `, h('b', null, v)))),
-      h('div', { class: 'sec' }, 'Season by season'),
+      h('div', { class: 'sec' }, t('Season by season')),
       c.hist.length
         ? h(
             'table',
             { class: 'table' },
-            h('thead', null, h('tr', null, h('th', null, 'Year'), h('th', null, 'Series'), h('th', null, 'Team'), h('th', { class: 'r' }, 'Pos'), h('th', { class: 'r' }, 'Wins'), h('th', { class: 'r' }, 'Pts'))),
-            h('tbody', null, [...c.hist].reverse().map((x) => h('tr', { class: x.champion ? 'me' : '' }, h('td', null, x.year), h('td', null, x.series), h('td', null, h('span', { class: 'dot', style: `background:${x.color};margin-right:6px` }), x.role === 'reserve' ? `${x.teamName} (reserve)` : x.teamName), h('td', { class: 'r' }, x.pos ? `P${x.pos}` : '–'), h('td', { class: 'r' }, x.wins), h('td', { class: 'r' }, x.pts)))),
+            h('thead', null, h('tr', null, h('th', null, t('Year')), h('th', null, t('Series')), h('th', null, t('Team')), h('th', { class: 'r' }, t('Pos')), h('th', { class: 'r' }, t('Wins')), h('th', { class: 'r' }, t('Pts')))),
+            h('tbody', null, [...c.hist].reverse().map((x) => h('tr', { class: x.champion ? 'me' : '' }, h('td', null, x.year), h('td', null, x.series), h('td', null, h('span', { class: 'dot', style: `background:${x.color};margin-right:6px` }), x.role === 'reserve' ? t('{team} (reserve)', { team: x.teamName }) : x.teamName), h('td', { class: 'r' }, x.pos ? `P${x.pos}` : '–'), h('td', { class: 'r' }, x.wins), h('td', { class: 'r' }, x.pts)))),
           )
-        : h('p', { class: 'empty' }, 'No seasons finished yet.'),
+        : h('p', { class: 'empty' }, t('No seasons finished yet.')),
     );
   };
   const lifeTab = () => {
     const rows = [
-      ['Bank balance', money(d.money)],
-      ['Net worth', money(netWorth(s))],
-      ['Fame', `${Math.round(d.fame)} / 100`],
-      ['Team trust', `${Math.round(d.teamRel)} / 100`],
-      ['Contract', c.contract ? `${plural(c.contract.years, 'year')} left, ${money(c.contract.salary)} a year` : 'Season by season'],
-      ['Junior academy', d.academy ? s.teams[d.academy].academy : 'Independent'],
+      [t('Bank balance'), money(d.money)],
+      [t('Net worth'), money(netWorth(s))],
+      [t('Fame'), `${Math.round(d.fame)} / 100`],
+      [t('Team trust'), `${Math.round(d.teamRel)} / 100`],
+      [t('Contract'), c.contract ? t('{years} left, {money} a year', { years: plural(c.contract.years, 'year'), money: money(c.contract.salary) }) : t('Season by season')],
+      [t('Junior academy'), d.academy ? s.teams[d.academy].academy : t('Independent')],
     ];
     const life = [];
-    if (s.flags.married) life.push('Married');
-    else if (s.flags.partner) life.push('In a relationship');
-    if (s.flags.parent) life.push('Parent');
-    if (s.flags.foundation) life.push('Runs the Lights Out Foundation');
-    if (s.flags.mentor) life.push('Mentored by a three-time champion');
-    if (s.flags.kebab) life.push('Sponsored by Dönerland Express since age 14');
+    if (s.flags.married) life.push(t('Married'));
+    else if (s.flags.partner) life.push(t('In a relationship'));
+    if (s.flags.parent) life.push(t('Parent'));
+    if (s.flags.foundation) life.push(t('Runs the Lights Out Foundation'));
+    if (s.flags.mentor) life.push(t('Mentored by a three-time champion'));
+    if (s.flags.kebab) life.push(t('Sponsored by Dönerland Express since age 14'));
     return h(
       'div',
       { class: 'life' },
       rows.map(([k, v]) => h('div', { class: 'life-row' }, h('span', { class: 's' }, k), h('span', { class: 't' }, v))),
-      d.assets.length ? h('div', { class: 'sec' }, 'Things you own') : null,
-      d.assets.map((a) => h('div', { class: 'life-row' }, h('span', { class: 't' }, a.name), h('span', { class: 's' }, money(a.value)))),
-      life.length ? h('div', { class: 'sec' }, 'Life') : null,
-      life.map((t) => h('div', { class: 'life-row' }, h('span', { class: 't' }, t), h('span'))),
+      d.assets.length ? h('div', { class: 'sec' }, t('Things you own')) : null,
+      // Asset names are saved in English, which is also their key.
+      d.assets.map((a) => h('div', { class: 'life-row' }, h('span', { class: 't' }, t(a.name)), h('span', { class: 's' }, money(a.value)))),
+      life.length ? h('div', { class: 'sec' }, t('Life')) : null,
+      life.map((line) => h('div', { class: 'life-row' }, h('span', { class: 't' }, line), h('span'))),
     );
   };
-  openDialog(`${d.name} ${nation(d.nat).flag}`, tabs([['Stats', statsTab], ['Career', careerTab], ['Life', lifeTab]]));
+  openDialog(`${d.name} ${nation(d.nat).flag}`, tabs([[t('Stats'), statsTab], [t('Career'), careerTab], [t('Life'), lifeTab]]));
 }
 
 // ------------------------------------------------------------ achievements & hall of fame
@@ -204,9 +206,12 @@ export function openAchievements(app) {
   const grid = h(
     'div',
     { class: 'ach-grid' },
-    ACHIEVEMENTS.map((a) => h('div', { class: `ach ${got.has(a.id) ? 'got' : 'locked'}` }, h('span', { class: 'ic' }, a.icon), h('div', null, h('b', null, a.name), h('span', null, a.desc)))),
+    ACHIEVEMENTS.map((a) => {
+      const w = achWords(a);
+      return h('div', { class: `ach ${got.has(a.id) ? 'got' : 'locked'}` }, h('span', { class: 'ic' }, a.icon), h('div', null, h('b', null, w.name), h('span', null, w.desc)));
+    }),
   );
-  openDialog(`Achievements ${got.size}/${ACHIEVEMENTS.length}`, grid);
+  openDialog(t('Achievements {got}/{all}', { got: got.size, all: ACHIEVEMENTS.length }), grid);
 }
 
 export function openHallOfFame(app) {
@@ -224,15 +229,20 @@ export function openHallOfFame(app) {
               'div',
               null,
               h('div', { class: 't' }, `${i + 1}. ${l.name} ${l.flag}`),
-              h('div', { class: 's' }, `${l.tier}. ${l.f1.starts ? `${plural(l.f1.titles, 'title')}, ${plural(l.f1.wins, 'win')}, ${plural(l.f1.starts, 'start')}` : 'No Grand Prix start'}. Retired at ${l.age} in ${l.endYear}.`),
-              h('div', { class: 's' }, `Legacy ${l.score}. Seed ${l.seed}`),
+              h('div', { class: 's' }, t('{tier}. {record}. Retired at {age} in {year}.', {
+                tier: summaryWords(l).tier,
+                record: l.f1.starts ? t('{titles}, {wins}, {starts}', { titles: plural(l.f1.titles, 'title'), wins: plural(l.f1.wins, 'win'), starts: plural(l.f1.starts, 'start') }) : t('No Grand Prix start'),
+                age: l.age,
+                year: l.endYear,
+              })),
+              h('div', { class: 's' }, t('Legacy {score}. Seed {seed}', { score: l.score, seed: l.seed })),
             ),
-            h('button', { class: 'btn btn-sm', onClick: () => { dlg.close(); app.showTitle({ seed: l.seed }); } }, 'Replay seed'),
+            h('button', { class: 'btn btn-sm', onClick: () => { dlg.close(); app.showTitle({ seed: l.seed }); } }, t('Replay seed')),
           ),
         ),
       )
-    : h('p', { class: 'empty' }, 'Finish a career and it will be remembered here.');
-  dlg = openDialog('Hall of fame', body);
+    : h('p', { class: 'empty' }, t('Finish a career and it will be remembered here.'));
+  dlg = openDialog(t('Hall of fame'), body);
 }
 
 export function openRecords(app) {
@@ -240,11 +250,12 @@ export function openRecords(app) {
   if (!s) return;
   const rows = allTime(s);
   const byWins = [...rows].sort((a, b) => b.wins - a.wins || b.titles - a.titles);
+  // Era is a year range, or a word the engine wrote when the list was built.
   const table = (list) =>
     h(
       'table',
       { class: 'table' },
-      h('thead', null, h('tr', null, h('th', { class: 'r' }, '#'), h('th', null, 'Driver'), h('th', { class: 'r' }, 'Titles'), h('th', { class: 'r' }, 'Wins'), h('th', { class: 'r' }, 'Starts'), h('th', null, 'Era'))),
+      h('thead', null, h('tr', null, h('th', { class: 'r' }, '#'), h('th', null, t('Driver')), h('th', { class: 'r' }, t('Titles')), h('th', { class: 'r' }, t('Wins')), h('th', { class: 'r' }, t('Starts')), h('th', null, t('Era')))),
       h(
         'tbody',
         null,
@@ -255,28 +266,39 @@ export function openRecords(app) {
     );
   const me = rows.find((r) => r.kind === 'me');
   const intro = me
-    ? `You rank #${rows.indexOf(me) + 1} for titles and #${byWins.indexOf(me) + 1} for wins among ${rows.length} Grand Prix drivers.`
-    : 'Start a Formula 1 race to appear here.';
-  openDialog('All-time records', h('div', null, h('p', { style: 'margin-top:0;color:var(--ink-2)' }, intro), tabs([['Most titles', () => table(rows)], ['Most wins', () => table(byWins)]])));
+    ? t('You rank #{titles} for titles and #{wins} for wins among {of} Grand Prix drivers.', { titles: rows.indexOf(me) + 1, wins: byWins.indexOf(me) + 1, of: rows.length })
+    : t('Start a Formula 1 race to appear here.');
+  openDialog(t('All-time records'), h('div', null, h('p', { style: 'margin-top:0;color:var(--ink-2)' }, intro), tabs([[t('Most titles'), () => table(rows)], [t('Most wins'), () => table(byWins)]])));
 }
 
 // ------------------------------------------------------------ settings, backup, about
 
 export function openSettings(app) {
+  let dlg;
   const seg = (opts, cur, onPick) => {
     const wrap = h('div', { class: 'seg' });
-    const btns = opts.map(([v, label]) => h('button', { 'aria-pressed': v === cur ? 'true' : 'false', onClick: () => { btns.forEach((b) => b.setAttribute('aria-pressed', 'false')); btns[opts.findIndex((o) => o[0] === v)].setAttribute('aria-pressed', 'true'); onPick(v); } }, label));
+    const btns = opts.map(([v, label, lang]) => h('button', { lang, 'aria-pressed': v === cur ? 'true' : 'false', onClick: () => { btns.forEach((b) => b.setAttribute('aria-pressed', 'false')); btns[opts.findIndex((o) => o[0] === v)].setAttribute('aria-pressed', 'true'); onPick(v); } }, label));
     wrap.append(...btns);
     return wrap;
   };
+  const langs = LANGS.map(([code, label]) => [code, label, code === 'zh' ? 'zh-Hant' : 'en']);
   const body = h(
     'div',
     null,
-    h('div', { class: 'setting' }, h('div', null, h('b', null, 'Race animations'), h('p', null, 'Start lights, the timing tower and confetti.')), seg([['full', 'Full'], ['fast', 'Fast'], ['off', 'Off']], app.settings.anim, (v) => { app.settings.anim = v; store.saveSettings(app.settings); })),
-    h('div', { class: 'setting' }, h('div', null, h('b', null, 'Sound effects'), h('p', null, 'Start lights, team radio beeps and victory fanfares.')), seg([[true, 'On'], [false, 'Off']], app.settings.sound !== false, (v) => { app.settings.sound = v; setSound(v); store.saveSettings(app.settings); })),
+    // Written in both languages so anyone can find it.
+    h('div', { class: 'setting' }, h('div', null, h('b', null, 'Language · 語言'), h('p', null, t('In a career already under way, the story so far stays in the language it was written in. Everything new uses the language you pick.'))), seg(langs, getLang(), (v) => {
+      if (v === getLang()) return;
+      dlg.close();
+      app.setLanguage(v);
+      openSettings(app);
+    })),
+    h('div', { class: 'setting' }, h('div', null, h('b', null, t('Race animations')), h('p', null, t('Start lights, the timing tower and confetti.'))), seg([['full', t('Full')], ['fast', t('Fast')], ['off', t('Off')]], app.settings.anim, (v) => { app.settings.anim = v; store.saveSettings(app.settings); })),
+    h('div', { class: 'setting' }, h('div', null, h('b', null, t('Sound effects')), h('p', null, t('Start lights, team radio beeps and victory fanfares.'))), seg([[true, t('On')], [false, t('Off')]], app.settings.sound !== false, (v) => { app.settings.sound = v; setSound(v); store.saveSettings(app.settings); })),
   );
-  openDialog('Settings', body);
+  dlg = openDialog(t('Settings'), body);
 }
+
+const NOT_BACKUP = 'This file is not a Lights Out backup.';
 
 export function openBackup(app) {
   const file = h('input', { type: 'file', accept: 'application/json,.json', class: 'sr', id: 'import-file' });
@@ -285,35 +307,38 @@ export function openBackup(app) {
     if (!f) return;
     try {
       store.importAll(JSON.parse(await f.text()));
-      toast('Backup restored.');
+      toast(t('Backup restored.'));
       app.showTitle();
       document.querySelector('dialog')?.close();
     } catch (e) {
-      toast(e.message || 'That file could not be read.');
+      toast(e.message === NOT_BACKUP ? t('This file is not a Lights Out backup.') : e.message || t('That file could not be read.'));
     }
   });
   const body = h(
     'div',
     null,
-    h('p', { style: 'margin-top:0;color:var(--ink-2)' }, 'Your career, hall of fame and achievements live in this browser only. Download a backup to move them to another device or keep them safe.'),
+    h('p', { style: 'margin-top:0;color:var(--ink-2)' }, t('Your career, hall of fame and achievements live in this browser only. Download a backup to move them to another device or keep them safe.')),
     h(
       'div',
       { class: 'row', style: 'flex-wrap:wrap' },
-      h('button', { class: 'btn', onClick: () => { app.save(); download(`lights-out-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(store.exportAll())); } }, 'Download backup'),
-      h('label', { class: 'btn', for: 'import-file' }, 'Restore from file'),
+      h('button', { class: 'btn', onClick: () => { app.save(); download(`lights-out-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(store.exportAll())); } }, t('Download backup')),
+      h('label', { class: 'btn', for: 'import-file' }, t('Restore from file')),
       file,
     ),
   );
-  openDialog('Backup', body);
+  openDialog(t('Backup'), body);
 }
 
 export function openAbout() {
   const body = h(
     'div',
     null,
-    h('p', { style: 'margin-top:0' }, 'Lights Out is a racing career life simulator. Start in karting at eight, climb through Formula 4, 3 and 2, and see how far you get in Formula 1.'),
-    h('p', { style: 'color:var(--ink-2)' }, 'Every team, driver and sponsor in the game is fictional. Any resemblance to real people or teams is affectionate coincidence. This is a fan-made game and is not affiliated with Formula 1, the FIA or any team.'),
-    h('p', { class: 'credits' }, 'Flag emoji from ', h('a', { href: 'https://github.com/jdecked/twemoji', target: '_blank', rel: 'noopener' }, 'Twemoji'), ' (CC-BY 4.0) via the country-flag-emoji-polyfill font. Type set in Saira. Version ', GAME.version, '.'),
+    h('p', { style: 'margin-top:0' }, t('Lights Out is a racing career life simulator. Start in karting at eight, climb through Formula 4, 3 and 2, and see how far you get in Formula 1.')),
+    h('p', { style: 'color:var(--ink-2)' }, t('Every team, driver and sponsor in the game is fictional. Any resemblance to real people or teams is affectionate coincidence. This is a fan-made game and is not affiliated with Formula 1, the FIA or any team.')),
+    h('p', { class: 'credits' }, ...tn('Flag emoji from {link} (CC-BY 4.0) via the country-flag-emoji-polyfill font. Type set in Saira. Version {version}.', {
+      link: h('a', { href: 'https://github.com/jdecked/twemoji', target: '_blank', rel: 'noopener' }, 'Twemoji'),
+      version: GAME.version,
+    })),
   );
-  openDialog('About Lights Out', body);
+  openDialog(t('About Lights Out'), body);
 }

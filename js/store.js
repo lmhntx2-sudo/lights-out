@@ -1,6 +1,7 @@
 // localStorage wrapper. Every read and write is guarded: private windows and
 // blocked storage must never break the game, they just stop remembering.
 import { GAME } from './config.js';
+import { detectLang } from './i18n.js';
 
 const P = GAME.storagePrefix;
 
@@ -29,6 +30,14 @@ function del(k) {
     // ignore
   }
 }
+
+const browserLang = () => {
+  try {
+    return detectLang(navigator.language, navigator.languages || []);
+  } catch {
+    return { lang: 'en', variant: 'hk' };
+  }
+};
 
 const reducedMotion = () => {
   try {
@@ -61,7 +70,9 @@ export const store = {
     return fresh;
   },
 
-  settings: () => ({ anim: reducedMotion() ? 'off' : 'full', ...get('settings', {}) }),
+  // lang is 'en' or 'zh'. Until the player picks one, it follows the browser.
+  settings: () => ({ anim: reducedMotion() ? 'off' : 'full', lang: browserLang().lang, ...get('settings', {}) }),
+  langVariant: () => browserLang().variant,
   saveSettings: (v) => set('settings', v),
 
   supporter: () => get('supporter', false),

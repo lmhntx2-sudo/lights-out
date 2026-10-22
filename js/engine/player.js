@@ -21,8 +21,12 @@ export function createPlayer(setup, r) {
   const first = setup.first.trim();
   const last = setup.last.trim();
   const num = Math.round(Number(setup.number));
+  // Chinese, Japanese and Korean names read family name first, with no space.
+  // They also have no letters for a three-letter code, so the code is the name itself.
+  const cjk = /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/.test(first + last);
+  const code = cjk && !/[a-z]/i.test(first + last) ? [...`${last}${first}`].slice(0, 3).join('') : driverCode(last || first);
   return {
-    first, last, name: `${first} ${last}`.trim(), code: driverCode(last || first),
+    first, last, name: cjk ? `${last}${first}` : `${first} ${last}`.trim(), code,
     number: num >= 2 && num <= 99 ? num : r.int(2, 99),
     nat: setup.nat, style: setup.style, bg: setup.bg, helmet: setup.helmet,
     age: 15, stats, caps, pot,

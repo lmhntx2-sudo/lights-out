@@ -4,6 +4,7 @@ import { NATIONS } from '../data/nations.js';
 import { STYLES, BACKGROUNDS } from './constants.js';
 import { netWorth, unlock } from './achievements.js';
 import { pushFeed } from './helpers.js';
+import { t, loc } from '../i18n.js';
 
 export const DAILY_GOALS = [
   { id: 'f1win', text: 'Win a Formula 1 race.', test: (s) => s.career.tot.F1.wins >= 1 },
@@ -15,6 +16,9 @@ export const DAILY_GOALS = [
   { id: 'points', text: 'Score 500 Formula 1 points.', test: (s) => s.career.tot.F1.points >= 500 },
   { id: 'rossa', text: 'Drive for Scuderia Rossa.', test: (s) => s.career.f1Teams.includes('rossa') },
 ];
+
+// The goal in the current language, from its id (saves keep the English text too).
+export const dailyGoalText = (id, fallback) => loc('daily', id, null, DAILY_GOALS.find((g) => g.id === id)?.text ?? fallback);
 
 export function todayKey(d = new Date()) {
   const p = (n) => String(n).padStart(2, '0');
@@ -41,7 +45,7 @@ export function checkDaily(s) {
   const g = DAILY_GOALS.find((x) => x.id === s.daily.goal);
   if (g && g.test(s)) {
     s.daily.done = true;
-    pushFeed(s, { k: 'mile', icon: '📅', title: 'Daily challenge complete', text: g.text, tone: 'purple' });
+    pushFeed(s, { k: 'mile', icon: '📅', title: t('Daily challenge complete'), text: dailyGoalText(g.id, g.text), tone: 'purple' });
     unlock(s, 'daily');
   }
 }

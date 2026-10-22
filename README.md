@@ -82,8 +82,23 @@ Where things live:
 | `js/engine/market.js` | Contracts, offers, AI careers, car development. |
 | `js/engine/achievements.js` | Achievements. |
 | `js/ui/` | Title screen, game screen, dialogs, donations. |
+| `js/i18n.js` | Languages: English and 繁體中文 (Traditional Chinese). |
+| `js/engine/events.zh.js` | Chinese words for every event, keyed by event id. |
+| `js/lang/zh.js`, `js/lang/zh.data.js` | Chinese for the interface, and names of tracks, nations, achievements and so on. |
 
-The same seed plus the same choices always replays the same career.
+The same seed plus the same choices always replays the same career, in either language.
+
+## Languages
+
+The game is in English and 繁體中文, written for Hong Kong and Taiwan players. It starts in
+繁體中文 when the browser's language is zh-HK, zh-TW, zh-MO or zh-Hant, and in English
+otherwise. Players switch on the title screen or in Settings. Place names follow the
+browser's region where Hong Kong and Taiwan spell them differently (意大利 or 義大利).
+
+English text is the key for its own translation. When you add or change an event, add its
+Chinese to `js/engine/events.zh.js` with the same choices in the same order; for any other
+text, run `node tools/i18n-keys.mjs --missing` to list what still needs Chinese.
+`npm test` fails if something is missing, so a new event cannot ship half-translated.
 
 The social preview image (`assets/og.png`) and app icons were drawn in the browser and saved
 through the local dev server's `/__save/` endpoint, which only exists in `tools/serve.mjs`.
