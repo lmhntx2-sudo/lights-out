@@ -1,6 +1,12 @@
 // The career state machine. Everything the UI does goes through:
 //   newGame(setup)  prompt(s)  advance(s)  choose(s, i)  pickOffer(s, i)
 //   skipToDecision(s)  simToSeasonEnd(s)  retireNow(s)
+//
+// s.setup and s.log record the career for the global leaderboard: the setup it
+// started from, then one entry per state-changing call ('a' advance, 'c2'
+// choose 2, 'o0' pick offer 0, 'r' retire now). Replaying the log from the
+// setup rebuilds the same career (see replay.js). Saves from before the log
+// existed have no s.log, so nothing is recorded for them.
 import { Rng, hashSeed } from '../core/rng.js';
 import { START_YEAR, START_AGE, SINFO, SERIES, BACKGROUNDS } from './constants.js';
 import { TRACKS, CALENDARS } from '../data/tracks.js';
@@ -39,6 +45,8 @@ export function goalText(goal) {
 export function newGame(setup) {
   const s = {
     v: 1,
+    setup: JSON.parse(JSON.stringify(setup)),
+    log: [],
     seed: setup.seed,
     rng: hashSeed(setup.seed),
     daily: setup.daily || null,
@@ -142,6 +150,7 @@ export function prompt(s) {
 
 export function advance(s) {
   if (s.pending || s.stage === 'retired') return;
+  s.log?.push('a');
   const r = new Rng(s);
   if (s.stage === 'prologue') presentPrologue(s);
   else if (s.stage === 'preseason') startSeason(s, r);
@@ -151,6 +160,7 @@ export function advance(s) {
 
 export function choose(s, i) {
   if (!s.pending) return;
+  s.log?.push(`c${i}`);
   const r = new Rng(s);
   const after = resolve(s, r, i);
   if (after === 'race') finishRace(s, r);
@@ -667,6 +677,7 @@ function endSeason(s, r) {
 
 export function pickOffer(s, i) {
   if (s.pending || s.stage !== 'offers' || !s.offers?.[i]) return;
+  s.log?.push(`o${i}`);
   const r = new Rng(s);
   const o = s.offers[i];
   if (o.kind === 'retire') return retire(s, 'retired');
@@ -719,5 +730,6 @@ function retire(s, how) {
 
 export function retireNow(s) {
   if (s.stage === 'retired') return;
+  s.log?.push('r');
   retire(s, 'retired');
 }

@@ -9,6 +9,9 @@ import { ACHIEVEMENTS, netWorth, achWords } from '../engine/achievements.js';
 import { nation } from '../data/nations.js';
 import { GAME } from '../config.js';
 import { allTime, summaryWords } from '../engine/legacy.js';
+import { todayKey, dailySetup, dailyGoalText } from '../engine/daily.js';
+import { checkDisplayName, NAME_MIN, NAME_MAX } from '../core/displayname.js';
+import { fetchBoard, submitCareer, localizeError } from '../api.js';
 import { setSound } from './sfx.js';
 import { t, tn, LANGS, getLang, statName, statHint, seriesName, trainingText } from '../i18n.js';
 
@@ -44,13 +47,13 @@ export function confirmDialog(title, text, okLabel, onOk) {
   dlg = openDialog(title, body);
 }
 
-function tabs(spec) {
+function tabs(spec, start = 0) {
   const bar = h('div', { class: 'tabs', role: 'tablist' });
   const panel = h('div', { role: 'tabpanel' });
   const btns = spec.map(([label, render], i) => {
     const b = h('button', {
       role: 'tab',
-      'aria-selected': i === 0 ? 'true' : 'false',
+      'aria-selected': i === start ? 'true' : 'false',
       onClick: () => {
         btns.forEach((x) => x.setAttribute('aria-selected', 'false'));
         b.setAttribute('aria-selected', 'true');
@@ -60,7 +63,7 @@ function tabs(spec) {
     return b;
   });
   bar.append(...btns);
-  panel.append(spec[0][1]());
+  panel.append(spec[start][1]());
   return h('div', null, spec.length > 1 ? bar : null, panel);
 }
 
@@ -269,6 +272,137 @@ export function openRecords(app) {
     ? t('You rank #{titles} for titles and #{wins} for wins among {of} Grand Prix drivers.', { titles: rows.indexOf(me) + 1, wins: byWins.indexOf(me) + 1, of: rows.length })
     : t('Start a Formula 1 race to appear here.');
   openDialog(t('All-time records'), h('div', null, h('p', { style: 'margin-top:0;color:var(--ink-2)' }, intro), tabs([[t('Most titles'), () => table(rows)], [t('Most wins'), () => table(byWins)]])));
+}
+
+// ------------------------------------------------------------ global leaderboard
+
+function boardTable(entries, mine, daily) {
+  return h(
+    'table',
+    { class: 'table lb-table' },
+    h('thead', null, h('tr', null, h('th', { class: 'r' }, '#'), h('th', null, t('Driver')), h('th', { class: 'r' }, t('Score')))),
+    h(
+      'tbody',
+      null,
+      entries.map((e, i) => {
+        const record = e.starts ? `${plural(e.titles, 'title')}, ${plural(e.wins, 'win')}` : t('No Grand Prix start');
+        return h(
+          'tr',
+          { class: mine.has(e.id) ? 'me' : '' },
+          h('td', { class: 'r lb-pos' }, i + 1),
+          h(
+            'td',
+            null,
+            h('div', { class: 'lb-name' }, e.name, mine.has(e.id) ? h('span', { class: 'lb-you' }, t('You')) : null),
+            h(
+              'div',
+              { class: 'lb-sub' },
+              daily ? h('span', { class: `lb-goal${e.daily?.done ? ' ok' : ''}` }, e.daily?.done ? t('Goal met') : t('Goal missed')) : null,
+              [e.flag, [e.driver, summaryWords(e).tier, record].filter(Boolean).join(' · ')].filter(Boolean).join(' '),
+            ),
+          ),
+          h('td', { class: 'r lb-score' }, e.score),
+        );
+      }),
+    ),
+  );
+}
+
+export function openLeaderboard(app, { tab = 'all' } = {}) {
+  const mine = store.boardMine();
+  const date = todayKey();
+  const canPlay = !app.s || app.s.stage === 'retired';
+  let dlg;
+  const load = (board) => {
+    const box = h('div', { 'aria-busy': 'true' }, h('p', { class: 'empty' }, t('Loading the leaderboard…')));
+    fetchBoard(board, board === 'daily' ? date : null)
+      .then((data) => {
+        const empty = board === 'daily' ? t('Nobody has submitted today’s challenge yet. Be the first.') : t('No careers on the board yet. Finish one and be the first.');
+        box.replaceChildren(data.entries.length ? boardTable(data.entries, mine, board === 'daily') : h('p', { class: 'empty' }, empty));
+      })
+      .catch((e) => {
+        box.replaceChildren(h('p', { class: 'empty' }, t('The leaderboard could not be loaded.')));
+        toast(e.message);
+      })
+      .finally(() => box.removeAttribute('aria-busy'));
+    return box;
+  };
+  const allTab = () => h('div', null, h('p', { class: 'lb-intro' }, t('The top 100 careers by legacy score. The server replays every one from its seed before it goes on the board.')), load('all'));
+  const dailyTab = () => {
+    const d = dailySetup(date);
+    return h(
+      'div',
+      null,
+      h('p', { class: 'lb-intro' }, h('b', null, t('Goal for {date}: ', { date })), dailyGoalText(d.goal, d.goalText), ' ', t('Meeting it puts you above everyone who missed it, then legacy score decides.')),
+      canPlay ? h('button', { class: 'btn btn-sm', style: 'margin-bottom:12px', onClick: () => { dlg.close(); app.showTitle({ daily: true }); } }, t('Play today’s challenge')) : null,
+      load('daily'),
+    );
+  };
+  dlg = openDialog(t('Global leaderboard'), tabs([[t('All-time'), allTab], [t('Today’s daily challenge'), dailyTab]], tab === 'daily' ? 1 : 0));
+}
+
+export function boardResultText(b, duplicate = false) {
+  if (duplicate) return t('This career is already on the global leaderboard.');
+  if (b.rank && b.daily) return t('You are #{rank} on the global leaderboard and #{daily} in the daily challenge.', { rank: b.rank, daily: b.daily });
+  if (b.rank) return t('You are #{rank} on the global leaderboard.', { rank: b.rank });
+  if (b.daily) return t('Career verified. It did not make the all-time top 100, but you are #{daily} in the daily challenge.', { daily: b.daily });
+  return t('Career verified. It did not make the all-time top 100.');
+}
+
+export function openSubmitDialog(app, onDone) {
+  const s = app.s;
+  const sum = s.retired;
+  const hint = t('Everyone can see it next to your score. {min} to {max} characters: letters, numbers, spaces and basic punctuation.', { min: NAME_MIN, max: NAME_MAX });
+  let dlg;
+  const input = h('input', { class: 'input', id: 'lb-name', maxlength: NAME_MAX, autocomplete: 'nickname', spellcheck: 'false', 'aria-describedby': 'lb-name-hint' });
+  input.value = store.boardName() || '';
+  const msg = h('p', { class: 'hint', id: 'lb-name-hint' }, hint);
+  const go = h('button', { class: 'btn btn-go', type: 'submit' }, t('Submit career'));
+  const form = h(
+    'form',
+    { class: 'lb-form', novalidate: true },
+    h('p', { style: 'margin-top:0;color:var(--ink-2)' }, t('{name}, legacy score {score}. The server replays the whole career from its seed to check it.', { name: sum.name, score: sum.score })),
+    sum.daily
+      ? h('p', { style: 'color:var(--ink-2)' }, sum.daily.done ? t('It also goes on the daily challenge board for {date}, goal met.', { date: sum.daily.date }) : t('It also goes on the daily challenge board for {date}, goal missed.', { date: sum.daily.date }))
+      : null,
+    h('label', { for: 'lb-name' }, t('Display name')),
+    input,
+    msg,
+    h('div', { class: 'row', style: 'justify-content:flex-end;margin-top:16px' }, h('button', { class: 'btn btn-ghost', type: 'button', onClick: () => dlg.close() }, t('Cancel')), go),
+  );
+  input.addEventListener('input', () => {
+    msg.classList.remove('bad');
+    msg.textContent = hint;
+  });
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const c = checkDisplayName(input.value);
+    if (!c.ok) {
+      msg.textContent = localizeError(c.error);
+      msg.classList.add('bad');
+      input.focus();
+      return;
+    }
+    go.disabled = true;
+    go.textContent = t('Checking your career…');
+    try {
+      const res = await submitCareer(s, c.name);
+      store.setBoardName(c.name);
+      store.addBoardMine(res.entry.id);
+      sum.board = { id: res.entry.id, name: res.entry.name, rank: res.ranks.all, daily: res.ranks.daily, dailyDate: res.dailyBoard };
+      app.save();
+      dlg.close();
+      toast(boardResultText(sum.board, res.duplicate));
+      onDone?.();
+    } catch (e) {
+      toast(e.message);
+      go.disabled = false;
+      go.textContent = t('Submit career');
+    }
+  });
+  dlg = openDialog(t('Submit to the global leaderboard'), form);
+  input.focus();
+  input.select();
 }
 
 // ------------------------------------------------------------ settings, backup, about

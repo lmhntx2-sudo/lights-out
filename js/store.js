@@ -88,6 +88,16 @@ export const store = {
     set('daily', d);
   },
 
+  // Global leaderboard: the last display name used, and this browser's entries.
+  boardName: () => get('boardName', ''),
+  setBoardName: (v) => set('boardName', v),
+  boardMine: () => new Set(get('boardMine', [])),
+  addBoardMine(id) {
+    const ids = get('boardMine', []).filter((x) => x !== id);
+    ids.unshift(id);
+    set('boardMine', ids.slice(0, 200));
+  },
+
   exportAll: () => ({
     app: 'lights-out',
     v: 1,

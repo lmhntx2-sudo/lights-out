@@ -14,8 +14,9 @@ import { money, plural, stars } from '../core/fmt.js';
 import { store } from '../store.js';
 import {
   openStandings, openProfile, openAchievements, openHallOfFame, openSettings, openBackup, openAbout,
-  openDialog, confirmDialog, statBars,
+  openDialog, confirmDialog, statBars, openLeaderboard, openSubmitDialog, boardResultText,
 } from './modals.js';
+import { canSubmit } from '../api.js';
 import { openDonate, maybeNudge, coffeeButton } from './donate.js';
 import { openRecords } from './modals.js';
 import { car } from './car.js';
@@ -426,10 +427,32 @@ function retireCard(app, e) {
     h('div', { class: 'kv' }, h('span', null, t('Net worth '), h('b', null, money(e.worth))), h('span', null, t('Legacy score '), h('b', null, e.score)), h('span', null, t('Seed '), h('b', null, e.seed))),
     e.daily ? h('div', { class: 'kv', style: 'margin-top:6px' }, h('span', null, t('Daily goal: {goal} ', { goal: daily }), h('b', null, e.daily.done ? t('Completed') : t('Not completed')))) : null,
     h('div', { class: 'row', style: 'flex-wrap:wrap;margin-top:14px' }, shareBtn, copyBtn, f.starts ? h('button', { class: 'btn', onClick: () => openRecords(app) }, t('All-time records')) : null, h('button', { class: 'btn', onClick: () => openHallOfFame(app) }, t('Hall of fame'))),
+    boardBox(app, e),
     app.supporter
       ? h('div', { class: 'thanks-box' }, h('p', { style: 'margin:0' }, t('☕ Thank you for being in the pit crew. You keep this free for everyone.')))
       : h('div', { class: 'thanks-box' }, h('p', null, t('Enjoyed that career? Lights Out is free with no ads. A coffee keeps new teams, tracks and stories coming.')), coffeeButton(app, { reason: 'retire' })),
   );
+}
+
+// The global leaderboard part of the retirement card. It only goes online when
+// a button is pressed, so the game itself never needs a connection.
+function boardBox(app, e) {
+  const box = h('div', { class: 'lb-box' });
+  const draw = () => {
+    const s = app.s;
+    const b = s?.retired?.board;
+    const view = h('button', { class: 'btn', onClick: () => openLeaderboard(app, { tab: e.daily ? 'daily' : 'all' }) }, t('View leaderboard'));
+    let text;
+    let submit = null;
+    if (b) text = cat(boardResultText(b), t('Submitted as {name}.', { name: b.name }));
+    else if (canSubmit(s)) {
+      text = t('See how this career ranks against everyone else’s. The server replays it from the seed to check it.');
+      submit = h('button', { class: 'btn btn-go', onClick: () => openSubmitDialog(app, draw) }, t('Submit to the global leaderboard'));
+    } else text = t('This career began before the global leaderboard existed, so it cannot be verified. Your next one can.');
+    box.replaceChildren(h('h4', null, t('Global leaderboard')), h('p', null, text), h('div', { class: 'row', style: 'flex-wrap:wrap' }, submit, view));
+  };
+  draw();
+  return box;
 }
 
 // ------------------------------------------------------------------ header & side
@@ -638,6 +661,7 @@ function openMenu(app) {
     item(t('Save and go to the title screen'), () => app.showTitle()),
     item(t('Achievements'), () => openAchievements(app)),
     item(t('Hall of fame'), () => openHallOfFame(app)),
+    item(t('Global leaderboard'), () => openLeaderboard(app)),
     item(t('All-time records'), () => openRecords(app)),
     item(t('Settings'), () => openSettings(app)),
     item(t('Backup'), () => openBackup(app)),

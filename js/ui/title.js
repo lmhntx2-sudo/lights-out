@@ -8,7 +8,7 @@ import { todayKey, dailySetup, dailyGoalText } from '../engine/daily.js';
 import { ACHIEVEMENTS } from '../engine/achievements.js';
 import { store } from '../store.js';
 import { coffeeButton } from './donate.js';
-import { openHallOfFame, openAchievements, openSettings, openBackup, openAbout, allUnlocked } from './modals.js';
+import { openHallOfFame, openAchievements, openSettings, openBackup, openAbout, allUnlocked, openLeaderboard } from './modals.js';
 import { car } from './car.js';
 import { sfx } from './sfx.js';
 import { t, getLang, LANGS, loc, natName, styleName, styleDesc, bgText } from '../i18n.js';
@@ -99,6 +99,7 @@ export function renderTitle(app, { seed, daily, form: kept } = {}) {
     h(
       'nav',
       { class: 'title-links', 'aria-label': t('More') },
+      h('button', { class: 'btn btn-ghost', onClick: () => openLeaderboard(app, { tab: dly ? 'daily' : 'all' }) }, `🏆 ${t('Global leaderboard')}`),
       h('button', { class: 'btn btn-ghost', onClick: () => openHallOfFame(app) }, t('Hall of fame')),
       h('button', { class: 'btn btn-ghost', onClick: () => openAchievements(app) }, t('Achievements {got}/{all}', { got: ach.size, all: ACHIEVEMENTS.length })),
       h('button', { class: 'btn btn-ghost', onClick: () => openBackup(app) }, t('Backup')),
