@@ -8,7 +8,7 @@ import { todayKey, dailySetup, dailyGoalText } from '../engine/daily.js';
 import { ACHIEVEMENTS } from '../engine/achievements.js';
 import { store } from '../store.js';
 import { coffeeButton } from './donate.js';
-import { openHallOfFame, openAchievements, openSettings, openBackup, openAbout, allUnlocked, openLeaderboard } from './modals.js';
+import { openHallOfFame, openAchievements, openSettings, openBackup, openAbout, allUnlocked, openLeaderboard, confirmDialog } from './modals.js';
 import { car } from './car.js';
 import { sfx } from './sfx.js';
 import { t, getLang, LANGS, loc, natName, styleName, styleDesc, bgText } from '../i18n.js';
@@ -73,6 +73,7 @@ export function renderTitle(app, { seed, daily, form: kept } = {}) {
   const goal = dly ? dailyGoalText(dly.goal, dly.goalText) : '';
 
   // ---------------------------------------------------------------- hero
+  const builder = h('section', { class: 'builder', 'aria-labelledby': 'build-h' });
   const g = gantry();
   const word = h('h1', { class: `wordmark ${anim ? 'wait' : ''}` }, h('span', null, 'Lights'), h('span', null, 'Out'));
   const launch = h('div', { class: 'launch', 'aria-hidden': 'true' }, h('div', { class: 'grid-box' }), h('div', { class: 'marks' }), car({ color: '#E10600', accent: '#FFFFFF', number: form.number }));
@@ -82,6 +83,13 @@ export function renderTitle(app, { seed, daily, form: kept } = {}) {
     actions.append(
       h('button', { class: 'btn btn-go', onClick: () => app.continueGame() }, t('Continue career'), h('small', { style: 'font-style:normal;font-weight:600;opacity:.85' }, t('{name}, {year}', { name: save.driver.name, year: save.year }))),
     );
+  }
+  if (!dly) {
+    const toBuilder = () => {
+      document.getElementById('first')?.focus({ preventScroll: true });
+      builder.scrollIntoView({ behavior: anim ? 'smooth' : 'auto', block: 'start' });
+    };
+    actions.append(h('button', { class: save && save.stage !== 'retired' ? 'btn' : 'btn btn-go', onClick: toBuilder }, t('New career')));
   }
   actions.append(
     dly
@@ -116,7 +124,6 @@ export function renderTitle(app, { seed, daily, form: kept } = {}) {
   );
 
   // ---------------------------------------------------------------- builder
-  const builder = h('section', { class: 'builder', 'aria-labelledby': 'build-h' });
   const preview = h('div');
   const carPreview = h('div', { class: 'car-preview' });
   const updatePreview = () => {
@@ -233,8 +240,9 @@ export function renderTitle(app, { seed, daily, form: kept } = {}) {
       form.last = n.last;
     }
     if (!form.seed) form.seed = newSeed();
-    if (save && save.stage !== 'retired' && !confirm(t("Starting a new career replaces {name}'s unfinished one. Continue?", { name: save.driver.name }))) return;
-    app.startGame({ ...form, helmet: { ...form.helmet }, daily: dly ? { date: dly.date, goal: dly.goal, goalText: dly.goalText } : null });
+    const go = () => app.startGame({ ...form, helmet: { ...form.helmet }, daily: dly ? { date: dly.date, goal: dly.goal, goalText: dly.goalText } : null });
+    if (save && save.stage !== 'retired') confirmDialog(t('Start a new career?'), t("Starting a new career replaces {name}'s unfinished one. Continue?", { name: save.driver.name }), t('Start a new career'), go);
+    else go();
   });
 
   builder.append(...[

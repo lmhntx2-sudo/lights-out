@@ -28,7 +28,7 @@ export const FEEDER_TEAMS = [
   { name: 'Tridente', color: '#7FB3D5' },
   { name: 'HyperTech GP', color: '#EDEDED' },
   { name: 'Valencia Motorsport', color: '#F2C14E' },
-  { name: 'Van Dijkstra Racing', color: '#FF7F11' },
+  { name: 'Van Dijkstra Racing', short: 'Van Dijkstra', color: '#FF7F11' },
   { name: 'Rodan Motorsport', color: '#2E86AB' },
   { name: 'MV Racing', color: '#C2457A' },
   { name: 'Dorian Racing', color: '#3BB273' },
@@ -36,7 +36,7 @@ export const FEEDER_TEAMS = [
   { name: 'Aix Racing', color: '#9DA3A4' },
   { name: 'Kartbahn Junior', color: '#5C80BC' },
   { name: 'Monoposto Lab', color: '#E9D758' },
-  { name: 'Northern Lights GP', color: '#4ECDC4' },
+  { name: 'Northern Lights GP', short: 'Northern Lights', color: '#4ECDC4' },
 ];
 
 export const ENGINEERS = ['Hannah', 'Pietro', 'Bianca', 'Raj', 'Sofia', 'Gus', 'Ines', 'Kenji', 'Olly', 'Ruth', 'Dani', 'Mika', 'Tomasz', 'Leah', 'Bernd', 'Carla'];

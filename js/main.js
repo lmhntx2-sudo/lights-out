@@ -51,6 +51,19 @@ const app = {
     mountGame(app);
   },
 
+  // A restored backup replaces the saved career and settings. The career on
+  // screen is not in it, so drop it without saving, then pick up the settings.
+  afterRestore() {
+    app.s = null;
+    app.view = null;
+    app.refresh = null;
+    app.settings = store.settings();
+    app.supporter = store.supporter();
+    applyLang(app.settings.lang);
+    setSound(app.settings.sound !== false);
+    renderTitle(app);
+  },
+
   // Switch language and redraw whatever is on screen. A career in progress keeps
   // its story so far as written; the open decision and everything new switch.
   setLanguage(lang) {

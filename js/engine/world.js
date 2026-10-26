@@ -59,7 +59,7 @@ export function createWorld(s, r) {
     picks.forEach((tpl, i) => {
       const id = `${series.toLowerCase()}-${i}`;
       const t = {
-        id, name: tpl.name, short: tpl.name.split(' ')[0], color: tpl.color, series,
+        id, name: tpl.name, short: tpl.short || tpl.name.split(' ')[0], color: tpl.color, series,
         perf: r1(r.range(72, 90)), budget: r.range(0.5, 0.9), prestige: 50, rel: r.range(0.96, 0.985),
         seats: [null, null], engineer: r.pick(ENGINEERS),
       };

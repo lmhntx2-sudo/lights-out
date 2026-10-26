@@ -285,7 +285,7 @@ function boardTable(entries, mine, daily) {
       'tbody',
       null,
       entries.map((e, i) => {
-        const record = e.starts ? `${plural(e.titles, 'title')}, ${plural(e.wins, 'win')}` : t('No Grand Prix start');
+        const record = e.starts ? t('{titles}, {wins}', { titles: plural(e.titles, 'title'), wins: plural(e.wins, 'win') }) : t('No Grand Prix start');
         return h(
           'tr',
           { class: mine.has(e.id) ? 'me' : '' },
@@ -441,8 +441,8 @@ export function openBackup(app) {
     if (!f) return;
     try {
       store.importAll(JSON.parse(await f.text()));
+      app.afterRestore();
       toast(t('Backup restored.'));
-      app.showTitle();
       document.querySelector('dialog')?.close();
     } catch (e) {
       toast(e.message === NOT_BACKUP ? t('This file is not a Lights Out backup.') : e.message || t('That file could not be read.'));

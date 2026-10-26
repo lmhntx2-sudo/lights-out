@@ -400,7 +400,7 @@ function runRound(s, r) {
   let victim = null;
   if (s.career.role === 'reserve') {
     mode = 'watch';
-    if (r.next() < 0.08) {
+    if (r.next() < 0.08 && !(s.driver.injured > 0)) {
       const own = s.teams[s.career.team].seats.filter(Boolean);
       const all = seatsOf(s, 'F1').map((x) => x.id);
       victim = r.next() < 0.5 && own.length ? r.pick(own) : r.pick(all);
@@ -512,7 +512,7 @@ function finishRace(s, r) {
       story(s, tr('The crash at {track} was heavier than it looked. A fractured wrist: you will miss the next {races}.', { ...at, races: d.injured === 1 ? tr('race') : plural(d.injured, 'race') }), { title: tr('Injury'), tone: 'red' });
     }
   }
-  if (race.mode === 'injured') d.injured = Math.max(0, d.injured - 1);
+  if (race.mode === 'injured' || race.mode === 'watch') d.injured = Math.max(0, d.injured - 1);
 
   pushFeed(s, raceCard(s, race, track, grid, order, me));
   if (x) checkAch(s, 'race', x);

@@ -172,7 +172,7 @@ export function shareText(sum, url) {
     stats,
     tr('Net worth {money}. Legacy score {score}.', { money: money(sum.worth), score: sum.score }),
     tr('Seed: {seed}', { seed: sum.seed }),
-    url ? tr('Play Lights Out: {url}', { url }) : '',
+    url ? tr('Play Lights Out: {url}', { url: `${url}?seed=${encodeURIComponent(sum.seed)}` }) : '',
   ]
     .filter(Boolean)
     .join('\n');

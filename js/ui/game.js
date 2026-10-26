@@ -564,11 +564,23 @@ function ringClass(ch) {
   return 'lo';
 }
 
+// Taps on a decision or on offers that appeared less than this long ago are
+// ignored. On a phone the next button lands right under your finger, so a quick
+// double tap would otherwise make a choice you never read.
+const FRESH_MS = 450;
+
+function fresh(app) {
+  return performance.now() - app.view.dockAt < FRESH_MS;
+}
+
 function renderDock(app) {
   const s = app.s;
   const p = prompt(s);
   const dock = app.view.dock;
   const inner = h('div', { class: 'dock-in' });
+  const key = p.type === 'choice' ? `c${p.n}` : p.type === 'offers' ? `o${s.year}` : null;
+  if (key && key !== app.view.dockKey) app.view.dockAt = performance.now();
+  app.view.dockKey = key;
 
   if (p.type === 'choice') {
     inner.append(
@@ -576,7 +588,7 @@ function renderDock(app) {
       ...p.choices.map((c, i) =>
         h(
           'button',
-          { class: 'choice', onClick: () => act(app, (st) => choose(st, i), { animate: true }) },
+          { class: 'choice', onClick: () => fresh(app) || act(app, (st) => choose(st, i), { animate: true }) },
           h('span', { class: `ring ${ringClass(c.chance)}`, style: `--p:${c.chance}`, 'aria-label': c.chance >= 100 ? t('Certain') : t('{n} percent chance', { n: c.chance }) }, h('span', null, c.chance >= 100 ? t('Safe') : `${c.chance}%`)),
           h('span', { class: 'lab' }, c.label, c.stat || c.hint ? h('small', null, c.hint || t('Depends on {stat}', { stat: c.stat.toLowerCase() })) : null),
         ),
@@ -623,7 +635,7 @@ function offerButton(app, o, i) {
     const label = offerLabel(o);
     return h(
       'button',
-      { class: 'offer dim', onClick: () => confirmDialog(label, cat(note, t('This ends your career and shows your legacy.')), o.kind === 'retire' ? t('Retire') : t('Sign for endurance'), go) },
+      { class: 'offer dim', onClick: () => fresh(app) || confirmDialog(label, cat(note, t('This ends your career and shows your legacy.')), o.kind === 'retire' ? t('Retire') : t('Sign for endurance'), go) },
       h('i', { style: 'background:var(--line)' }),
       h('div', null, h('b', null, label), note ? h('span', { class: 'meta' }, note) : null),
       h('span'),
@@ -637,7 +649,7 @@ function offerButton(app, o, i) {
       : h('span', { class: `money ${cant ? 'cant' : ''}` }, o.cost ? money(o.cost) : t('Free'), h('small', null, o.cost ? (cant ? t('You cannot afford it') : t('Seat cost')) : s.driver.academy ? t('Academy pays') : t('Team pays')));
   return h(
     'button',
-    { class: 'offer', disabled: cant, onClick: go },
+    { class: 'offer', disabled: cant, onClick: () => fresh(app) || go() },
     h('i', { style: `background:${o.color}` }),
     h(
       'div',
