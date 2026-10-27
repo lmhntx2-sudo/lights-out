@@ -3,7 +3,7 @@ import { DONATE, isPlaceholder, liveMethods, price, tierLink, tipJarOpen } from 
 import { h, toast } from './dom.js';
 import { openDialog } from './modals.js';
 import { store } from '../store.js';
-import { t, loc, isZh } from '../i18n.js';
+import { t, loc, isZh, htmlLang } from '../i18n.js';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -32,13 +32,14 @@ function methodPanel(id, app) {
     ];
   }
   const links = DONATE.tiers.map((tier) => ({ tier, url: tierLink(tier, id) }));
-  const note = id === 'paypal' && m.me ? t('Each amount opens PayPal with it filled in.') : id === 'bmc' ? t('You can change the amount on the next page.') : null;
+  const note = id === 'paypal' && (m.me || m.email) ? t('Each amount opens PayPal with it filled in.') : id === 'bmc' ? t('You can change the amount on the next page.') : null;
   return [h('div', { class: 'tiers' }, links.map(({ tier, url }) => tierCard(tier, url, app))), note ? h('p', { class: 'suggest' }, note) : null];
 }
 
 export function openDonate(app, reason = '') {
   const open = tipJarOpen();
-  const methods = liveMethods();
+  // PayMe is how Hong Kong pays day to day, so Hong Kong players see it first.
+  const methods = liveMethods().sort((a, b) => (htmlLang() === 'zh-Hant-HK' ? (b === 'payme') - (a === 'payme') : 0));
   const intro = {
     retire: () => t('That was a whole career. If it made you grin, a coffee keeps the next update coming.'),
     first_win: () => t('Your first Grand Prix win deserves champagne. The developer would settle for a coffee.'),

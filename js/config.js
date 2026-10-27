@@ -25,8 +25,10 @@ export const DONATE = {
   symbol: 'HK$',
   methods: {
     card: { label: 'Card', url: '' },
-    paypal: { label: 'PayPal', me: '', url: '' },
-    payme: { label: 'PayMe', qr: '', url: '' },
+    // email: the PayPal account. Joined at runtime so the address isn't sitting
+    // in the page source for spam scrapers.
+    paypal: { label: 'PayPal', me: '', email: ['lmhntx1', 'gmail.com'].join('@'), url: '' },
+    payme: { label: 'PayMe', qr: 'assets/donate-qr.png', url: 'https://payme.hsbc/nlnlnlnot' },
     bmc: { label: 'Buy Me a Coffee', url: 'https://www.buymeacoffee.com/YOUR_NAME' },
   },
   tiers: [
@@ -47,7 +49,7 @@ function methodLive(id) {
   const m = DONATE.methods[id];
   if (!m) return false;
   if (id === 'card') return !isPlaceholder(m.url) || DONATE.tiers.some((t) => !isPlaceholder(t.stripe));
-  if (id === 'paypal') return !!m.me || !isPlaceholder(m.url);
+  if (id === 'paypal') return !!m.me || !!m.email || !isPlaceholder(m.url);
   if (id === 'payme') return !!m.qr || !isPlaceholder(m.url);
   return !isPlaceholder(m.url);
 }
@@ -60,7 +62,14 @@ export const price = (amount) => `${DONATE.symbol}${amount}`;
 export function tierLink(t, id) {
   const m = DONATE.methods[id];
   if (id === 'card') return !isPlaceholder(t.stripe) ? t.stripe : !isPlaceholder(m.url) ? m.url : null;
-  if (id === 'paypal') return m.me ? `https://paypal.me/${encodeURIComponent(m.me)}/${t.amount}${DONATE.currency}` : !isPlaceholder(m.url) ? m.url : null;
+  if (id === 'paypal') {
+    if (m.me) return `https://paypal.me/${encodeURIComponent(m.me)}/${t.amount}${DONATE.currency}`;
+    if (m.email) {
+      const q = new URLSearchParams({ cmd: '_xclick', business: m.email, amount: String(t.amount), currency_code: DONATE.currency, item_name: `Lights Out: ${t.name}`, no_shipping: '1' });
+      return `https://www.paypal.com/cgi-bin/webscr?${q}`;
+    }
+    return !isPlaceholder(m.url) ? m.url : null;
+  }
   if (id === 'payme') return null;
   return !isPlaceholder(m.url) ? m.url : null;
 }
