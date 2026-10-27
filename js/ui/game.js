@@ -66,7 +66,7 @@ function act(app, fn, { animate = false } = {}) {
   const animated = animate && app.settings.anim !== 'off';
   const added = appendNew(app, animated);
   app.refresh();
-  for (const id of s.ach.slice(achBefore)) if (freshAch.includes(id)) achToast(id);
+  for (const id of s.ach.slice(achBefore)) if (freshAch.includes(id)) achToast(id, s.driver.nat);
   celebrate(app, s.feed.filter((e) => e.n > prevN), pendN ? s.feed.find((e) => e.n === pendN) : null, animated);
   if (s.nudge) {
     const reason = s.nudge;
@@ -115,10 +115,11 @@ function reveal(app, updated, added) {
   });
 }
 
-function achToast(id) {
+function achToast(id, nat) {
   const a = ACH_BY_ID[id];
   if (!a) return;
-  toast(h('div', { class: 'ach-t' }, h('span', { style: 'font-size:24px' }, a.icon), h('div', null, h('b', null, t('Achievement unlocked')), achWords(a).name)), { cls: 'ach-t', ms: 4500 });
+  const w = achWords(a, nat);
+  toast(h('div', { class: 'ach-t' }, h('span', { style: 'font-size:24px' }, w.icon), h('div', null, h('b', null, t('Achievement unlocked')), w.name)), { cls: 'ach-t', ms: 4500 });
 }
 
 // ------------------------------------------------------------------ feed
@@ -251,6 +252,7 @@ const R = {
     if (me?.pole) sumBits.push(t('Pole position.'));
     if (me?.fl) sumBits.push(t('Fastest lap.'));
     if (e.mode === 'standin') sumBits.push(t('Stand-in drive.'));
+    if (e.special) sumBits.push(t('Non-championship race.'));
     if (e.champ) sumBits.push(t('Championship: P{pos}, {pts}.', { pos: e.champ.pos, pts: plural(e.champ.pts, 'point') }));
     const wrap = h('article', { class: `f-race${latest ? '' : ' compact'}` });
     const tw = tower(e, animate, app.settings.anim === 'fast' ? 0.5 : 1);
@@ -259,7 +261,7 @@ const R = {
       h(
         'div',
         { class: 'hd' },
-        h('span', { class: 'rnd' }, `R${e.round}`),
+        h('span', { class: 'rnd' }, e.special ? 'GP' : `R${e.round}`),
         h('span', { class: 'trk' }, `${e.flag} ${trackShortById(e.trackId, e.short)}`, rc),
         h('span', { class: `res-pos ${cls}` }, pos, h('small', null, small)),
       ),
@@ -322,7 +324,7 @@ const R = {
 
   ach: (app, e) => {
     const a = ACH_BY_ID[e.id];
-    const w = a ? achWords(a) : { name: e.name, desc: e.desc };
+    const w = a ? achWords(a, app.s.driver.nat) : { name: e.name, desc: e.desc };
     return h('div', { class: 'f-ach' }, h('span', { class: 'ic', 'aria-hidden': 'true' }, e.icon), h('span', null, ...tn('Achievement: {name}. {desc}', { name: h('b', null, w.name), desc: w.desc })));
   },
 

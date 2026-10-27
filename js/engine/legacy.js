@@ -4,8 +4,9 @@ import { LEGENDS } from '../data/legends.js';
 import { SINFO } from './constants.js';
 import { netWorth } from './achievements.js';
 import { overall } from './player.js';
+import { sponsorKind } from './helpers.js';
 import { money, plural } from '../core/fmt.js';
-import { t as tr, loc, bgText, styleName, seriesName } from '../i18n.js';
+import { t as tr, loc, bgText, styleName, seriesName, macauGreats } from '../i18n.js';
 
 const TIERS = {
   goat: 'The greatest of all time',
@@ -46,6 +47,14 @@ export function summaryWords(sum) {
   };
 }
 
+// Your first sponsor, years later: big if their logo went back on your helmet in F1.
+const SPONSOR_LATER = {
+  doner: (big) => (big ? tr('Dönerland Express now has forty branches. Every one has a photo of your helmet on the wall.') : tr('Dönerland Express still has your first helmet sticker stuck to the till.')),
+  hk: (big) => (big ? tr('Sun Keung Kee now has forty branches. Every one has a photo of your helmet on the wall.') : tr('Sun Keung Kee still has your first helmet sticker on the milk tea urn.')),
+  tw: (big) => (big ? tr('A-Ma Boba now has forty branches. Every one has a photo of your helmet on the wall.') : tr('A-Ma Boba still has your first helmet sticker on the cup-sealing machine.')),
+  mo: (big) => (big ? tr('Ping Kee now has forty branches. Every one has a photo of your helmet on the wall.') : tr('Ping Kee still has your first helmet sticker on the grill hood.')),
+};
+
 function epilogue(s, how) {
   const d = s.driver;
   const f = s.career.tot.F1;
@@ -65,8 +74,8 @@ function epilogue(s, how) {
   else if (s.flags.monaco) lines.push(tr('You still live in Monaco and watch the Grand Prix from your balcony.'));
   if (s.flags.parent) lines.push(tr('Your kid has just started karting. You are the most nervous parent at the track.'));
   else if (s.flags.married) lines.push(tr('You and your partner still have no idea what DRS stands for, between you.'));
-  if (s.flags.kebab_f1) lines.push(tr('Dönerland Express now has forty branches. Every one has a photo of your helmet on the wall.'));
-  else if (s.flags.kebab) lines.push(tr('Dönerland Express still has your first helmet sticker stuck to the till.'));
+  if (s.flags.kebab) lines.push(SPONSOR_LATER[sponsorKind(d.nat)](!!s.flags.kebab_f1));
+  if (s.flags.macau_win) lines.push(tr('Your name is still on the list of Macau Grand Prix winners, a few lines below {senna} and {schumacher}.', macauGreats()));
   if (s.flags.crypto) lines.push(tr("You still get letters from CoinRocket's lawyers."));
   if (s.flags.remortgage) lines.push(s.flags.paid_back ? tr("Your parents' new house has a trophy room. Your mum dusts it every day.") : tr('You never did pay back that mortgage. Your parents never once mentioned it.'));
 

@@ -1,6 +1,9 @@
 // Nationalities you can race for. `names` picks the name pool used for
 // AI drivers, `home` lists Grands Prix that count as a home race, and
 // `market` scales how much sponsors pay a driver from that country.
+// `cv` is the content version a nationality arrived in: careers set up on an
+// older version can't pick it, and the daily challenge never does, so every
+// day's daily driver stays the same.
 
 export const REGIONS = [
   { id: 'eu', name: 'Europe' },
@@ -37,6 +40,7 @@ export const NATIONS = [
   { id: 'CN', name: 'China', adj: 'Chinese', flag: '🇨🇳', region: 'ap', names: 'zh', home: ['china'], market: 1.3 },
   { id: 'TW', name: 'Taiwan', adj: 'Taiwanese', flag: '🇹🇼', region: 'ap', names: 'zh', home: [], market: 1.0 },
   { id: 'HK', name: 'Hong Kong', adj: 'Hongkonger', flag: '🇭🇰', region: 'ap', names: 'zh', home: [], market: 1.05 },
+  { id: 'MO', name: 'Macau', adj: 'Macanese', flag: '🇲🇴', region: 'ap', names: 'zh', home: [], market: 1.0, cv: 2 },
   { id: 'KR', name: 'South Korea', adj: 'Korean', flag: '🇰🇷', region: 'ap', names: 'kr', home: [], market: 1.0 },
   { id: 'TH', name: 'Thailand', adj: 'Thai', flag: '🇹🇭', region: 'ap', names: 'th', home: [], market: 0.95 },
   { id: 'IN', name: 'India', adj: 'Indian', flag: '🇮🇳', region: 'ap', names: 'in', home: [], market: 1.1 },

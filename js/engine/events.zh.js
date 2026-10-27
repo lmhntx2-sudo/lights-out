@@ -6,12 +6,12 @@
 // must have the same length and order as the English one (tests check this).
 // Text can be a string or an (s, c) => string function, exactly as in events.js.
 
-import { firstName } from './helpers.js';
+import { firstName, sponsorKind } from './helpers.js';
 import { TRAINING } from './constants.js';
 import { F1_TEAMS } from '../data/teams.js';
 import { nation } from '../data/nations.js';
 import { money } from '../core/fmt.js';
-import { trackShortById, trackPlaceById, seriesName, trainingText, natName } from '../i18n.js';
+import { trackShortById, trackPlaceById, seriesName, trainingText, natName, macauGreats } from '../i18n.js';
 
 // Track names in context objects are English; the ids give the Chinese ones.
 const trk = (c) => trackShortById(c.trackId, c.track);
@@ -24,6 +24,58 @@ const ACADEMY_LINES = {
   silverline: '精準、數據至上，還有點嚇人。他們遞給你一份以分鐘計算的訓練計劃。',
   torque: '他們包辦一切開支，但甩掉車手也像甩開燙手的鍋一樣快。壓力？沒有的事。',
   papaya: '笑臉迎人、零食好吃，而且出了名對年輕車手有耐性。',
+};
+
+// 第一個贊助商：你長大的地方樓下那家店（見 sponsorKind）。只換字，不換合約。
+const SPONSOR = {
+  doner: {
+    label: '找贊助商：街口的土耳其烤肉店',
+    deal: 'Dönerland Express 付了六萬元，把一根旋轉中的烤肉柱印在你的頭盔上。客觀來說，這是圍場裡最好看的頭盔。',
+    debut: '在某個地方，Dönerland Express 的老闆正盯著烤肉爐上方那部小電視。',
+    letter: '你的第一個贊助商 Dönerland Express 寄來一封字跡顫抖的信：能不能讓那根旋轉烤肉柱回到你的頭盔上，就一場比賽？',
+    back: '旋轉烤肉柱回歸了！周邊商品銷量暴增，Dönerland 一口氣開了三家分店。',
+    photo: '你改寄了一張簽名照給他們。照片掛在烤肉爐上方的牆上。',
+  },
+  hk: {
+    label: '找贊助商：樓下的茶餐廳',
+    deal: '新強記茶餐廳付了六萬元，把一個夾著厚切牛油的菠蘿油印在你的頭盔上。客觀來說，這是圍場裡最好看的頭盔。',
+    debut: '香港那邊，新強記的老闆把水吧上那部電視的音量開到最大。',
+    letter: '你的第一個贊助商新強記茶餐廳寄來一封字跡顫抖的信：能不能讓那個菠蘿油回到你的頭盔上，就一場比賽？',
+    back: '菠蘿油回歸了！周邊商品銷量暴增，新強記一口氣開了三家分店，第一家門外的人龍繞了整個街口。',
+    photo: '你改寄了一張簽名照給他們。照片貼在餐牌旁邊，就在你以前常坐的那個卡位上面。',
+  },
+  tw: {
+    label: '找贊助商：巷口的手搖飲料店',
+    deal: '阿嬤珍奶付了六萬元，把一大杯插著粗吸管的珍珠奶茶印在你的頭盔上。客觀來說，這是圍場裡最好看的頭盔。',
+    debut: '台灣那邊，阿嬤把手機靠在煮珍珠的鍋子旁，一邊顧火一邊看。',
+    letter: '你的第一個贊助商阿嬤珍奶寄來一封字跡顫抖的信：能不能讓那杯珍奶回到你的頭盔上，就一場比賽？',
+    back: '珍奶回歸了！周邊商品銷量暴增，阿嬤珍奶一口氣開了三家分店，每一家不到中午珍珠就賣光。',
+    photo: '你改寄了一張簽名照給他們。照片掛在封口機上方的牆上。',
+  },
+  mo: {
+    label: '找贊助商：氹仔的豬扒包檔',
+    deal: '炳記付了六萬元，把一個豬扒包印在你的頭盔上。客觀來說，這是圍場裡最好看的頭盔。',
+    debut: '澳門那邊，炳記門外的人龍停住了：大家都擠在老闆的手機前看比賽。',
+    letter: '你的第一個贊助商炳記寄來一封字跡顫抖的信：能不能讓那個豬扒包回到你的頭盔上，就一場比賽？',
+    back: '豬扒包回歸了！周邊商品銷量暴增，炳記一口氣開了三家分店，旅遊巴開始在門口停車。',
+    photo: '你改寄了一張簽名照給他們。照片掛在烤爐上方的牆上。',
+  },
+};
+const sponsor = (s) => SPONSOR[sponsorKind(s.driver.nat)];
+
+// 澳門格蘭披治大賽車：本地車迷的一句話。
+const MACAU_FANS = {
+  MO: '而今年，賽道就是你家門口的街道：你以前上學，每天都經過葡京彎。',
+  HK: '坐船一小時就到，半個香港好像都買了門票。',
+  TW: '這大概是你這輩子最接近主場的比賽，台灣的車迷俱樂部已經把機位全部訂光。',
+  CN: '你認識的每一個車迷，都準備從珠海過關來看。',
+};
+
+const MACAU_START = {
+  MO: '葡京彎的看台坐滿了你的街坊，叫聲震天。',
+  HK: '半個看台都是坐船過來的香港人，齊聲喊著你的名字。',
+  TW: '台灣的車迷俱樂部在葡京彎上方掛起一幅巴士那麼大的橫幅。',
+  CN: '從珠海過關而來的車迷，擠滿了葡京彎的看台。',
 };
 
 export const EVENTS_ZH = {
@@ -90,7 +142,7 @@ export const EVENTS_ZH = {
           ]
         : [
             { label: '把房子再抵押', ok: '他們眼都不眨就簽了。你暗暗發誓，將來要買一間更好的房子給他們。' },
-            { label: '找贊助商：街口的土耳其烤肉店', ok: 'Dönerland Express 付了六萬元，把一根旋轉中的烤肉柱印在你的頭盔上。客觀來說，這是圍場裡最好看的頭盔。' },
+            { label: sponsor(s).label, ok: sponsor(s).deal },
             {
               label: '有天分就夠了',
               ok: '一位車隊老闆無意中聽到，給了你一個獎學金車位。天分剛好夠用。',
@@ -161,7 +213,7 @@ export const EVENTS_ZH = {
     text: (s) =>
       `發車格巡禮。一位流行巨星問你是誰，一部攝影機直接塞到你面前。${
         s.flags.remortgage ? '當年為你把房子再抵押的爸媽，正在車庫裡哭成淚人。' : '你的家人在車庫裡哭成淚人。'
-      }${s.flags.kebab ? '在某個地方，Dönerland Express 的老闆正盯著烤肉爐上方那部小電視。' : ''}`,
+      }${s.flags.kebab ? sponsor(s).debut : ''}`,
     choices: [
       {
         label: '盡情享受這一刻',
@@ -935,10 +987,10 @@ export const EVENTS_ZH = {
 
   kebab_return: {
     title: '老朋友',
-    text: '你的第一個贊助商 Dönerland Express 寄來一封字跡顫抖的信：能不能讓那根旋轉烤肉柱回到你的頭盔上，就一場比賽？',
+    text: (s) => sponsor(s).letter,
     choices: [
-      { label: '當然可以', ok: '旋轉烤肉柱回歸了！周邊商品銷量暴增，Dönerland 一口氣開了三家分店。' },
-      { label: '車隊不准', ok: '你改寄了一張簽名照給他們。照片掛在烤肉爐上方的牆上。' },
+      { label: '當然可以', ok: (s) => sponsor(s).back },
+      { label: '車隊不准', ok: (s) => sponsor(s).photo },
     ],
   },
 
@@ -1244,6 +1296,73 @@ export const EVENTS_ZH = {
         label: '挑戰模擬器圈速紀錄',
         ok: '你打破了模擬器紀錄，數據還幫了賽車一把。',
         ko: '測試車手的紀錄依然屹立不倒。他因此得意得讓人受不了。',
+      },
+    ],
+  },
+
+  // ------------------------------------------------------ 澳門格蘭披治大賽車
+
+  macau_invite: {
+    title: '澳門的邀請',
+    text: (s, c) => {
+      const { senna, schumacher } = macauGreats();
+      return `每年十一月，全世界最出色的年輕車手都會受邀到東望洋賽道，參加澳門格蘭披治大賽車：六公里的石牆、一條沿海直路，還有一個窄得賽車差點轉不過的髮夾彎。這場比賽不計入任何錦標賽。${senna}贏過，${schumacher}也贏過。主辦單位希望你也站上發車格。${MACAU_FANS[c.nat] || ''}`;
+    },
+    choices: [
+      { label: '去澳門', ok: '對方話還沒說完，你已經答應了。' },
+      { label: '休息，備戰下季', ok: '你翹著腳在家看電視直播，胃裡隱隱有點打結。' },
+    ],
+  },
+
+  macau_quali: {
+    title: '澳門：排位賽',
+    text: '東望洋賽道沒有緩衝區，只有石牆。快的車手會故意擦著牆過彎。上到山段，賽道窄得只容兩部車並排，彎角的護欄早已滿是輪胎印。',
+    choices: [
+      {
+        label: '在山段貼著石牆飛馳',
+        ok: '你的後輪輕吻山段的護欄，做出一圈讓整條維修區都靜下來的時間。',
+        ko: '吻得太用力了。轉向拉桿撞彎，只能排在車尾發車。',
+      },
+      {
+        label: '在衝向葡京彎的直路上找尾流',
+        ok: '你算準時機，沿著海旁緊貼對手車尾，尾流替你快了足足零點三秒。',
+        ko: '大家都打著同一個算盤。整節排位賽，你都困在一群互相等待的賽車之間。',
+      },
+      { label: '穩穩做一圈乾淨的', ok: '尊重石牆。尊重石牆。尊重石牆。' },
+    ],
+  },
+
+  macau_lisboa: {
+    title: '澳門：殺入葡京彎',
+    text: (s, c) =>
+      `從 P${c.grid} 起步，燈滅！起步後全油門衝過文華東方彎的那段直路，是青年方程式最長的尾流大戰，盡頭就是葡京彎：一個在賭場門前的急右彎，整個車陣同時殺到。${MACAU_START[c.nat] || ''}`,
+    choices: [
+      {
+        label: '跳出尾流，從內線插入',
+        ok: '夠晚、夠深，壓著路肩切進去。出葡京彎時，你已經多賺了三個位。',
+        ko: '前輪鎖死，你直直衝進葡京彎的緩衝通道。重新加入時已經墊底。',
+      },
+      {
+        label: '跟著尾流，乾淨過彎',
+        ok: '前面兩部車在葡京彎碰在一起。你小心翼翼繞過殘骸，向山上衝去。',
+        ko: '太客氣了。上山途中，兩部車在你身邊呼嘯而過。',
+      },
+    ],
+  },
+
+  macau_melco: {
+    title: '澳門：新濠髮夾彎',
+    text: '比賽過半。一部車在賽車界最慢的彎角新濠髮夾彎熄了火，你前面的車一部接一部，在兩邊石牆之間停成一條長龍。賽道工作人員正拼命跑過去。',
+    choices: [
+      {
+        label: '從內線擠過去',
+        ok: '你在毫釐之間穿過空隙，從車龍裡殺出來，一口氣上升四位。',
+        ko: '空隙合上了。你和另外三部車一起卡在護欄邊，比賽就此結束。',
+      },
+      {
+        label: '耐心等候',
+        ok: '工作人員推車時你保持冷靜，下山途中再超越兩部心急亂來的車。',
+        ko: '你在等待時熄了火。等引擎重新發動，半條車龍已經走了。',
       },
     ],
   },

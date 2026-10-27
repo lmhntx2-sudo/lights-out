@@ -1,3 +1,10 @@
+// Content version. A career keeps the rules it started with: newGame stores the
+// version in s.setup.cv (absent means 1), and anything added later checks it
+// before it touches the dice, so careers already under way replay unchanged.
+//   1  the original game
+//   2  home-crowd pack: Macau Grand Prix, first driver from your country, Macau nationality
+export const CONTENT_VERSION = 2;
+
 export const START_YEAR = 2026;
 export const START_AGE = 15;
 export const RETIRE_AGE = 42;

@@ -5,6 +5,7 @@ import { STATS } from '../engine/constants.js';
 import { standingsOrder, slPoints } from '../engine/market.js';
 import { nameOf } from '../engine/world.js';
 import { overall } from '../engine/player.js';
+import { sponsorKind } from '../engine/helpers.js';
 import { ACHIEVEMENTS, netWorth, achWords } from '../engine/achievements.js';
 import { nation } from '../data/nations.js';
 import { GAME } from '../config.js';
@@ -132,6 +133,13 @@ export function statBars(s) {
   return h('div', { class: 'statbars' }, rows);
 }
 
+const SPONSOR_LIFE = {
+  doner: () => t('Sponsored by Dönerland Express since age 14'),
+  hk: () => t('Sponsored by Sun Keung Kee Café since age 14'),
+  tw: () => t('Sponsored by A-Ma Boba since age 14'),
+  mo: () => t('Sponsored by Ping Kee since age 14'),
+};
+
 export function openProfile(app) {
   const s = app.s;
   const d = s.driver;
@@ -181,7 +189,8 @@ export function openProfile(app) {
     if (s.flags.parent) life.push(t('Parent'));
     if (s.flags.foundation) life.push(t('Runs the Lights Out Foundation'));
     if (s.flags.mentor) life.push(t('Mentored by a three-time champion'));
-    if (s.flags.kebab) life.push(t('Sponsored by Dönerland Express since age 14'));
+    if (s.flags.kebab) life.push(SPONSOR_LIFE[sponsorKind(d.nat)]());
+    if (s.career.macau?.length) life.push(t('Raced the Macau Grand Prix: {results}', { results: s.career.macau.map((m) => `${m.year} ${m.dnf ? t('DNF') : `P${m.pos}`}`).join(', ') }));
     return h(
       'div',
       { class: 'life' },
@@ -206,12 +215,14 @@ export function allUnlocked(app) {
 
 export function openAchievements(app) {
   const got = allUnlocked(app);
+  // Named for the driver on screen, or else the most recent one.
+  const nat = app.s?.driver.nat ?? [...store.lives()].sort((a, b) => (b.at || 0) - (a.at || 0))[0]?.nat;
   const grid = h(
     'div',
     { class: 'ach-grid' },
     ACHIEVEMENTS.map((a) => {
-      const w = achWords(a);
-      return h('div', { class: `ach ${got.has(a.id) ? 'got' : 'locked'}` }, h('span', { class: 'ic' }, a.icon), h('div', null, h('b', null, w.name), h('span', null, w.desc)));
+      const w = achWords(a, nat);
+      return h('div', { class: `ach ${got.has(a.id) ? 'got' : 'locked'}` }, h('span', { class: 'ic' }, w.icon), h('div', null, h('b', null, w.name), h('span', null, w.desc)));
     }),
   );
   openDialog(t('Achievements {got}/{all}', { got: got.size, all: ACHIEVEMENTS.length }), grid);

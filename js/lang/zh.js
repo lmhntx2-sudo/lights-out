@@ -511,4 +511,46 @@ export const ZH = {
   'Unknown leaderboard.': '找不到這個排行榜。',
   'Only finished careers can go on the leaderboard.': '只有已完結的生涯才能上榜。',
   'The leaderboard is having trouble. Try again later.': '排行榜出了點問題，請稍後再試。',
+
+  // ------------------------------------------------------------ home crowd: first sponsors
+  'Sun Keung Kee gives free iced lemon tea to the whole street.': '新強記請整條街的街坊喝凍檸茶。',
+  'A-Ma Boba gives free pearl milk tea to the whole town.': '阿嬤珍奶請全鎮的人喝珍奶。',
+  'Ping Kee gives free pork chop buns to the whole of Taipa.': '炳記請全氹仔的人吃豬扒包。',
+  'Sun Keung Kee now has forty branches. Every one has a photo of your helmet on the wall.': '新強記現在有四十家分店，每一家的牆上都掛著你的頭盔照片。',
+  'Sun Keung Kee still has your first helmet sticker on the milk tea urn.': '新強記水吧的茶壺上，仍貼著你第一頂頭盔的貼紙。',
+  'A-Ma Boba now has forty branches. Every one has a photo of your helmet on the wall.': '阿嬤珍奶現在有四十家分店，每一家的牆上都掛著你的頭盔照片。',
+  'A-Ma Boba still has your first helmet sticker on the cup-sealing machine.': '阿嬤珍奶的封口機上，仍貼著你第一頂頭盔的貼紙。',
+  'Ping Kee now has forty branches. Every one has a photo of your helmet on the wall.': '炳記現在有四十家分店，每一家的牆上都掛著你的頭盔照片。',
+  'Ping Kee still has your first helmet sticker on the grill hood.': '炳記烤爐的抽油煙罩上，仍貼著你第一頂頭盔的貼紙。',
+  'Sponsored by Sun Keung Kee Café since age 14': '14 歲起由新強記茶餐廳贊助',
+  'Sponsored by A-Ma Boba since age 14': '14 歲起由阿嬤珍奶贊助',
+  'Sponsored by Ping Kee since age 14': '14 歲起由炳記豬扒包贊助',
+  'Pineapple bun king': '菠蘿油之王',
+  'Bubble tea king': '珍奶之王',
+  'Pork chop bun king': '豬扒包之王',
+
+  // ------------------------------------------------------------ home crowd: first driver from your country
+  'First from Hong Kong': '香港第一人',
+  "No driver from Hong Kong had ever started a Formula 1 race. Now one has. Back home, the cha chaan teng by your old school has the race on every screen and nobody has touched their milk tea. Your group chat has nine hundred unread messages. Someone has hung a bedsheet from a footbridge in Mong Kok: 'Hong Kong finally has an F1 driver!'":
+    '從來沒有香港車手在 F1 起跑過。現在有了。家鄉那邊，你舊學校樓下的茶餐廳每部電視都在播你的比賽，奶茶放涼了也沒人碰。你的群組有九百多條未讀訊息。旺角的行人天橋上，有人掛起一張床單：「香港終於有 F1 車手喇！」',
+  'First from Taiwan': '台灣第一人',
+  "No driver from Taiwan had ever started a Formula 1 race. Now one has. At a night market in Taichung someone has wheeled a TV out next to the fried chicken stall, and the crowd has blocked the whole lane. Your old karting coach at Penbay posts a single word, 'Finally.' By morning it has two hundred thousand likes.":
+    '從來沒有台灣車手在 F1 起跑過。現在有了。台中的夜市裡，有人把電視推到雞排攤旁邊，人潮把整條巷子都塞住了。你在大鵬灣的卡丁車教練只發了兩個字：「終於。」到了早上，已經有二十萬個讚。',
+  'First from Macau': '澳門第一人',
+  'No driver from Macau had ever started a Formula 1 race. Every November the best young drivers in the world come to race on your streets. This time one of yours went out into the world. Around Senado Square the race is on every phone, and the bakery next to your old school is handing out free egg tarts.':
+    '從來沒有澳門車手在 F1 起跑過。每年十一月，全世界最出色的年輕車手都來你家門口的街道比賽；今年，輪到澳門人走出去了。議事亭前地一帶，每部手機都在播比賽，你舊學校旁邊的餅店免費派蛋撻。',
+  'The first {adj} in Formula 1': '第一位{nation} F1 車手',
+  'No {adj} driver had ever started a Formula 1 race. Now one has. Back home the race is on every screen, and people who had never watched a Grand Prix are suddenly experts on tyre strategy.':
+    '從來沒有{nation}車手在 F1 起跑過。現在有了。家鄉的每一個螢幕都在播你的比賽，從來沒看過大獎賽的人，一夜之間全變成了輪胎策略專家。',
+
+  // ------------------------------------------------------------ home crowd: the Macau Grand Prix
+  '{gp}, November {year}': '{year} 年 11 月，{gp}',
+  'Guia Circuit. No points, no championship, just the most famous trophy in junior racing.': '東望洋賽道。沒有積分，沒有錦標，只有青年方程式最負盛名的獎盃。',
+  'Macau winner': '澳門冠軍',
+  'You win the {gp}. Your name goes on the list of winners, a few lines below {senna} and {schumacher}.': '你贏得了{gp}！冠軍名單上添了你的名字，就在{senna}和{schumacher}下面幾行。',
+  'Two Macau wins. Only a handful of drivers in history have done that.': '兩奪澳門冠軍。史上只有寥寥幾位車手做得到。',
+  'Macau, again': '再次稱王澳門',
+  'Your name is still on the list of Macau Grand Prix winners, a few lines below {senna} and {schumacher}.': '澳門格蘭披治大賽車的冠軍名單上，你的名字仍然排在{senna}和{schumacher}下面幾行。',
+  'Non-championship race.': '非錦標賽賽事。',
+  'Raced the Macau Grand Prix: {results}': '出戰澳門格蘭披治大賽車：{results}',
 };

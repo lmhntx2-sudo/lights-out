@@ -1,5 +1,5 @@
-import { pushFeed } from './helpers.js';
-import { loc } from '../i18n.js';
+import { pushFeed, sponsorKind } from './helpers.js';
+import { t as tr, loc } from '../i18n.js';
 
 // on: when the check runs. 'manual' ones are unlocked directly by events or the UI.
 // x for race: { series, pos, dnf, grid, pole, fl, wet, trackId, home, standin, pts }
@@ -66,12 +66,24 @@ export const ACHIEVEMENTS = [
   A('family', '👶', 'Racing family', 'Become a parent.', 'manual'),
   A('pit_crew', '☕', 'Pit crew', 'Fuel the developer with a coffee.', 'manual'),
   A('daily', '📅', 'Daily driver', 'Complete a daily challenge.', 'manual'),
+  A('macau_win', '🏮', 'Macau winner', 'Win the Macau Grand Prix.', 'manual'),
 ];
 
 export const ACH_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));
 
-// Name and description in the current language.
-export const achWords = (a) => ({ name: loc('ach', a.id, 'name', a.name), desc: loc('ach', a.id, 'desc', a.desc) });
+// Kebab king is named after whichever shop was your first sponsor.
+const FIRST_SPONSOR = {
+  hk: () => ({ icon: '🍍', name: tr('Pineapple bun king') }),
+  tw: () => ({ icon: '🧋', name: tr('Bubble tea king') }),
+  mo: () => ({ icon: '🍔', name: tr('Pork chop bun king') }),
+};
+
+// Icon, name and description in the current language. `nat` is the driver's
+// nationality where there is one.
+export function achWords(a, nat) {
+  const local = a.id === 'kebab_king' && FIRST_SPONSOR[sponsorKind(nat)];
+  return { icon: a.icon, name: loc('ach', a.id, 'name', a.name), desc: loc('ach', a.id, 'desc', a.desc), ...(local ? local() : null) };
+}
 
 export function netWorth(s) {
   return s.driver.money + s.driver.assets.reduce((a, b) => a + b.value, 0);
@@ -84,8 +96,7 @@ export function f1Seasons(s) {
 export function unlock(s, id) {
   if (!ACH_BY_ID[id] || s.ach.includes(id)) return false;
   s.ach.push(id);
-  const a = ACH_BY_ID[id];
-  pushFeed(s, { k: 'ach', id, icon: a.icon, ...achWords(a) });
+  pushFeed(s, { k: 'ach', id, ...achWords(ACH_BY_ID[id], s.driver?.nat) });
   return true;
 }
 

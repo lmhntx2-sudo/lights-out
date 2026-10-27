@@ -1,6 +1,6 @@
 // Every decision moment in the game lives here.
 //
-// phase     prologue | preseason | race | between | offseason
+// phase     prologue | preseason | race | between | offseason | macau
 // when      (s, c) => boolean, extra conditions
 // w         weight when several events are eligible
 // once      only ever happens once per career
@@ -11,7 +11,7 @@
 //           training, signFor, salaryUp, extend, carPerf
 //           race-only: mod (pace), qmod (qualifying), gain, lose, dnf, saveDnf
 
-import { pay, firstName } from './helpers.js';
+import { pay, firstName, contentVersion, sponsorKind } from './helpers.js';
 import { TRAINING } from './constants.js';
 import { F1_TEAMS } from '../data/teams.js';
 
@@ -20,6 +20,43 @@ const ev = (o) => L.push(o);
 
 const F1 = ['F1'];
 const JUNIOR = ['F4', 'F3', 'F2'];
+
+// Your first sponsor, in its local form (see sponsorKind). Words only.
+const SPONSOR = {
+  doner: {
+    label: 'Find a sponsor: the local kebab shop',
+    deal: 'Dönerland Express pays sixty grand to put a spinning kebab on your helmet. Objectively the best-looking helmet in the paddock.',
+    debut: 'Somewhere, the owner of Dönerland Express is watching on a tiny TV above the rotisserie.',
+    letter: 'Dönerland Express, your very first sponsor, sends a letter in shaky handwriting. Could their spinning kebab go back on your helmet, just for one race?',
+    back: 'The spinning kebab returns. Merch sales explode. Dönerland opens three new branches.',
+    photo: 'You send them a signed photo instead. It goes on the wall above the rotisserie.',
+  },
+  hk: {
+    label: 'Find a sponsor: the cha chaan teng downstairs',
+    deal: 'Sun Keung Kee Café pays sixty grand to put a pineapple bun, slab of butter and all, on your helmet. Objectively the best-looking helmet in the paddock.',
+    debut: 'Back in Hong Kong, the boss of Sun Keung Kee has turned the TV above the milk tea counter all the way up.',
+    letter: 'Sun Keung Kee Café, your very first sponsor, sends a letter in shaky handwriting. Could their pineapple bun go back on your helmet, just for one race?',
+    back: 'The pineapple bun returns. Merch sales explode. Sun Keung Kee opens three new branches, and the queue at the first one goes round the block.',
+    photo: 'You send them a signed photo instead. It goes on the wall next to the menu board, above the table you always sat at.',
+  },
+  tw: {
+    label: 'Find a sponsor: the bubble tea shop on the corner',
+    deal: 'A-Ma Boba pays sixty grand to put a giant cup of pearl milk tea, fat straw and all, on your helmet. Objectively the best-looking helmet in the paddock.',
+    debut: 'Back in Taiwan, A-Ma is watching on a phone propped up against the tapioca pot.',
+    letter: 'A-Ma Boba, your very first sponsor, sends a letter in shaky handwriting. Could the milk tea cup go back on your helmet, just for one race?',
+    back: 'The milk tea cup returns. Merch sales explode. A-Ma Boba opens three new branches, and every one sells out of pearls by noon.',
+    photo: 'You send them a signed photo instead. It goes on the wall above the cup-sealing machine.',
+  },
+  mo: {
+    label: 'Find a sponsor: the pork chop bun stall in Taipa',
+    deal: 'Ping Kee pays sixty grand to put a pork chop bun on your helmet. Objectively the best-looking helmet in the paddock.',
+    debut: 'Back in Macau, the queue at Ping Kee has stopped moving: everyone is watching the race on the boss\'s phone.',
+    letter: 'Ping Kee, your very first sponsor, sends a letter in shaky handwriting. Could their pork chop bun go back on your helmet, just for one race?',
+    back: 'The pork chop bun returns. Merch sales explode. Ping Kee opens three new branches, and the tour buses start stopping outside.',
+    photo: 'You send them a signed photo instead. It goes on the wall above the grill.',
+  },
+};
+const sponsor = (s) => SPONSOR[sponsorKind(s.driver.nat)];
 
 // ---------------------------------------------------------------- prologue
 
@@ -102,7 +139,7 @@ ev({
         ]
       : [
           { label: 'Remortgage the house', ok: { text: 'They do it without blinking. You promise yourself you will buy them a better one.', fx: { money: 250000, flag: 'remortgage' } } },
-          { label: 'Find a sponsor: the local kebab shop', ok: { text: 'Dönerland Express pays sixty grand to put a spinning kebab on your helmet. Objectively the best-looking helmet in the paddock.', fx: { money: 60000, fame: 2, flag: 'kebab' } } },
+          { label: sponsor(s).label, ok: { text: sponsor(s).deal, fx: { money: 60000, fame: 2, flag: 'kebab' } } },
           {
             label: 'Talent will be enough', stat: 'composure', base: 50,
             ok: { text: 'A team boss overhears you and offers a scholarship drive. Talent was enough, just about.', fx: { money: 150000, stats: { composure: 2 } } },
@@ -192,7 +229,7 @@ ev({
   once: true,
   title: (s, c) => `${c.track}: your Formula 1 debut`,
   text: (s) =>
-    `Grid walk. A pop star asks who you are. A camera is shoved into your face. ${s.flags.remortgage ? 'Your parents, who remortgaged the house for this, are crying in the garage.' : 'Your family is crying in the garage.'} ${s.flags.kebab ? 'Somewhere, the owner of Dönerland Express is watching on a tiny TV above the rotisserie.' : ''}`,
+    `Grid walk. A pop star asks who you are. A camera is shoved into your face. ${s.flags.remortgage ? 'Your parents, who remortgaged the house for this, are crying in the garage.' : 'Your family is crying in the garage.'} ${s.flags.kebab ? sponsor(s).debut : ''}`,
   choices: [
     {
       label: 'Soak it all in', stat: 'composure', base: 50,
@@ -1220,10 +1257,10 @@ ev({
   series: F1,
   when: (s) => s.flags.kebab,
   title: 'An old friend',
-  text: 'Dönerland Express, your very first sponsor, sends a letter in shaky handwriting. Could their spinning kebab go back on your helmet, just for one race?',
+  text: (s) => sponsor(s).letter,
   choices: [
-    { label: 'Of course it can', ok: { text: 'The spinning kebab returns. Merch sales explode. Dönerland opens three new branches.', fx: { fame: 4, flag: 'kebab_f1' } } },
-    { label: 'The team says no', ok: { text: 'You send them a signed photo instead. It goes on the wall above the rotisserie.', fx: {} } },
+    { label: 'Of course it can', ok: { text: (s) => sponsor(s).back, fx: { fame: 4, flag: 'kebab_f1' } } },
+    { label: 'The team says no', ok: { text: (s) => sponsor(s).photo, fx: {} } },
   ],
 });
 
@@ -1645,5 +1682,108 @@ ev({
     },
   ],
 });
+
+// ------------------------------------------------------ the Macau Grand Prix
+//
+// A one-off Formula 3 street race on the Guia Circuit in November, after the
+// season. game.js offers the invitation and runs the race through these in
+// order; the 'macau' phase is never drawn at random. Content version 2 only.
+
+const MACAU_FANS = {
+  MO: ' And this year it is your own streets: you used to walk past the Lisboa bend on the way to school.',
+  HK: ' It is an hour from home on the ferry, and half of Hong Kong seems to have bought a ticket.',
+  TW: ' It is the closest thing to a home race you will ever get, and the Taiwanese fan clubs have booked every flight.',
+  CN: ' Every racing fan you know is coming over the border from Zhuhai.',
+};
+
+const MACAU_START = {
+  MO: ' The grandstand at Lisboa is your whole neighbourhood, and it is screaming.',
+  HK: ' Half the grandstand came over on the ferry from Hong Kong, and they are chanting your name.',
+  TW: ' A Taiwanese fan club has hung a banner the size of a bus above the Lisboa bend.',
+  CN: ' The fans who came over the border have filled the grandstand at Lisboa.',
+};
+
+const macauOn = (s) => contentVersion(s) >= 2;
+
+ev({
+  id: 'macau_invite',
+  phase: 'macau',
+  w: 0,
+  when: macauOn,
+  title: 'An invitation to Macau',
+  text: (s, c) =>
+    `Every November the best young drivers in the world are invited to the Guia Circuit for the Macau Grand Prix: six kilometres of walls, a seafront straight and a hairpin so tight the cars barely fit. It counts for no championship. Senna won it. Schumacher won it. The organisers want you on the grid.${MACAU_FANS[c.nat] || ''}`,
+  choices: [
+    { label: 'Go to Macau', ok: { text: 'You say yes before they have finished the sentence.', fx: { flag: 'macau' } } },
+    { label: 'Rest for next season', ok: { text: 'You watch it on TV with your feet up and a small knot in your stomach.', fx: {} } },
+  ],
+});
+
+ev({
+  id: 'macau_quali',
+  phase: 'macau',
+  w: 0,
+  when: macauOn,
+  title: 'Macau: qualifying',
+  text: 'There is no run-off at the Guia Circuit, only walls. The fast drivers brush them on purpose. Up in the mountain section the track is barely two cars wide, and the barrier at Police Bend is already striped with tyre marks.',
+  choices: [
+    {
+      label: 'Brush the walls through the mountain section', stat: 'pace', base: 45,
+      ok: { text: 'You kiss the barrier at Solitude with the rear tyre and set a lap that silences the pit lane.', fx: { qmod: 4, fame: 2 } },
+      ko: { text: 'One kiss too many at Police Bend. Bent track rod, back of the grid.', fx: { qmod: -7 } },
+    },
+    {
+      label: 'Hunt for a tow on the run to Lisboa', stat: 'technical', base: 52,
+      ok: { text: 'You time it perfectly behind a rival down the seafront. The slipstream is worth three tenths.', fx: { qmod: 2.5 } },
+      ko: { text: 'Everyone has the same idea. You spend the session in a traffic jam of cars waiting for each other.', fx: { qmod: -1.5 } },
+    },
+    { label: 'Bank a clean lap', ok: { text: 'Respect the walls. Respect the walls. Respect the walls.', fx: { qmod: 0.5 } } },
+  ],
+});
+
+ev({
+  id: 'macau_lisboa',
+  phase: 'macau',
+  w: 0,
+  when: macauOn,
+  title: 'Macau: into Lisboa',
+  text: (s, c) =>
+    `Lights out from P${c.grid}. The run from the start, flat out through the Mandarin Oriental bend, is the longest slipstream fight in junior racing, and it ends at Lisboa: a hard right in front of the casino with the whole field arriving at once.${MACAU_START[c.nat] || ''}`,
+  choices: [
+    {
+      label: 'Pull out of the tow and dive up the inside', stat: 'racecraft', base: 42,
+      ok: { text: 'Late, deep and right on the kerb. You come out of Lisboa three places better off.', fx: { mod: 3.5, fame: 1 } },
+      ko: { text: 'You lock the fronts and go straight on into the escape road at Lisboa. You rejoin at the back.', fx: { mod: -4 } },
+    },
+    {
+      label: 'Sit in the tow and keep it clean', stat: 'consistency', base: 55,
+      ok: { text: 'Two cars ahead tangle at Lisboa. You tiptoe past the wreckage and up the hill.', fx: { mod: 1.5 } },
+      ko: { text: 'Too polite. Two cars sweep past you on the climb towards San Francisco Hill.', fx: { mod: -1.5 } },
+    },
+  ],
+});
+
+ev({
+  id: 'macau_melco',
+  phase: 'macau',
+  w: 0,
+  when: macauOn,
+  title: 'Macau: the Melco hairpin',
+  text: 'Halfway. A car has stalled in the Melco hairpin, the slowest corner in motor racing, and the cars ahead of you are stopping nose to tail between the walls. The marshals are running.',
+  choices: [
+    {
+      label: 'Squeeze through on the inside', stat: 'racecraft', base: 45, risky: true,
+      ok: { text: 'You thread it through with millimetres to spare and come out of the jam four places up.', fx: { mod: 4, fame: 2 } },
+      ko: { text: 'The gap closes. You are wedged against the barrier with three other cars, and your race is over.', fx: { dnf: true } },
+    },
+    {
+      label: 'Wait your turn', stat: 'composure', base: 55,
+      ok: { text: 'You stay calm while the marshals push, then pick off two cars that panicked on the way down the hill.', fx: { mod: 1.5 } },
+      ko: { text: 'You stall while you wait. By the time it fires up again, half the queue has gone.', fx: { mod: -2.5 } },
+    },
+  ],
+});
+
+export const MACAU_RACE = ['macau_quali', 'macau_lisboa', 'macau_melco'];
 
 export const EVENTS = Object.fromEntries(L.map((e) => [e.id, e]));

@@ -36,6 +36,8 @@ export const TRACKS = Object.fromEntries(
     T('imola', 'Imola round', 'Imola', 'Imola', 'IT', 18, 0.3, 0.3, 0.35, 'technical'),
     T('paulricard', 'Paul Ricard round', 'Le Castellet', 'Le Castellet', 'FR', 18, 0.6, 0.1, 0.2, 'fast'),
     T('hockenheim', 'Hockenheim round', 'Hockenheim', 'Hockenheim', 'DE', 18, 0.65, 0.25, 0.3, 'fast'),
+    // Special events: on no calendar, raced by invitation, worth no points.
+    { ...T('macau', 'Macau Grand Prix', 'Macau', 'Guia Circuit', 'MO', 15, 0.3, 0.12, 0.7, 'street'), special: true },
   ].map((t) => [t.id, t]),
 );
 
