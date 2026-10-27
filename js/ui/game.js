@@ -591,7 +591,7 @@ function renderDock(app) {
           'button',
           { class: 'btn btn-go', onClick: () => act(app, advance, { animate: true }) },
           t('Next race'),
-          h('small', null, t('{flag} {next}, round {round} of {of}', p)),
+          h('small', null, cat(t('{flag} {next}, round {round} of {of}', p), p.kind && t('({kind})', p))),
         ),
         h('button', { class: 'btn', onClick: () => act(app, skipToDecision), title: t('Race on until something needs your decision') }, t('Skip to next call')),
       ),

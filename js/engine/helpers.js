@@ -8,6 +8,9 @@ export function pay(s, f1Amount) {
   return Math.round((f1Amount * k) / 1000) * 1000;
 }
 
+// The content version a career started with (see CONTENT_VERSION).
+export const contentVersion = (s) => s.setup?.cv ?? 1;
+
 export const firstName = (full) => String(full || '').split(' ')[0];
 
 export function pushFeed(s, entry) {

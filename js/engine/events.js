@@ -10,16 +10,31 @@
 // fx        stats, fame, money, teamRel, flag, ach, asset, injury, academy,
 //           training, signFor, salaryUp, extend, carPerf
 //           race-only: mod (pace), qmod (qualifying), gain, lose, dnf, saveDnf
+// variants  other wordings for events that come up a lot: [{ when, title, text,
+//           radio, choices: [{ ok, ko }] }]. Only words: a variant leaves out what
+//           it keeps from the event, and never changes choices, odds or effects.
+//           Matching variants take turns with the original (see story.js), and
+//           events.zh.js has the same list in the same order.
+//
+// New events that could fire in an existing career, or change what the RNG
+// draws, check contentVersion(s) so careers started earlier replay unchanged.
 
-import { pay, firstName } from './helpers.js';
+import { pay, firstName, contentVersion } from './helpers.js';
 import { TRAINING } from './constants.js';
 import { F1_TEAMS } from '../data/teams.js';
+import { TRACKS } from '../data/tracks.js';
 
 const L = [];
 const ev = (o) => L.push(o);
 
 const F1 = ['F1'];
 const JUNIOR = ['F4', 'F3', 'F2'];
+
+// Street, fast or technical circuit. Only ever used to pick words.
+const byKind = (c, words) => words[c.kind] ?? words.technical;
+const qGap = (c) => (c.f1 ? 'two tenths' : 'a tenth and a half');
+const carWord = (c) => (c.rank <= 2 ? 'the class of the field' : c.rank <= 4 ? 'a front-runner' : c.rank <= 7 ? 'firmly midfield' : 'a bit of a handful');
+const lapsLeft = (c) => c.laps - c.lap;
 
 // ---------------------------------------------------------------- prologue
 
@@ -147,6 +162,45 @@ ev({
     },
     { label: 'Keep your head down', ok: { text: 'You focus on yourself. Quiet, polite and impossible to read.', fx: { stats: { consistency: 1 } } } },
   ],
+  variants: [
+    {
+      when: (s, c) => c.tm.ovr >= c.ovr + 3,
+      title: 'A benchmark next door',
+      text: (s, c) => `${c.tm.name} will be in the other ${c.team} car, and everyone who matters rates ${firstName(c.tm.name)} above you, including your own engineers. Beat that and the world notices.`,
+      choices: [
+        { ok: (s, c) => `You ask ${firstName(c.tm.name)} to talk you through their data, and they actually do. You learn a lot. The team loves it.` },
+        {
+          ok: (s, c) => `You tell the press you are "not here to be anyone's number two". ${firstName(c.tm.name)} reads it and looks unsettled.`,
+          ko: (s, c) => `Picking a fight with the faster driver looks desperate. ${firstName(c.tm.name)} just smiles.`,
+        },
+        { ok: 'You say little, watch everything and get on with it.' },
+      ],
+    },
+    {
+      when: (s, c) => c.tm.ovr <= c.ovr - 3,
+      text: (s, c) => `${c.team} have paired you with ${c.tm.name}. The press has already decided you are the team leader. Nobody has told ${firstName(c.tm.name)}.`,
+      choices: [
+        { ok: (s, c) => `You share everything with ${firstName(c.tm.name)} and the whole garage pulls in the same direction. The team loves it.` },
+        {
+          ok: (s, c) => `A quiet word, a confident grin, and ${firstName(c.tm.name)} understands the pecking order before testing starts.`,
+          ko: (s, c) => `Throwing your weight around goes down badly. ${firstName(c.tm.name)} comes out of it looking like the grown-up.`,
+        },
+        { ok: 'You let the lap times do the talking.' },
+      ],
+    },
+    {
+      title: 'Seat fitting',
+      text: (s, c) => `Seat fittings at the ${c.team} factory. In the next room, ${c.tm.name} is being fitted for the other car. You have both been told to "push each other".`,
+      choices: [
+        { ok: (s, c) => `You knock on the door and suggest sharing setups. ${firstName(c.tm.name)} says yes. The engineers can't believe their luck.` },
+        {
+          ok: (s, c) => `You ask for your seat to be made "a bit faster than the other one", loudly enough to be heard next door. ${firstName(c.tm.name)} doesn't laugh.`,
+          ko: (s, c) => `Your joke about the other seat gets back to ${firstName(c.tm.name)} and sounds a lot worse second-hand.`,
+        },
+        { ok: 'You get fitted, say thank you and go home. Nobody learns anything about you.' },
+      ],
+    },
+  ],
 });
 
 ev({
@@ -163,6 +217,35 @@ ev({
     { label: 'Hype it up for the cameras', ok: { text: '"Best car I have ever driven." Marketing are thrilled. Your engineer raises an eyebrow.', fx: { fame: 1, teamRel: 2 } } },
     { label: 'Manage expectations', ok: { text: '"We\'ll see where we are in Melbourne." The most F1 sentence ever spoken.', fx: { stats: { composure: 1 } } } },
     ...(c.rank > 6 ? [{ label: 'Tell the truth', ok: { text: '"It\'s a bit of a pig, honestly." The quote goes everywhere. Fans love your honesty. The team does not.', fx: { fame: 3, teamRel: -4 } } }] : []),
+  ],
+  variants: [
+    {
+      when: (s, c) => c.rank <= 3,
+      text: (s, c) => `Three hundred journalists, one covered car, and a rumour from the wind tunnel that the new ${c.team} is ${carWord(c)}. The cover comes off to gasps.`,
+      choices: [
+        { ok: '"It\'s a rocket." Every rival team principal quotes you at their own launch.' },
+        { ok: '"Let\'s see after the first few races." Your team principal nods. Nobody believes you.' },
+        { ok: '"Honestly? It\'s a handful." The team does not enjoy that quote.' },
+      ],
+    },
+    {
+      when: (s, c) => c.rank > 6,
+      text: (s, c) => `The ${c.team} launch is held in a car park, because the budget went on the car. Testing whispers that it is ${carWord(c)}.`,
+      choices: [
+        { ok: '"A big step forward." Marketing prints it on a banner. Your engineer quietly takes the banner down.' },
+        { ok: '"We have work to do." Nobody argues.' },
+        { ok: '"It\'s slow in the corners and slow on the straights." Fans love the honesty. The team does not.' },
+      ],
+    },
+    {
+      title: (s, c) => `${c.year}: the new ${c.team}`,
+      text: (s, c) => `The new ${c.team} is unveiled on a livestream with a countdown clock and a smoke machine that sets off the fire alarm. Testing says it is ${carWord(c)}.`,
+      choices: [
+        { ok: '"It already feels special." The clip goes everywhere. Your engineer coughs.' },
+        { ok: '"Ask me after the first race." Wise, if dull.' },
+        { ok: '"It isn\'t very good." The fire alarm was less awkward.' },
+      ],
+    },
   ],
 });
 
@@ -249,6 +332,36 @@ ev({
     },
     { label: 'Park it and save the engine', ok: { text: 'You pull into the garage. The mechanics nod. The engine lives to fight another day.', fx: { teamRel: 3 } } },
   ],
+  variants: [
+    {
+      radio: (s, c) => `${c.eng}: "We're losing hydraulic pressure. Short-shift and stay off the kerbs."`,
+      text: 'The gearshifts are getting lazy and the steering is getting heavy. Somewhere behind you, a hydraulic line is weeping.',
+      choices: [
+        { ok: 'You baby every shift and stay off every kerb. The pressure holds to the flag. Just.', ko: 'The gearbox jams in fourth and the car rolls to a stop. The hydraulics win.' },
+        { ok: 'The warning light stays on and the car keeps going anyway. Nobody can explain it.', ko: 'Fluid everywhere, gears nowhere. You park it with smoke curling from the back.' },
+        { ok: 'You bring it in before anything else breaks. The gearbox will live to race again.' },
+      ],
+    },
+    {
+      when: (s, c) => c.kind !== 'fast',
+      radio: (s, c) => `${c.eng}: "Rear brake temperatures are critical. Lift and coast, please."`,
+      text: (s, c) => `The brakes are glowing orange on the onboard camera and the pedal gets longer with every stop. ${c.kind === 'street' ? 'Between these walls, that is not a comforting thought.' : 'There are a lot of slow corners left.'}`,
+      choices: [
+        { ok: 'You lift early for every braking zone and the temperatures come back from the edge. Slow, but home.', ko: 'The pedal goes to the floor at the end of the straight. Escape road, then the garage.' },
+        { ok: 'You keep braking late and the discs somehow survive. The engineers want to frame them.', ko: 'A brake disc explodes in a shower of sparks. You limp back to the pits and climb out.' },
+        { ok: 'You park it before the brakes give up for good. Sensible, and the team says so.' },
+      ],
+    },
+    {
+      radio: (s, c) => `${c.eng}: "Fuel pressure is dropping. Keep it smooth, stay off the kerbs."`,
+      text: 'The engine coughs on every corner exit and the car stutters down the straights. Something in the fuel system is very unhappy.',
+      choices: [
+        { ok: 'Smooth, gentle and boring, and it gets you to the flag.', ko: 'One last cough on the back straight and the engine falls silent.' },
+        { ok: 'It stutters, it splutters, it finishes. Nobody in the garage can explain why.', ko: 'You keep your foot in and the engine coughs itself to death.' },
+        { ok: 'You bring it in. Better a quiet retirement today than a new engine tomorrow.' },
+      ],
+    },
+  ],
 });
 
 ev({
@@ -295,6 +408,44 @@ ev({
     },
     { label: 'Stay tidy and survive', ok: { text: 'Others play bumper cars. You keep your nose clean. Patience is a skill too.', fx: { mod: 0.5 } } },
   ],
+  variants: [
+    {
+      title: (s, c) => `${c.track}: the start`,
+      text: (s, c) =>
+        byKind(c, {
+          street: `Lights out from P${c.grid} on the streets of ${c.place}. Turn 1 is a right-hander between two concrete walls, and twenty cars want to be first through it.`,
+          fast: `Lights out from P${c.grid}. It is a long drag down to Turn 1, slipstreams everywhere, and by the braking zone the cars are four abreast.`,
+          technical: `Lights out from P${c.grid}. Turn 1 is tight and slow, the kind of corner where somebody always arrives too fast.`,
+        }),
+      choices: [
+        { ok: 'You take the long way round and the cars on the inside tangle with each other. Two places, gift-wrapped.', ko: 'There is no room on the outside after all. Kerb, grass, and a handful of places gone.' },
+        { ok: 'You brake later than anyone thought possible and stop the car on the apex. Through.', ko: 'You arrive at the apex with company. Front wing in pieces, and a long first lap.' },
+        { ok: 'You hang back, pick your way through the chaos and leave Turn 1 with your car in one piece.' },
+      ],
+    },
+    {
+      when: (s, c) => c.wet,
+      title: (s, c) => `${c.track}: lap 1 in the spray`,
+      text: (s, c) => `A wet start from P${c.grid}. Nobody can see past the car in front, and Turn 1 is somewhere behind a wall of spray.`,
+      choices: [
+        { ok: 'You go round the outside where the grip is, and two cars aquaplane past their braking points. Two places.', ko: 'The outside line is a river. You slither wide and cars pour past in the spray.' },
+        { ok: 'You dive blind into the spray on the inside and come out with clear track ahead. Heroic, or lucky.', ko: "You brake where you think the braking zone is. It isn't. Front wing, someone's rear tyre, a lot of places." },
+        { ok: 'You keep it on the black line and let the brave and the foolish sort themselves out.' },
+      ],
+    },
+    {
+      title: (s, c) => `${c.track}: lights out`,
+      text: (s, c) =>
+        c.grid <= 5
+          ? `Lights out. You launch from P${c.grid} with the leaders right there, and the run to Turn 1 is a game of chicken at two hundred kilometres an hour.`
+          : `Lights out. From P${c.grid} it is a wall of rear wings and brake dust, and every gap into Turn 1 closes as soon as you look at it.`,
+      choices: [
+        { ok: 'You commit round the outside and hold your nerve while the others flinch. Two places.', ko: 'The gap closes, you lift, and the cars behind take the invitation.' },
+        { ok: 'A late, cheeky dive, and the door is still open when you get there. Big gain.', ko: 'You and the car ahead want the same piece of tarmac. Carbon-fibre confetti.' },
+        { ok: 'You keep it tidy, stay out of trouble and let the first lap come to you.' },
+      ],
+    },
+  ],
 });
 
 ev({
@@ -316,6 +467,38 @@ ev({
       label: 'Stay out for track position', stat: 'consistency', base: 55,
       ok: { text: 'You hold your place on old tyres with a masterclass in defending.', fx: { mod: 2 } },
       ko: { text: 'With ten laps left the tyres give up. Everyone on fresh rubber waves as they go past.', fx: { mod: -2.5 } },
+    },
+  ],
+  variants: [
+    {
+      text: (s, c) =>
+        byKind(c, {
+          street: 'Someone has found the wall. The crane is coming out, the safety car is already out, and the pit entry is the next corner.',
+          fast: 'A car is beached in the gravel at the fastest corner on the lap. Safety car. A stop costs far less time than usual, and every pit wall knows it.',
+          technical: 'A spin in the twisty middle sector leaves a car stranded across the track. Safety car. Track position is gold here, but so are fresh tyres.',
+        }),
+      choices: [
+        { ok: 'Quick stop, fresh tyres, and you pick them off one by one on the restart.', ko: 'Everyone had the same idea. You queue in the pit lane and rejoin behind cars you were beating.' },
+        { ok: 'You stay out, back the field up at the restart, and nobody gets a look.', ko: 'The old tyres last until ten laps from home, then the cars that stopped come by one after another.' },
+      ],
+    },
+    {
+      when: (s, c) => c.wet,
+      radio: (s, c) => `${c.eng}: "Safety car. Fresh tyres are ready if you want them."`,
+      text: 'A car has aquaplaned into the barrier and there is standing water on the straight. Safety car, and the spray hangs over the pit entry like fog.',
+      choices: [
+        { ok: 'Fresh tyres with proper tread. On the restart you have grip that nobody around you can find.', ko: 'You stop, the rain eases, and your shiny new tyres are suddenly the wrong ones.' },
+        { ok: 'You stay out and keep your track position. In the spray, nobody can get close enough to pass.', ko: 'Your worn tyres skate across every puddle on the restart. Places fall away.' },
+      ],
+    },
+    {
+      title: (s, c) => `${c.track}: yellow flags`,
+      radio: (s, c) => `${c.eng}: "SC, SC. Pit entry is open. Talk to me."`,
+      text: (s, c) => `Yellow flags, then the safety car boards. ${c.pos <= 3 ? 'You are near the front, so whatever you do, the cars behind will do the opposite.' : 'The cars around you are already weaving towards the pit entry.'}`,
+      choices: [
+        { ok: 'In and out without a fumble. Your fresh rubber does the talking on the restart.', ko: 'A slow stop and a queue behind another car. You rejoin in traffic.' },
+        { ok: 'You hold position and nail the restart. The gamble pays.', ko: 'Cold, old tyres on the restart and no grip at all. You slide backwards through the order.' },
+      ],
     },
   ],
 });
@@ -364,6 +547,40 @@ ev({
     },
     { label: 'Bring it home', ok: { text: 'You take the points. Your engineer exhales on the radio.', fx: {} } },
   ],
+  variants: [
+    {
+      title: (s, c) => `${c.track}: last lap`,
+      text: (s, c) =>
+        byKind(c, {
+          street: `Last lap around ${c.place}. ${c.ahead.name} is half a second ahead for P${c.pos - 1}, and there is exactly one place to pass.`,
+          fast: `Last lap. ${c.ahead.name} is a sitting duck on the long straight, if you can stay close enough through the fast stuff. P${c.pos - 1} is right there.`,
+          technical: `Last lap, nose to tail with ${c.ahead.name} through the twisty stuff for P${c.pos - 1}. Nail the exit of the final corner or forget it.`,
+        }),
+      choices: (s, c) => [
+        { ok: `You throw it up the inside at the last braking zone and it sticks. P${c.pos - 1}!`, ko: `You lock the fronts, run wide, and ${c.behind ? c.behind.last : 'the car behind'} sneaks through as well.` },
+        { ok: `Perfect exit, perfect tow. You pull out and beat ${c.ahead.last} to the line.`, ko: 'You get the tow but run out of road. Half a car short at the flag.' },
+        { ok: 'You bring it home. Your engineer finally breathes out.' },
+      ],
+    },
+    {
+      when: (s, c) => c.last,
+      title: (s, c) => `${c.track}: last lap of the season`,
+      text: (s, c) => `The last lap of the last race of the year. ${c.ahead.name} for P${c.pos - 1}, and the whole winter to think about whatever happens next.`,
+      choices: (s, c) => [
+        { ok: `A lunge into the final braking zone and it sticks. P${c.pos - 1}, and a winter of smiling.`, ko: `You lock up and run wide, and ${c.behind ? c.behind.last : 'the car behind'} slips through as well. It will be a long winter.` },
+        { ok: `One last tow, one last pass. You beat ${c.ahead.last} to the line and end the year on a high.`, ko: 'Half a car short at the flag. The season ends with you staring at a gearbox.' },
+        { ok: 'You bring it home and end the season in one piece. The mechanics are already packing the garage.' },
+      ],
+    },
+    {
+      text: (s, c) => `Final lap. ${c.ahead.name} has been defending for half the race and those tyres are cooked. P${c.pos - 1} is half a second away.`,
+      choices: (s, c) => [
+        { ok: `Late, later, latest. You out-brake ${c.ahead.last} into the last big stop and the place is yours.`, ko: `You brake too late, the fronts lock, and ${c.behind ? c.behind.last : 'the car behind'} takes a place off you too.` },
+        { ok: `You hang on through the last corner, get the tow and pip ${c.ahead.last} on the line.`, ko: 'Close, but not close enough. Half a car at the flag.' },
+        { ok: 'No heroics. You bring it home and bank the result.' },
+      ],
+    },
+  ],
 });
 
 ev({
@@ -389,6 +606,50 @@ ev({
       label: 'Let him by and save your tyres', stat: 'consistency', base: 52,
       ok: { text: `You let ${c.behind.last} go, then re-pass on fresher rubber three laps from home.`, fx: {} },
       ko: { text: `You let ${c.behind.last} go. ${c.behind.last} keeps going.`, fx: { lose: 1 } },
+    },
+  ],
+  variants: [
+    {
+      text: (s, c) =>
+        byKind(c, {
+          street: `${c.behind.name} is all over your gearbox between the walls of ${c.place}. There is one place to pass on this lap, and you both know where it is. P${c.pos} is on the line.`,
+          fast: `${c.behind.name} is in your slipstream on every straight and closer every lap. P${c.pos} will be decided at the end of the long straight.`,
+          technical: `${c.behind.name} is glued to your rear wing through the twisty stuff, looking for a better exit and a gap that isn't there yet. P${c.pos} is on the line.`,
+        }),
+      choices: (s, c) => [
+        { ok: `${c.behind.last} looks left, looks right, and finds a closed door every time.`, ko: `${c.behind.last} gets the better exit and drives straight past.` },
+        { ok: `A late, firm move. ${c.behind.last} backs out of it. The stewards look, then look away.`, ko: 'The stewards were watching. Five seconds for moving under braking.' },
+        { ok: `You wave ${c.behind.last} through, tuck in behind, and take the place back on fresher tyres near the end.`, ko: `You let ${c.behind.last} through. That is the last you see of the car.` },
+      ],
+    },
+    {
+      when: (s, c) => c.tmBehind,
+      title: (s, c) => `${c.track}: teammate in the mirrors`,
+      text: (s, c) => `It's your own teammate. ${c.tm.name} has fresher tyres, P${c.pos} is on the line, and the pit wall has gone very quiet.`,
+      choices: (s, c) => [
+        { ok: `Hard and fair. ${c.tm.last} has nowhere to go, and the team gets to breathe again.`, ko: `${c.tm.last} dives up the inside and makes it stick. The garage claps, very quietly.` },
+        { ok: `A late move on your own teammate. ${c.tm.last} backs out, and the team principal pretends not to have seen it.`, ko: 'Five seconds for moving under braking, against your own teammate. Ouch.' },
+        { ok: `You let ${c.tm.last} by, then take the place back on fresher rubber three laps from home.`, ko: `You let ${c.tm.last} by. ${c.tm.last} keeps going.` },
+      ],
+    },
+    {
+      when: (s, c) => c.wet,
+      title: (s, c) => `${c.track}: pressure in the spray`,
+      text: (s, c) => `Somewhere in the spray behind you is ${c.behind.name}, filling your mirrors whenever you can see them. P${c.pos} is on the line.`,
+      choices: (s, c) => [
+        { ok: `${c.behind.last} looks for a way through the spray and finds you on the racing line every time.`, ko: `${c.behind.last} goes round the outside in the wet. You never saw it coming, mostly because you never saw anything.` },
+        { ok: `A late move in the spray. ${c.behind.last} backs off. The stewards put it down to the conditions.`, ko: 'Moving under braking in the wet. The stewards are not amused: five seconds.' },
+        { ok: `You let ${c.behind.last} through, then pounce when the car aquaplanes two laps later.`, ko: `You let ${c.behind.last} through and the spray swallows the car. Gone.` },
+      ],
+    },
+    {
+      title: (s, c) => `${c.track}: holding on`,
+      text: (s, c) => `Five laps to go. ${c.behind.name} has shown a nose at three corners in a row, and your tyres are finished. P${c.pos} is hanging by a thread.`,
+      choices: (s, c) => [
+        { ok: 'Defensive line, every corner, every lap. You make the car as wide as a bus.', ko: `${c.behind.last} feints, you flinch, and that is that.` },
+        { ok: `You leave it late and firm, and ${c.behind.last} decides that today is not the day.`, ko: 'One move too many under braking. The stewards hand you five seconds.' },
+        { ok: `You let ${c.behind.last} go, save what is left of the tyres, and pounce on the last lap.`, ko: `You let ${c.behind.last} go. Your tyres were never coming back.` },
+      ],
     },
   ],
 });
@@ -456,6 +717,41 @@ ev({
       ko: { text: 'They do not hang on. Flat-spotted, you limp home.', fx: { mod: -4 } },
     },
   ],
+  variants: [
+    {
+      title: (s, c) => `${c.track}: lap ${c.lap} of ${c.laps}`,
+      text: (s, c) =>
+        byKind(c, {
+          street: `${lapsLeft(c)} laps to go. The rears are sliding out of every slow corner, and the walls get closer every lap.`,
+          fast: `${lapsLeft(c)} laps to go. The front tyres are graining from all those fast sweepers, and the car pushes wide in every high-speed corner.`,
+          technical: `${lapsLeft(c)} laps to go. All those traction zones have eaten the rear tyres, and the car steps out at every slow exit.`,
+        }),
+      choices: [
+        { ok: 'Short-shifting, gentle on the throttle, kind to the rubber. They last.', ko: 'You manage them, and they fall off a cliff anyway. A long slide to the flag.' },
+        { ok: 'You take the extra stop. It costs time, but the new tyres make it feel like a different car.' },
+        { ok: 'You push, and against all logic the tyres come back to you. Fastest laps of your race at the end.', ko: 'The tyres give up completely. Flat-spotted and shaking, you limp home.' },
+      ],
+    },
+    {
+      when: (s, c) => c.wet,
+      text: (s, c) => `The track is drying and your wet-weather tyres are melting. ${lapsLeft(c)} laps to go, and the tread is disappearing in front of your eyes.`,
+      choices: [
+        { ok: 'You hunt for every damp patch to cool the tyres and nurse them to the end.', ko: 'There are not enough damp patches. The tyres overheat and you slide home.' },
+        { ok: 'You pit for fresh tyres. It costs time, but you finish on rubber that actually works.' },
+        { ok: 'You push on melting rubber and it somehow works. The commentators call it brave. Your engineer calls it lucky.', ko: 'The tyres disintegrate. You limp home on what is left of them.' },
+      ],
+    },
+    {
+      title: (s, c) => `${c.track}: tyres`,
+      radio: (s, c) => `${c.eng}: "Tyres are at the end of their life. Your call."`,
+      text: (s, c) => `${lapsLeft(c)} laps to go. The lap times are tumbling, the car behind is closing, and every corner feels like ice.`,
+      choices: [
+        { ok: 'Smooth hands, patient feet. The tyres hang on to the flag.', ko: 'You nurse them and they die anyway. You slither home, losing time every lap.' },
+        { ok: 'Box, fresh rubber, out again. A little slower, a lot safer.' },
+        { ok: 'You ignore the warning and push. The tyres somehow hold, and you set your fastest laps at the very end.', ko: 'They do not hold. A flat-spotted, vibrating crawl to the finish.' },
+      ],
+    },
+  ],
 });
 
 ev({
@@ -472,6 +768,54 @@ ev({
       ko: { text: 'You clip the wall at the last corner. Lap deleted, starting near the back.', fx: { qmod: -4 } },
     },
     { label: 'Bank a clean lap', ok: { text: 'Neat, tidy, a fair reflection of the car.', fx: { qmod: 0.3 } } },
+  ],
+  variants: [
+    {
+      title: (s, c) => `${c.track}: final run`,
+      text: (s, c) =>
+        byKind(c, {
+          street: `Last run in qualifying around ${c.place}. The walls are close enough to touch and the track gets quicker every lap. You are ${qGap(c)} off the top, with nowhere to hide a mistake.`,
+          fast: `Last run in qualifying at ${c.place}: long straights, fast sweepers, and a tow worth a tenth if you can find one. You are ${qGap(c)} off the top.`,
+          technical: `Last run at ${c.place}. Corner after corner after corner, and the tyres only give you one proper lap. You are ${qGap(c)} off the top.`,
+        }),
+      choices: [
+        {
+          ok: (s, c) =>
+            byKind(c, {
+              street: 'You brush the barrier on the exit of the last corner and the lap lights up purple. The mechanics check the wheel rim and grin.',
+              fast: 'Flat through the fast stuff, a perfect tow down the straight, purple everywhere. Mega.',
+              technical: 'Every apex kissed, every exit perfect. Purple in all three sectors.',
+            }),
+          ko: (s, c) =>
+            byKind(c, {
+              street: 'You find the wall instead of the time. Lap deleted, and you start near the back.',
+              fast: 'Too greedy through the quickest corner. Four wheels off, lap deleted, and a start near the back.',
+              technical: 'You run wide at the final corner. Track limits, lap deleted, starting near the back.',
+            }),
+        },
+        { ok: 'A tidy lap, with nothing left on the table and nothing in the wall. The car starts where it deserves.' },
+      ],
+    },
+    {
+      when: (s, c) => c.tm,
+      text: (s, c) => `Final run of qualifying, and the timing screen says ${c.tm.last} is ${qGap(c)} quicker in the other ${c.team}. Nobody in the garage says a word. Nobody needs to.`,
+      choices: [
+        {
+          ok: (s, c) => `A purple final sector. Over in the other garage, ${c.tm.last} watches the timing screen very quietly.`,
+          ko: (s, c) => `Too hard at the last corner. Lap deleted, a start near the back, and ${c.tm.last} will not let you forget it.`,
+        },
+        { ok: (s, c) => `A clean, honest lap. The data will tell you where ${c.tm.last} found the time.` },
+      ],
+    },
+    {
+      title: (s, c) => `${c.track}: qualifying, last run`,
+      radio: (s, c) => `${c.eng}: "${c.f1 ? 'Two tenths' : 'A tenth and a half'} off. Last set of tyres. Make it count."`,
+      text: 'One set of tyres left and one lap to get it right. The track gets faster with every car that goes round.',
+      choices: [
+        { ok: 'You leave nothing on the table. A lap on the very edge, and the timing screen turns purple.', ko: 'A snap of oversteer at the final corner. Lap gone, and so is your grid slot.' },
+        { ok: 'You bank a clean lap. Not spectacular, not wasted.' },
+      ],
+    },
   ],
 });
 
@@ -1321,6 +1665,36 @@ ev({
       ko: { text: 'You stall. Completely. The marshals have to push you away.', fx: { mod: -5 } },
     },
   ],
+  variants: [
+    {
+      text: (s, c) =>
+        byKind(c, {
+          street: 'Formation lap done. On a street circuit the grid is narrow and the walls are close, and of course this is when the revs drop and the anti-stall kicks in. First red light.',
+          fast: 'Formation lap done. A long run to Turn 1 is a great place to gain places and a terrible place to stall. The revs drop. Anti-stall. First red light.',
+          technical: 'Formation lap done. The clutch bite point has wandered, the revs drop, and the anti-stall kicks in just as the first red light comes on.',
+        }),
+      choices: [
+        { ok: 'You catch it with a flick of the paddle and get away cleanly. Nobody noticed a thing.', ko: 'You bog down and the cars behind stream past on both sides.' },
+        { ok: 'You dump the clutch, the rears bite, and you rocket off the line.', ko: 'You stall. Completely. The marshals wave yellow flags and push you away.' },
+      ],
+    },
+    {
+      when: (s, c) => c.wet,
+      text: 'Standing water on the grid, a slippery clutch, and a car that does not want to take first gear. The anti-stall kicks in as the first red light comes on.',
+      choices: [
+        { ok: 'You feather it like a surgeon and get away cleanly in the spray.', ko: 'Wheelspin, then nothing. The field disappears into the spray ahead.' },
+        { ok: 'You dump the clutch, the tyres find a dry patch, and the car hooks up. Rocket start.', ko: 'It bogs down in the wet and stalls. The cars behind swerve round you in the spray.' },
+      ],
+    },
+    {
+      when: (s, c) => c.grid <= 3,
+      text: (s, c) => `P${c.grid}, right at the front, with the whole field lined up behind you. The revs drop, the anti-stall kicks in, and the first red light comes on.`,
+      choices: [
+        { ok: 'You catch it with a flick of the paddle. From the grandstands it looks like a perfect launch.', ko: 'You bog down at the front and the field streams past on both sides.' },
+        { ok: 'You dump it and the car leaps forward like it was fired from a cannon.', ko: 'You stall at the front of the grid. Twenty cars dodge you, and the marshals push you away.' },
+      ],
+    },
+  ],
 });
 
 ev({
@@ -1642,6 +2016,103 @@ ev({
       label: 'Hunt for a sim lap record', stat: 'pace', base: 55,
       ok: { text: 'You smash the simulator record. The data helps the car, too.', fx: { stats: { technical: 1 }, carPerf: 0.2 } },
       ko: { text: 'The test driver’s record stands. He is insufferable about it.', fx: {} },
+    },
+  ],
+});
+
+// ------------------------------------------------------ reserve seasons (content version 2)
+
+const reserveTime = (s) => contentVersion(s) >= 2 && s.career.role === 'reserve';
+// Between races the season has already moved on to the next round.
+export const nextTrack = (s) => TRACKS[s.season?.cal[s.season.round]] || TRACKS[s.season?.cal[0]] || TRACKS.australia;
+// The slowest other F1 team: the one most likely to gamble on a reserve.
+export const smallTeam = (s) =>
+  Object.values(s.teams)
+    .filter((t) => t.series === 'F1' && t.id !== s.career.team)
+    .sort((a, b) => a.perf - b.perf || (a.id < b.id ? -1 : 1))[0];
+
+ev({
+  id: 'reserve_fp1',
+  phase: 'between',
+  w: 2.5,
+  when: reserveTime,
+  title: (s) => `${nextTrack(s).short}: first practice`,
+  text: (s, c) => `${c.team} are putting you in the car for first practice at ${nextTrack(s).short}. One hour, a race car, and a garage full of people quietly deciding whether you deserve one.`,
+  choices: [
+    {
+      label: 'Chase a headline lap time', stat: 'pace', base: 50,
+      ok: { text: 'Quickest of the stand-ins and faster than one of the race drivers. The team principal wanders over to your engineer.', fx: { fame: 2, teamRel: 2 } },
+      ko: { text: 'You push too hard, spin at the hairpin and bring out a red flag. The driver who loses the session is not thrilled.', fx: { teamRel: -3 } },
+    },
+    { label: 'Run the test programme to the letter', ok: { text: 'Aero rakes, long runs, back-to-back tyre tests. Dull, valuable, and noticed.', fx: { stats: { technical: 1 }, teamRel: 2 } } },
+  ],
+});
+
+ev({
+  id: 'reserve_sim',
+  phase: 'between',
+  w: 2.5,
+  when: reserveTime,
+  title: 'Night shift',
+  radio: (s, c) => `${c.eng}: "Can you stay on in the sim tonight? The car and the simulator disagree about everything."`,
+  text: 'The race team flies out to the next round. You stay behind at the factory to make the simulator match last weekend\'s data. It will be a long night.',
+  choices: [
+    {
+      label: 'Drive until the numbers match', stat: 'technical', base: 50,
+      ok: { text: 'At four in the morning the simulator and the car finally agree. The race engineers find your notes waiting for them.', fx: { stats: { technical: 1 }, teamRel: 3 } },
+      ko: { text: 'Six hundred laps, no correlation and a room full of very tired engineers. You learn a lot about what doesn\'t work.', fx: { stats: { technical: 1 } } },
+    },
+    { label: 'Do your hours and go home', ok: { text: 'A solid shift, then sleep. The data can wait for daylight.', fx: { stats: { composure: 1 } } } },
+  ],
+});
+
+ev({
+  id: 'reserve_seat_talk',
+  phase: 'between',
+  w: 2,
+  when: reserveTime,
+  title: 'The boss\'s office',
+  text: (s, c) => `The ${c.team} team principal closes the door. "If a race seat opens up, you are on the list. I need to know you are ready."`,
+  choices: [
+    {
+      label: 'Ask what it would take', stat: 'composure', base: 50,
+      ok: { text: 'A straight answer: be quick on Fridays, be useful in the sim, embarrass nobody. You can do that.', fx: { teamRel: 4, stats: { composure: 1 } } },
+      ko: { text: '"Results, not questions," says the boss. The meeting is over before you sit down.', fx: { teamRel: -2 } },
+    },
+    { label: 'Say you were ready yesterday', ok: { text: '"Good," says the boss. "Prove it." It feels like a door opening a crack.', fx: { fame: 1, teamRel: 2 } } },
+  ],
+});
+
+ev({
+  id: 'reserve_rival_call',
+  phase: 'between',
+  w: 2,
+  when: (s) => reserveTime(s) && !!smallTeam(s),
+  title: 'A quiet phone call',
+  text: (s) => `Your phone buzzes at midnight. It is the team manager at ${smallTeam(s).name}: "Purely hypothetical, but would you ever drive for us?"`,
+  choices: [
+    { label: 'Tell your own team about it', ok: { text: 'Your team principal appreciates the honesty and suddenly finds a few more Friday sessions for you.', fx: { teamRel: 4 } } },
+    {
+      label: 'Keep it quiet and keep talking', stat: 'composure', base: 50,
+      ok: { text: 'Nothing is signed, but your name is now on two lists. Word gets around the paddock, in a good way.', fx: { fame: 2 } },
+      ko: { text: 'The paddock knows within a day. Your own team is not amused.', fx: { teamRel: -4, fame: 1 } },
+    },
+  ],
+});
+
+ev({
+  id: 'reserve_rookie',
+  phase: 'between',
+  w: 2,
+  when: reserveTime,
+  title: 'The new kid',
+  text: (s, c) => `A teenager from the ${c.team} junior programme is doing their first simulator day, and the engineers ask you to show them the ropes.`,
+  choices: [
+    { label: 'Spend the whole day with them', ok: { text: 'You share every trick you know. By the evening the kid is quicker than you were at that age. You don\'t mind. Much.', fx: { teamRel: 3, stats: { composure: 1 } } } },
+    {
+      label: 'Set them a lap time to beat', stat: 'pace', base: 55,
+      ok: { text: 'They get within a tenth and spend the rest of the day trying to close it. So do you. Everyone gets faster.', fx: { stats: { pace: 1 } } },
+      ko: { text: 'They beat your time on their third lap. The engineers are delighted. You are very quiet on the drive home.', fx: { stats: { composure: 1 } } },
     },
   ],
 });

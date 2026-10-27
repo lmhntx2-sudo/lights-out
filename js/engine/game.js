@@ -8,7 +8,7 @@
 // setup rebuilds the same career (see replay.js). Saves from before the log
 // existed have no s.log, so nothing is recorded for them.
 import { Rng, hashSeed } from '../core/rng.js';
-import { START_YEAR, START_AGE, SINFO, SERIES, BACKGROUNDS } from './constants.js';
+import { START_YEAR, START_AGE, SINFO, SERIES, BACKGROUNDS, CONTENT_VERSION } from './constants.js';
 import { TRACKS, CALENDARS } from '../data/tracks.js';
 import { nation, flagOf } from '../data/nations.js';
 import { ACADEMY_TEAMS, F1_TEAMS } from '../data/teams.js';
@@ -33,6 +33,13 @@ export function roundName(track, series) {
   return series === 'F1' || track.name.endsWith('round') ? trackName(track) : tr('{track} round', { track: trackShort(track) });
 }
 
+// Street, fast or technical: only ever used in words, never in the race maths.
+export function kindName(kind) {
+  if (kind === 'street') return tr('street circuit');
+  if (kind === 'fast') return tr('high-speed circuit');
+  return kind === 'technical' ? tr('technical circuit') : '';
+}
+
 // The team's target for the season, in words.
 export function goalText(goal) {
   if (!goal) return '';
@@ -43,9 +50,15 @@ export function goalText(goal) {
 // ------------------------------------------------------------------ setup
 
 export function newGame(setup) {
+  // A new career gets the current content version. Version 1 is stored as no
+  // cv at all, so a replayed old career rebuilds exactly the setup it had.
+  const saved = JSON.parse(JSON.stringify(setup));
+  const cv = setup.cv ?? CONTENT_VERSION;
+  if (cv > 1) saved.cv = cv;
+  else delete saved.cv;
   const s = {
     v: 1,
-    setup: JSON.parse(JSON.stringify(setup)),
+    setup: saved,
     log: [],
     seed: setup.seed,
     rng: hashSeed(setup.seed),
@@ -137,7 +150,7 @@ export function prompt(s) {
     case 'race': {
       const se = s.season;
       const t = TRACKS[se.cal[se.round]];
-      return { type: 'race', round: se.round + 1, of: se.cal.length, next: roundName(t, se.series), flag: flagOf(t.nat) };
+      return { type: 'race', round: se.round + 1, of: se.cal.length, next: roundName(t, se.series), flag: flagOf(t.nat), kind: kindName(t.kind) };
     }
     case 'seasonEnd':
       return { type: 'continue', label: tr('Season review') };
@@ -346,6 +359,7 @@ function raceCtx(s, race, track) {
     gp: track.name,
     place: track.place,
     trackId: track.id,
+    kind: track.kind,
     laps: track.laps,
     lap: Math.max(2, Math.round(track.laps * 0.72)),
     wet: race.wet,
