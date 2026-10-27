@@ -67,7 +67,10 @@ you can submit careers and see the boards without deploying. `netlify dev` works
 
 If you change how the engine plays out (events, odds, balance), careers that were in
 progress when the change went live replay differently on the server and get refused.
-Careers started after the change are fine. Text-only changes are safe.
+Careers started after the change are fine. Text-only changes are safe. To add content
+without breaking careers in progress, bump `CONTENT_VERSION` in `js/engine/constants.js`
+and gate the new content on `contentVersion(s)`: every career keeps the version it
+started with (`s.setup.cv`, missing means 1), and the server replays it with that version.
 
 ## Second generation
 

@@ -61,38 +61,74 @@ export function pickEvent(s, r, phase, c) {
   return r.weighted(list, (e) => val(e.w ?? 1, s, c));
 }
 
-// The words for an event in the current language. A translation only ever
-// replaces text: choices, odds and outcomes always come from events.js.
-const wordsOf = (ev) => (isZh() && EVENTS_ZH[ev.id]) || null;
-
-function zhChoices(z, s, c) {
-  try {
-    return z ? val(z.choices, s, c) || [] : [];
-  } catch {
-    return [];
-  }
+// Which wording of an event to show: 0 is its own text, 1.. its variants.
+// The first time is always the original; after that the wordings that fit the
+// moment take turns, starting after the one used last time (s.seen[id].v).
+// Only the context and s.seen are read, never the RNG, so both languages and a
+// replay always land on the same wording.
+export function wordingOf(s, ev, c) {
+  if (!ev.variants?.length) return 0;
+  const fits = [0];
+  ev.variants.forEach((v, i) => {
+    try {
+      if (!v.when || v.when(s, c)) fits.push(i + 1);
+    } catch {
+      // a variant that can't read the context just sits this one out
+    }
+  });
+  const last = s.seen[ev.id]?.v ?? -1;
+  return fits.find((k) => k > last) ?? fits[0];
 }
 
-function render(ev, s, c) {
-  const z = wordsOf(ev);
-  const zc = zhChoices(z, s, c);
+// The words for an event in the current language and wording, most specific
+// first. A translation or variant only ever replaces text: choices, odds and
+// outcomes always come from the event itself in events.js.
+function wordsOf(ev, k) {
+  const z = isZh() ? EVENTS_ZH[ev.id] : null;
+  const pick = (w) => (k ? w?.variants?.[k - 1] : null);
+  return (z ? [pick(z), z] : [pick(ev)]).filter(Boolean);
+}
+
+const field = (layers, key, s, c) => {
+  const w = layers.find((l) => l[key] != null);
+  return w ? val(w[key], s, c) : undefined;
+};
+
+function choiceWords(layers, s, c) {
+  return layers.map((l) => {
+    try {
+      return val(l.choices, s, c) || [];
+    } catch {
+      return [];
+    }
+  });
+}
+
+function render(ev, s, c, k) {
+  const layers = wordsOf(ev, k);
+  const lists = choiceWords(layers, s, c);
+  const word = (i, key, ch) => {
+    const l = lists.find((x) => x[i]?.[key] != null);
+    return val(l ? l[i][key] : ch[key], s, c);
+  };
   const choices = choicesOf(ev, s, c).map((ch, i) => ({
-    label: val(zc[i]?.label ?? ch.label, s, c),
-    hint: val(zc[i]?.hint ?? ch.hint, s, c) || null,
+    label: word(i, 'label', ch),
+    hint: word(i, 'hint', ch) || null,
     chance: chanceOf(s, ch),
     stat: ch.stat ? statName(ch.stat) : null,
     risky: !!ch.risky,
   }));
   return {
-    title: val(z?.title ?? ev.title, s, c),
-    text: val(z?.text ?? ev.text, s, c),
-    radio: val(z?.radio ?? ev.radio, s, c) || null,
+    title: field(layers, 'title', s, c) ?? val(ev.title, s, c),
+    text: field(layers, 'text', s, c) ?? val(ev.text, s, c),
+    radio: (field(layers, 'radio', s, c) ?? val(ev.radio, s, c)) || null,
     choices,
   };
 }
 
 export function present(s, ev, c, after = null) {
-  const w = render(ev, s, c);
+  const k = wordingOf(s, ev, c);
+  const w = render(ev, s, c, k);
   const entry = pushFeed(s, {
     k: 'event',
     phase: ev.phase,
@@ -105,9 +141,10 @@ export function present(s, ev, c, after = null) {
     choices: w.choices,
     picked: null,
   });
-  s.pending = { id: ev.id, c, after, n: entry.n };
+  s.pending = { id: ev.id, c, after, n: entry.n, v: k };
   const seen = s.seen[ev.id] || { n: 0 };
   s.seen[ev.id] = { n: seen.n + 1, at: s.raceIdx, yr: s.year };
+  if (ev.variants?.length) s.seen[ev.id].v = k;
 }
 
 export function presentById(s, id, c, after) {
@@ -124,9 +161,10 @@ export function resolve(s, r, i) {
   const chance = entry?.choices[i]?.chance ?? chanceOf(s, ch);
   const ok = chance >= 100 || r.next() * 100 < chance;
   const branch = ok ? ch.ok : ch.ko || ch.ok;
-  const zc = zhChoices(wordsOf(ev), s, p.c)[choices.indexOf(ch)];
-  const zText = zc && (ok || !ch.ko ? zc.ok : zc.ko);
-  const text = val(zText ?? branch.text, s, p.c);
+  const key = ok || !ch.ko ? 'ok' : 'ko';
+  const idx = choices.indexOf(ch);
+  const words = choiceWords(wordsOf(ev, p.v ?? 0), s, p.c).find((l) => l[idx]?.[key] != null);
+  const text = val(words ? words[idx][key] : branch.text, s, p.c);
   const fx = val(branch.fx, s, p.c) || {};
   s.pending = null;
   const notes = applyFx(s, fx, p.c);
@@ -147,7 +185,7 @@ export function relocalize(s) {
   const ev = p && EVENTS[p.id];
   const entry = ev && s.feed.find((e) => e.n === p.n);
   if (!entry) return;
-  const w = render(ev, s, p.c);
+  const w = render(ev, s, p.c, p.v ?? 0);
   entry.title = w.title;
   entry.text = w.text;
   entry.radio = w.radio;

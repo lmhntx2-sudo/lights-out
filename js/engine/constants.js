@@ -2,6 +2,11 @@ export const START_YEAR = 2026;
 export const START_AGE = 15;
 export const RETIRE_AGE = 42;
 
+// Bumped whenever new content changes which events can fire or what the RNG
+// draws. A career keeps the version it started with (s.setup.cv, missing = 1),
+// so careers already in progress replay exactly as they were played.
+export const CONTENT_VERSION = 2;
+
 export const SERIES = ['F4', 'F3', 'F2', 'F1'];
 
 // wc   how much the car matters versus the driver in a race (0-1)
