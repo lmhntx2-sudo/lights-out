@@ -6,18 +6,23 @@ import { STYLES, BACKGROUNDS, HELMET_COLORS, SUPPORTER_COLORS } from '../engine/
 import { newSeed, cleanSeed } from '../core/rng.js';
 import { todayKey, dailySetup, dailyGoalText } from '../engine/daily.js';
 import { ACHIEVEMENTS } from '../engine/achievements.js';
+import { familyLine, heirOf } from '../engine/legacy.js';
+import { money } from '../core/fmt.js';
 import { store } from '../store.js';
 import { coffeeButton } from './donate.js';
 import { openHallOfFame, openAchievements, openSettings, openBackup, openAbout, allUnlocked, openLeaderboard, confirmDialog } from './modals.js';
 import { car } from './car.js';
 import { sfx } from './sfx.js';
-import { t, getLang, LANGS, loc, natName, styleName, styleDesc, bgText } from '../i18n.js';
+import { t, getLang, LANGS, loc, natName, styleName, styleDesc, bgText, isZh } from '../i18n.js';
 
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-function randomName(nat) {
+// A kid whose family name is written in Chinese characters gets a Chinese given name.
+const HAN_GIVEN = ['卓言', '子朗', '心悅', '浩然', '曉晴', '天佑', '詠恩', '俊希', '嘉怡', '朗晴', '樂軒', '芷澄'];
+
+function randomName(nat, family) {
   const pool = NAME_POOLS[nation(nat).names] || NAME_POOLS.en;
-  return { first: pick(pool.f), last: pick(pool.l) };
+  return { first: /[\u3400-\u9fff]/.test(family || '') ? pick(HAN_GIVEN) : pick(pool.f), last: pick(pool.l) };
 }
 
 function gantry() {
@@ -49,10 +54,12 @@ function langButton(app) {
   return h('button', { class: 'btn btn-ghost', lang: code === 'zh' ? 'zh-Hant' : 'en', onClick: () => app.setLanguage(code) }, `🌐 ${label}`);
 }
 
-export function renderTitle(app, { seed, daily, form: kept } = {}) {
+// heir: a retired parent's kid (legacy.js heirOf). Surname, nationality and
+// background come from the family; the helmet starts in the family colours.
+export function renderTitle(app, { seed, daily, form: kept, heir } = {}) {
   const root = document.getElementById('app');
   const save = store.loadGame();
-  const dly = daily ? dailySetup(todayKey()) : null;
+  const dly = daily && !heir ? dailySetup(todayKey()) : null;
   const doneToday = store.dailyDone()[todayKey()];
   // A language switch redraws the title with the same form, and without the intro again.
   const anim = app.settings.anim !== 'off' && !kept;
@@ -69,7 +76,10 @@ export function renderTitle(app, { seed, daily, form: kept } = {}) {
     seed: cleanSeed(seed) || newSeed(),
   };
   if (dly && !kept) Object.assign(form, { nat: dly.nat, style: dly.style, bg: dly.bg, seed: dly.seed });
-  app.title = { opts: { seed, daily }, form };
+  if (heir && !kept) Object.assign(form, { first: randomName(heir.nat, heir.last).first, last: heir.last, nat: heir.nat, bg: heir.bg, helmet: { ...heir.helmet } });
+  app.title = { opts: { seed, daily, heir }, form };
+  // Fields the family decides, like the daily challenge decides its own.
+  const fixed = !!dly || !!heir;
   const goal = dly ? dailyGoalText(dly.goal, dly.goalText) : '';
 
   // ---------------------------------------------------------------- hero
@@ -84,15 +94,22 @@ export function renderTitle(app, { seed, daily, form: kept } = {}) {
       h('button', { class: 'btn btn-go', onClick: () => app.continueGame() }, t('Continue career'), h('small', { style: 'font-style:normal;font-weight:600;opacity:.85' }, t('{name}, {year}', { name: save.driver.name, year: save.year }))),
     );
   }
+  // A retired parent's kid can still be picked up later, even after a reload.
+  const waiting = !heir && !dly && save?.stage === 'retired' ? heirOf(save) : null;
+  if (waiting) {
+    actions.append(
+      h('button', { class: 'btn btn-go', onClick: () => app.showTitle({ heir: waiting }) }, t('Continue with your kid'), h('small', { style: 'font-style:normal;font-weight:600;opacity:.85' }, t('Child of {parent}', { parent: waiting.parent }))),
+    );
+  }
   if (!dly) {
     const toBuilder = () => {
       document.getElementById('first')?.focus({ preventScroll: true });
       builder.scrollIntoView({ behavior: anim ? 'smooth' : 'auto', block: 'start' });
     };
-    actions.append(h('button', { class: save && save.stage !== 'retired' ? 'btn' : 'btn btn-go', onClick: toBuilder }, t('New career')));
+    actions.append(h('button', { class: (save && save.stage !== 'retired') || waiting ? 'btn' : 'btn btn-go', onClick: toBuilder }, t('New career')));
   }
   actions.append(
-    dly
+    dly || heir
       ? h('button', { class: 'btn', onClick: () => app.showTitle() }, t('Back to free play'))
       : h('button', { class: 'btn', onClick: () => app.showTitle({ daily: true }) }, doneToday ? t('Daily challenge (done)') : t('Daily challenge')),
   );
@@ -149,22 +166,22 @@ export function renderTitle(app, { seed, daily, form: kept } = {}) {
   }, '🎲');
 
   const first = h('input', { class: 'input', id: 'first', maxlength: 18, autocomplete: 'off', value: form.first, 'aria-label': t('First name'), placeholder: t('First name') });
-  const last = h('input', { class: 'input', id: 'last', maxlength: 22, autocomplete: 'off', value: form.last, 'aria-label': t('Last name'), placeholder: t('Last name') });
+  const last = h('input', { class: 'input', id: 'last', maxlength: 22, autocomplete: 'off', value: form.last, 'aria-label': t('Last name'), placeholder: t('Last name'), disabled: !!heir, title: heir ? t('The family name') : null });
   first.addEventListener('input', () => (form.first = first.value));
   last.addEventListener('input', () => (form.last = last.value));
   const dice = h('button', {
     class: 'btn icon-btn', type: 'button', title: t('Random name'), 'aria-label': t('Random name'),
     onClick: () => {
-      const n = randomName(form.nat);
+      const n = randomName(form.nat, heir && form.last);
       form.first = first.value = n.first;
-      form.last = last.value = n.last;
+      if (!heir) form.last = last.value = n.last;
     },
   }, '🎲');
 
   // nationality
   const natGrid = h('div', { class: 'nat-grid', role: 'group', 'aria-label': t('Nationality') });
   const natBtns = NATIONS.map((n) => {
-    const b = h('button', { class: 'chip', type: 'button', 'aria-pressed': n.id === form.nat ? 'true' : 'false', 'data-q': `${n.name} ${n.adj} ${loc('nation', n.id, null, '')}`.toLowerCase(), disabled: dly && n.id !== form.nat },
+    const b = h('button', { class: 'chip', type: 'button', 'aria-pressed': n.id === form.nat ? 'true' : 'false', 'data-q': `${n.name} ${n.adj} ${loc('nation', n.id, null, '')}`.toLowerCase(), disabled: fixed && n.id !== form.nat },
       h('span', { class: 'flag' }, n.flag), natName(n));
     b.addEventListener('click', () => {
       form.nat = n.id;
@@ -175,16 +192,16 @@ export function renderTitle(app, { seed, daily, form: kept } = {}) {
   });
   const order = REGIONS.flatMap((r) => natBtns.filter((_, i) => NATIONS[i].region === r.id));
   natGrid.append(...order);
-  const natFilter = h('input', { class: 'input nat-filter', placeholder: t('Search countries'), 'aria-label': t('Search countries'), disabled: !!dly });
+  const natFilter = h('input', { class: 'input nat-filter', placeholder: t('Search countries'), 'aria-label': t('Search countries'), disabled: fixed });
   natFilter.addEventListener('input', () => {
     const q = natFilter.value.trim().toLowerCase();
     natBtns.forEach((b) => (b.style.display = !q || b.dataset.q.includes(q) ? '' : 'none'));
   });
 
-  const optGroup = (entries, key, render) => {
+  const optGroup = (entries, key, render, locked = !!dly) => {
     const wrap = h('div', { class: 'opts', role: 'group' });
     const btns = entries.map(([id]) => {
-      const b = h('button', { class: 'opt', type: 'button', 'aria-pressed': form[key] === id ? 'true' : 'false', disabled: dly && form[key] !== id }, render(id));
+      const b = h('button', { class: 'opt', type: 'button', 'aria-pressed': form[key] === id ? 'true' : 'false', disabled: locked && form[key] !== id }, render(id));
       b.addEventListener('click', () => {
         form[key] = id;
         btns.forEach((x) => x.setAttribute('aria-pressed', 'false'));
@@ -200,7 +217,7 @@ export function renderTitle(app, { seed, daily, form: kept } = {}) {
     h('b', null, bgText(id, 'name')),
     h('span', null, bgText(id, 'desc')),
     h('div', { class: 'tags' }, h('span', { class: 'tag up' }, bgText(id, 'pros')), h('span', { class: 'tag down' }, bgText(id, 'cons'))),
-  ]);
+  ], fixed);
 
   // helmet colours
   const palette = [...HELMET_COLORS, ...SUPPORTER_COLORS];
@@ -235,20 +252,21 @@ export function renderTitle(app, { seed, daily, form: kept } = {}) {
   const start = h('button', { class: 'btn btn-go', type: 'button' }, dly ? t('Start the daily challenge') : t('Start your engine'));
   start.addEventListener('click', () => {
     if (!form.first.trim() && !form.last.trim()) {
-      const n = randomName(form.nat);
-      form.first = n.first;
-      form.last = n.last;
+      const n = randomName(form.nat, heir && form.last);
+      form.first = first.value = n.first;
+      if (!heir) form.last = n.last;
     }
     if (!form.seed) form.seed = newSeed();
-    const go = () => app.startGame({ ...form, helmet: { ...form.helmet }, daily: dly ? { date: dly.date, goal: dly.goal, goalText: dly.goalText } : null });
+    const go = () => app.startGame({ ...form, helmet: { ...form.helmet }, daily: dly ? { date: dly.date, goal: dly.goal, goalText: dly.goalText } : null, ...(heir ? { legacy: heir.legacy } : {}) });
     if (save && save.stage !== 'retired') confirmDialog(t('Start a new career?'), t("Starting a new career replaces {name}'s unfinished one. Continue?", { name: save.driver.name }), t('Start a new career'), go);
     else go();
   });
 
   builder.append(...[
-    h('h2', { id: 'build-h' }, dly ? t('Daily challenge') : t('Build your driver')),
-    h('p', { class: 'sub' }, dly ? t('Everyone gets the same driver and the same world today.') : t('Who are you, where are you from, and how do you drive?')),
+    h('h2', { id: 'build-h' }, dly ? t('Daily challenge') : heir ? t('Your kid') : t('Build your driver')),
+    h('p', { class: 'sub' }, dly ? t('Everyone gets the same driver and the same world today.') : heir ? t('Same surname, same flag, and the family helmet colours to start from. The rest is up to you.') : t('Who are you, where are you from, and how do you drive?')),
     dly ? h('div', { class: 'daily-banner' }, h('b', null, t('Goal for {date}: ', { date: dly.date })), goal, doneToday ? t(' You have already completed it today.') : '') : null,
+    heir ? heirBanner(heir) : null,
     h('div', { class: 'field' }, h('span', { class: 'lbl' }, t('Name')), h('div', { class: 'row' }, first, last, dice)),
     h('div', { class: 'field' }, h('span', { class: 'lbl' }, t('Race number')), h('p', { class: 'hint' }, t('From 2 to 99. Win the world title and you can run the #1.')), h('div', { class: 'row', style: 'align-items:center' }, numIn, numDice)),
     h('div', { class: 'field' }, h('span', { class: 'lbl' }, t('Nationality')), h('p', { class: 'hint' }, t('Sets your home Grand Prix and how much sponsors pay.')), natFilter, natGrid),
@@ -271,6 +289,16 @@ export function renderTitle(app, { seed, daily, form: kept } = {}) {
       },
     });
   }
+}
+
+// What the family hands down, in words.
+function heirBanner(heir) {
+  const lg = heir.legacy;
+  const bg = bgText(heir.bg, 'name');
+  const text = heir.bg === 'royalty'
+    ? t('Background: {bg}. {parent} retired worth {money}, so the family fortune is the whole inheritance.', { bg, parent: heir.parent, money: money(lg.worth) })
+    : t('Background: {bg}. From the family: {money} and +{fame} fame.', { bg, money: money(lg.money), fame: lg.fame });
+  return h('div', { class: 'daily-banner' }, h('b', null, familyLine({ gen: lg.gen, parent: heir.parent })), isZh() ? '' : ' ', text);
 }
 
 // Full-screen lights before the first race of a new career.

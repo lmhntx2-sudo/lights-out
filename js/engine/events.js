@@ -8,12 +8,19 @@
 // choices   [{ label, stat, base } or { label, p }] with ok / ko outcomes.
 //           Without stat or p a choice always succeeds.
 // fx        stats, fame, money, teamRel, flag, ach, asset, injury, academy,
-//           training, signFor, salaryUp, extend, carPerf
+//           training, signFor, salaryUp, extend, carPerf, number
 //           race-only: mod (pace), qmod (qualifying), gain, lose, dnf, saveDnf
 
-import { pay, firstName } from './helpers.js';
+import { pay, firstName, legacyOf } from './helpers.js';
 import { TRAINING } from './constants.js';
 import { F1_TEAMS } from '../data/teams.js';
+import { parentName } from './legacy.js';
+import { fullName } from './player.js';
+import { plural } from '../core/fmt.js';
+
+// Second-generation careers: the parent's name, and the parent's old rival's.
+const P = (s) => parentName(legacyOf(s));
+const RP = (s) => fullName(legacyOf(s).rival.first, legacyOf(s).rival.last);
 
 const L = [];
 const ev = (o) => L.push(o);
@@ -28,12 +35,16 @@ ev({
   phase: 'prologue',
   title: 'Age 8: the kart',
   text: (s) =>
-    ({
-      royalty: "Your father's chauffeur unloads a brand-new kart from a removal van. It has your initials on the seat. It also has a full-time mechanic called Klaus.",
-      prodigy: 'Grandad drags a battered 60cc kart out of a neighbour\'s shed. It smells of two-stroke oil and bad decisions. You are in love.',
-      grafter: 'Dad builds you a kart from a lawnmower engine and scaffolding pipe. It is held together by cable ties and hope. It is the fastest thing on your street.',
-      simracer: "You've done ten thousand laps on a sim rig in your bedroom. Your uncle finally takes you to a real kart track. The seat is hard and the world doesn't have a reset button.",
-    })[s.driver.bg],
+    legacyOf(s)
+      ? s.driver.bg === 'royalty'
+        ? `${P(s)}'s old mechanic unloads a brand-new kart from the team truck. It has your initials on the seat and the family helmet colours on the nose.`
+        : `${P(s)} drags their very first kart out of the garage and spends a whole weekend making it run again. It still has #${legacyOf(s).number} on the nose.`
+      : ({
+          royalty: "Your father's chauffeur unloads a brand-new kart from a removal van. It has your initials on the seat. It also has a full-time mechanic called Klaus.",
+          prodigy: 'Grandad drags a battered 60cc kart out of a neighbour\'s shed. It smells of two-stroke oil and bad decisions. You are in love.',
+          grafter: 'Dad builds you a kart from a lawnmower engine and scaffolding pipe. It is held together by cable ties and hope. It is the fastest thing on your street.',
+          simracer: "You've done ten thousand laps on a sim rig in your bedroom. Your uncle finally takes you to a real kart track. The seat is hard and the world doesn't have a reset button.",
+        })[s.driver.bg],
   choices: [
     { label: 'Every weekend at the local track', ok: { text: 'Rain, cold, snapped chains. You go anyway. By Christmas you know every bump on the circuit.', fx: { stats: { consistency: 3, racecraft: 2 } } } },
     { label: 'Study onboard videos every night', ok: { text: "You learn braking points from grainy videos before you can spell 'apex'.", fx: { stats: { pace: 3, technical: 2 } } } },
@@ -49,7 +60,10 @@ ev({
   id: 'pro_final',
   phase: 'prologue',
   title: 'Age 11: the national final',
-  text: (s, c) => `Last lap of the national karting final. You're second, a kart's length behind ${c.rival}, the kid everyone calls the next big thing. ${firstName(c.rival)}'s dad is already filming the podium.`,
+  text: (s, c) =>
+    `Last lap of the national karting final. You're second, a kart's length behind ${c.rival}, the kid everyone calls the next big thing. ${
+      legacyOf(s)?.rival ? `${RP(s)}, who spent years banging wheels with ${P(s)}, is already filming the podium.` : `${firstName(c.rival)}'s dad is already filming the podium.`
+    }`,
   choices: [
     {
       label: 'Lunge down the inside at the hairpin', stat: 'racecraft', base: 50,
@@ -92,16 +106,25 @@ ev({
   title: 'Age 14: the money talk',
   text: (s) =>
     s.driver.bg === 'royalty'
-      ? "Your father slides a cheque across the dinner table. 'Your mother wants you to be a lawyer. Prove her wrong.'"
-      : "A season of car racing costs more than your family's house. Literally. Your parents sit you down at the kitchen table.",
+      ? legacyOf(s)
+        ? `${P(s)} slides a cheque across the dinner table. 'I had to beg for every seat I ever got. You won't have to. Don't waste it.'`
+        : "Your father slides a cheque across the dinner table. 'Your mother wants you to be a lawyer. Prove her wrong.'"
+      : legacyOf(s)
+        ? `${P(s)} sits you down at the kitchen table. 'I paid for my own racing, and so will you. I'll help you start. After that, it's on you.'`
+        : "A season of car racing costs more than your family's house. Literally. Your parents sit you down at the kitchen table.",
   choices: (s) =>
     s.driver.bg === 'royalty'
       ? [
           { label: 'Take the cheque', ok: { text: 'Two million, signed with a fountain pen. The paddock will never let you forget it.', fx: { money: 2000000 } } },
-          { label: 'Turn it down and do it your way', ok: { text: 'Your dad is either furious or proud. With him it is hard to tell.', fx: { stats: { composure: 3 }, fame: 3, flag: 'self_made' } } },
+          {
+            label: 'Turn it down and do it your way',
+            ok: { text: legacyOf(s) ? `${P(s)} is either furious or proud. With racers it is hard to tell.` : 'Your dad is either furious or proud. With him it is hard to tell.', fx: { stats: { composure: 3 }, fame: 3, flag: 'self_made' } },
+          },
         ]
       : [
-          { label: 'Remortgage the house', ok: { text: 'They do it without blinking. You promise yourself you will buy them a better one.', fx: { money: 250000, flag: 'remortgage' } } },
+          legacyOf(s)
+            ? { label: `Borrow from ${P(s)}`, ok: { text: `${P(s)} lends you the money and has a lawyer draw up the paperwork. You promise to pay back every cent.`, fx: { money: 250000, flag: 'family_loan' } } }
+            : { label: 'Remortgage the house', ok: { text: 'They do it without blinking. You promise yourself you will buy them a better one.', fx: { money: 250000, flag: 'remortgage' } } },
           { label: 'Find a sponsor: the local kebab shop', ok: { text: 'Dönerland Express pays sixty grand to put a spinning kebab on your helmet. Objectively the best-looking helmet in the paddock.', fx: { money: 60000, fame: 2, flag: 'kebab' } } },
           {
             label: 'Talent will be enough', stat: 'composure', base: 50,
@@ -1643,6 +1666,115 @@ ev({
       ok: { text: 'You smash the simulator record. The data helps the car, too.', fx: { stats: { technical: 1 }, carPerf: 0.2 } },
       ko: { text: 'The test driver’s record stands. He is insufferable about it.', fx: {} },
     },
+  ],
+});
+
+// ------------------------------------------------------ second generation
+// Only careers continued by a retired driver's kid (setup.legacy) can see these.
+
+ev({
+  id: 'legacy_press',
+  phase: 'between',
+  once: true,
+  w: 4,
+  series: ['F4', 'F3', 'F2'],
+  when: (s) => !!legacyOf(s),
+  title: 'The surname',
+  text: (s) => `A racing magazine prints your photo next to one of ${P(s)} at the same age. Same flag, same surname, same helmet colours. The headline asks whether you will ever be as good.`,
+  choices: (s) => [
+    {
+      label: 'Own it: "I want everything they won, and more"', stat: 'composure', base: 50,
+      ok: { text: 'The quote goes everywhere. Sponsors love a dynasty.', fx: { fame: 3, stats: { composure: 1 } } },
+      ko: { text: 'From now on, every bad weekend is a "family crisis" in the magazines.', fx: { fame: 1, stats: { composure: -1 } } },
+    },
+    { label: 'Ask them to write about you instead', ok: { text: 'A short interview about your own driving. Hardly anybody reads it, but you like how you sound.', fx: { stats: { composure: 2 } } } },
+    { label: `Do the photo shoot with ${P(s)}`, ok: { text: 'Two generations on one cover. It sells out in a day.', fx: { fame: 2 } } },
+  ],
+});
+
+ev({
+  id: 'legacy_pitwall',
+  phase: 'race',
+  w: 2,
+  gap: 70,
+  when: (s) => !!legacyOf(s),
+  title: (s, c) => (c.f1 ? `${c.track}: ${P(s)} on commentary` : `${c.track}: ${P(s)} on the pit wall`),
+  text: (s, c) =>
+    c.f1
+      ? `${P(s)} is in the commentary box today. Millions of people are about to hear exactly what your parent thinks of your driving.`
+      : `${P(s)} is on the pit wall in a borrowed team cap, headset on, trying very hard not to look nervous.`,
+  choices: (s, c) => [
+    {
+      label: c.f1 ? 'Give them something to shout about' : `Try ${P(s)}'s old move into turn one`, stat: 'racecraft', base: 48,
+      ok: {
+        text: c.f1 ? 'A move round the outside that has the whole commentary box on its feet. Your parent’s voice cracks on air.' : 'Brake late, cut back, gone. Exactly how they used to do it. There is a fist pump on the pit wall.',
+        fx: { gain: 2, fame: 2 },
+      },
+      ko: { text: `You overcook it and run wide. Afterwards ${P(s)} is suddenly very interested in their phone.`, fx: { lose: 1, fame: -1 } },
+    },
+    {
+      label: 'Block it all out and drive your own race', stat: 'composure', base: 52,
+      ok: { text: 'Head down, no ghosts. Clean, quick and all yours.', fx: { mod: 1.2, stats: { composure: 1 } } },
+      ko: { text: 'You keep wondering what they are saying about you. It shows in the lap times.', fx: { mod: -0.8 } },
+    },
+  ],
+});
+
+ev({
+  id: 'legacy_number',
+  phase: 'preseason',
+  w: 0,
+  once: true,
+  title: 'The family number',
+  text: (s) => `Nobody has raced #${legacyOf(s).number} in Formula 1 since ${P(s)} retired. The team needs to know which number goes on your car.`,
+  choices: (s, c) => [
+    { label: `Bring back ${P(s)}'s #${legacyOf(s).number}`, ok: { text: 'The merchandise sells out before the car has turned a wheel. Somewhere, your parent is pretending not to cry.', fx: { number: legacyOf(s).number, fame: 3 } } },
+    { label: `Keep your own #${c.number}`, ok: { text: 'You want people to remember your number, not theirs. Your parent says that is exactly what they would have done.', fx: { stats: { composure: 2 }, fame: 1 } } },
+  ],
+});
+
+ev({
+  id: 'legacy_rival_kid',
+  phase: 'race',
+  once: true,
+  w: 8,
+  when: (s, c) => !!legacyOf(s)?.rival && c.rival && (c.rival.directlyAhead || c.rival.directlyBehind),
+  title: (s, c) => `${c.track}: the old feud`,
+  text: (s, c) =>
+    `${c.rival.name} is right ${c.rival.directlyAhead ? 'in front of you' : 'behind you'}. Their parent, ${RP(s)}, spent years banging wheels with ${P(s)}. The commentators have been waiting for this all season.`,
+  choices: (s, c) => [
+    {
+      label: 'Finish what your parents started', stat: 'racecraft', base: 46,
+      ok: { text: 'You win the duel. Somewhere, two retired racers are texting each other in capital letters.', fx: { gain: 2, fame: 3, flag: 'beat_rival' } },
+      ko: { text: `${c.rival.last} wins this round. The feud lives on for another generation.`, fx: { lose: 1, fame: -1 } },
+    },
+    {
+      label: 'Race clean. Nobody needs a third generation of this', stat: 'composure', base: 55,
+      ok: { text: `A hard, fair fight. Afterwards ${c.rival.last} shakes your hand, which your parents never once managed.`, fx: { mod: 1, teamRel: 2 } },
+      ko: { text: 'Clean, but far too careful. You lose touch with the cars ahead.', fx: { mod: -1 } },
+    },
+  ],
+});
+
+ev({
+  id: 'legacy_record',
+  phase: 'offseason',
+  once: true,
+  w: 4,
+  series: F1,
+  when: (s) => {
+    const lg = legacyOf(s);
+    return !!lg && lg.wins > 0 && s.career.role === 'race' && s.career.tot.F1.starts >= 40 && s.career.tot.F1.wins < lg.wins;
+  },
+  title: 'In the shadow',
+  text: (s) => `${P(s)} finished with ${plural(legacyOf(s).wins, 'win')}. You have ${plural(s.career.tot.F1.wins, 'win')}. On live TV, a presenter asks whether you will ever be as good as your parent.`,
+  choices: [
+    {
+      label: '"Ask me again when I retire."', stat: 'composure', base: 55,
+      ok: { text: 'The studio laughs. The clip makes you look ten years older, in a good way.', fx: { fame: 2, stats: { composure: 1 } } },
+      ko: { text: 'It comes out a lot sharper than you meant. The clip runs for a week.', fx: { fame: -2 } },
+    },
+    { label: 'Laugh: "Nobody is as good as my parent. Just ask them."', ok: { text: 'Everybody laughs, including, later that evening, your parent.', fx: { fame: 1, stats: { composure: 1 } } } },
   ],
 });
 

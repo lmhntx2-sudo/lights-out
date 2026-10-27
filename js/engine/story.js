@@ -199,6 +199,10 @@ export function applyFx(s, fx, c = {}) {
     notes.push({ t: fx.budget > 0 ? tr('Team budget up') : tr('Team budget down'), good: fx.budget > 0 });
   }
   if (fx.useOne) s.flags.useOne = s.year;
+  if (fx.number) {
+    d.number = fx.number;
+    notes.push({ t: tr('Race number #{n}', { n: fx.number }), good: true });
+  }
   if (fx.salaryUp && s.career.contract) {
     s.career.contract.salary = Math.round(s.career.contract.salary * (1 + fx.salaryUp));
     notes.push({ t: tr('Salary now {money}', { money: money(s.career.contract.salary) }), good: true });

@@ -1,4 +1,4 @@
-import { pushFeed } from './helpers.js';
+import { pushFeed, legacyOf } from './helpers.js';
 import { loc } from '../i18n.js';
 
 // on: when the check runs. 'manual' ones are unlocked directly by events or the UI.
@@ -64,6 +64,8 @@ export const ACHIEVEMENTS = [
   A('paid_in_full', '🎩', 'Earned it', 'Win a Formula 1 race as paddock royalty.', 'race', (s, x) => won(x) && s.driver.bg === 'royalty'),
   A('endurance', '🕛', 'Endurance convert', 'Leave single-seaters for endurance racing.', 'manual'),
   A('family', '👶', 'Racing family', 'Become a parent.', 'manual'),
+  A('heir', '🧬', 'Family business', 'Win a Grand Prix as a second-generation driver.', 'race', (s, x) => won(x) && !!legacyOf(s)),
+  A('surpass', '📈', 'Out of the shadow', 'Win more Grands Prix than your parent did.', 'race', (s) => !!legacyOf(s) && f1(s).wins > legacyOf(s).wins),
   A('pit_crew', '☕', 'Pit crew', 'Fuel the developer with a coffee.', 'manual'),
   A('daily', '📅', 'Daily driver', 'Complete a daily challenge.', 'manual'),
 ];

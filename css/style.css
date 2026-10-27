@@ -478,6 +478,8 @@ dialog::backdrop { background: rgba(5, 5, 8, .75); backdrop-filter: blur(3px); }
 .table tr.me td { color: var(--yellow); font-weight: 700; }
 .table tr.rival td:nth-child(2)::after { content: ' (rival)'; color: #ff8a80; font-weight: 400; }
 :lang(zh-Hant) .table tr.rival td:nth-child(2)::after { content: '（宿敵）'; }
+.table tr.parent td:nth-child(2)::after { content: ' (parent)'; color: var(--purple); font-weight: 400; }
+:lang(zh-Hant) .table tr.parent td:nth-child(2)::after { content: '（上一代）'; }
 .table .r { text-align: right; }
 .sec { margin: 18px 0 8px; font-size: 15px; font-weight: 700; }
 .ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }

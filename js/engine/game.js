@@ -14,6 +14,7 @@ import { nation, flagOf } from '../data/nations.js';
 import { ACADEMY_TEAMS, F1_TEAMS } from '../data/teams.js';
 import { createWorld, makeAIDriver, teamsOf, seatsOf, nameOf, teammateOf, carTier, carRank } from './world.js';
 import { createPlayer, growPlayer, overall, ovr, raceNumber } from './player.js';
+import { driverCode } from '../data/names.js';
 import { prepareRace, classify, pointsFor } from './race.js';
 import { EVENTS, PROLOGUE, PROLOGUE_AGE } from './events.js';
 import { pickEvent, present, resolve } from './story.js';
@@ -22,8 +23,8 @@ import {
   newStand, addResult, tallyAI, standingsOrder, simSeriesSeason, offseasonAI, generateOffers,
   takeOffer, offseasonFill, teamDevelopment, slPoints, rivalNews, playerValue, wantF1,
 } from './market.js';
-import { pushFeed, story } from './helpers.js';
-import { buildSummary } from './legacy.js';
+import { pushFeed, story, legacyOf } from './helpers.js';
+import { buildSummary, parentName, tierName } from './legacy.js';
 import { checkDaily } from './daily.js';
 import { money, plural } from '../core/fmt.js';
 import { t as tr, cat, natName, bgText, seriesName, trackName, trackShort } from '../i18n.js';
@@ -43,6 +44,9 @@ export function goalText(goal) {
 // ------------------------------------------------------------------ setup
 
 export function newGame(setup) {
+  // A second-generation career starts in the year the kid turns fifteen. Its
+  // world, money and story differ; an ordinary setup has no legacy and none of this runs.
+  const lg = setup.legacy || null;
   const s = {
     v: 1,
     setup: JSON.parse(JSON.stringify(setup)),
@@ -52,7 +56,7 @@ export function newGame(setup) {
     daily: setup.daily || null,
     stage: 'prologue',
     proStep: 0,
-    year: START_YEAR,
+    year: lg ? lg.year : START_YEAR,
     raceIdx: 0,
     fn: 0,
     feed: [],
@@ -70,6 +74,10 @@ export function newGame(setup) {
   const r = new Rng(s);
   createWorld(s, r);
   s.driver = createPlayer(setup, r);
+  if (lg) {
+    s.driver.money += lg.money;
+    s.driver.fame += lg.fame;
+  }
   s.drivers.P = { id: 'P', first: s.driver.first, last: s.driver.last, code: s.driver.code, nat: s.driver.nat, isPlayer: true };
   s.career = {
     series: 'F4', team: null, role: 'race', contract: null,
@@ -79,7 +87,12 @@ export function newGame(setup) {
       junior: { starts: 0, wins: 0, podiums: 0, poles: 0, titles: 0 },
     },
   };
-  const rival = makeAIDriver(s, r, { series: 'F4', age: START_AGE, skill: overall(s.driver.stats) + r.range(-1, 3), pot: r.range(86, 96) });
+  const rival = makeAIDriver(s, r, { series: 'F4', age: START_AGE, skill: overall(s.driver.stats) + r.range(-1, 3), pot: r.range(86, 96), nat: lg?.rival?.nat });
+  // The kid of your parent's old rival, with the same surname and flag.
+  if (lg?.rival) {
+    rival.last = lg.rival.last;
+    rival.code = driverCode(rival.last);
+  }
   rival.rival = true;
   s.rivalId = rival.id;
   placeStart(s, r);
@@ -88,10 +101,12 @@ export function newGame(setup) {
   const n = nation(s.driver.nat);
   pushFeed(s, {
     k: 'chapter',
-    year: START_YEAR - 7,
+    year: s.year - 7,
     big: tr('Prologue'),
     title: tr('{name}, {adj} and eight years old', { name: s.driver.name, adj: n.adj, nation: natName(n) }),
-    sub: bgText(s.driver.bg, 'desc'),
+    sub: lg
+      ? tr('Child of {parent} ({tier}). Everyone at the kart track already knows your surname.', { parent: parentName(lg), tier: tierName(lg.tier) })
+      : bgText(s.driver.bg, 'desc'),
   });
   presentPrologue(s);
   return s;
@@ -117,7 +132,7 @@ function placeStart(s, r) {
 
 function presentPrologue(s) {
   const age = PROLOGUE_AGE[s.proStep];
-  const c = { age, year: START_YEAR - (START_AGE - age), rival: nameOf(s, s.rivalId), acads: s.acads };
+  const c = { age, year: s.year - (START_AGE - age), rival: nameOf(s, s.rivalId), acads: s.acads };
   present(s, EVENTS[PROLOGUE[s.proStep]], c, 'prologue');
 }
 
@@ -173,7 +188,7 @@ export function choose(s, i) {
       const bills = s.driver.academy
         ? tr('The {academy} is paying the bills.', { academy: s.teams[s.driver.academy].academy })
         : tr('You pay your own way: {money} in the bank.', { money: money(s.driver.money) });
-      story(s, cat(tr("It's {year}. You're fifteen, and {team} have given you a seat in {series}.", { year: START_YEAR, team: t.name, series: seriesName('F4') }), bills), { title: tr('Into the cars') });
+      story(s, cat(tr("It's {year}. You're fifteen, and {team} have given you a seat in {series}.", { year: s.year, team: t.name, series: seriesName('F4') }), bills), { title: tr('Into the cars') });
     }
   }
   if (!s.pending && s.queue.length) {
@@ -297,6 +312,8 @@ function startSeason(s, r) {
   if (series === 'F1' && c.role === 'race') {
     s.queue.push({ id: 'car_launch', c: ctx, after: null });
     if (c.rookieYear == null && !s.seen.rookie_pranks) s.queue.push({ id: 'rookie_pranks', c: ctx, after: null });
+    const lg = legacyOf(s);
+    if (lg && !s.seen.legacy_number && s.driver.number !== lg.number) s.queue.push({ id: 'legacy_number', c: { ...ctx, number: s.driver.number }, after: null });
   }
 }
 
@@ -499,9 +516,17 @@ function finishRace(s, r) {
       if (pole) mile(s, 'f1pole', '⏱️', tr('First pole position'), tr('Fastest of all on Saturday at {track}.', at), 'purple');
       if (!pe.dnf && pos === 1) {
         if (!s.career.firsts.f1win) s.nudge = 'first_win';
-        const crowd = s.flags.remortgage ? tr('Your parents are in the garage, holding each other, crying.') : tr('The team carries you on their shoulders.');
+        const lg = legacyOf(s);
+        const parent = lg && parentName(lg);
+        const crowd = lg
+          ? tr('{parent} is in the garage and, for once, has nothing to say.', { parent })
+          : s.flags.remortgage ? tr('Your parents are in the garage, holding each other, crying.') : tr('The team carries you on their shoulders.');
         const kebab = s.flags.kebab && tr('Dönerland Express gives free kebabs to the whole town.');
         mile(s, 'f1win', '🏁', tr('Grand Prix winner'), cat(tr('You win the {gp}.', at), crowd, kebab), 'purple');
+        if (lg && tot.wins === lg.wins + 1) {
+          const text = lg.wins ? tr('Win number {n}. That is one more Grand Prix than {parent} ever won.', { n: tot.wins, parent }) : tr('{parent} never won a Grand Prix. You just did.', { parent });
+          mile(s, 'parentwins', '👪', tr('Out of the shadow'), text, 'purple');
+        }
       }
     } else if (!pe.dnf && pos === 1) {
       mile(s, 'jrwin', '🥇', tr('First win in cars'), tr('You win at {track} in {series}. You scream so loudly on the radio your engineer has to take the headset off.', { ...at, series: seriesName(series) }));
@@ -655,6 +680,11 @@ function endSeason(s, r) {
     f1Champ: series !== 'F1' ? `${nameOf(s, f1Champ)}${champTeam ? ` (${champTeam.short})` : ''}` : null,
   });
   if (academyNote) story(s, academyNote, { title: tr('Dropped'), tone: 'red' });
+  const lg = legacyOf(s);
+  if (lg && champion && series === 'F1' && c.tot.F1.titles === lg.titles + 1) {
+    const text = lg.titles ? tr('World title number {n}. Nobody in the family has won more.', { n: c.tot.F1.titles }) : tr('{parent} never won the world title. You just did.', { parent: parentName(lg) });
+    mile(s, 'parenttitles', '👑', tr('A new family record'), text, 'purple');
+  }
 
   checkAch(s, 'season', { series, pos, champion });
   if (champion && series === 'F1') {
@@ -692,7 +722,10 @@ export function pickOffer(s, i) {
   if (o.kind === 'seat' && t.series === 'F1' && !wasF1 && !s.career.firsts.f1seat) {
     s.career.firsts.f1seat = s.year;
     const deal = tr('{team} sign you on a {years}-year deal worth {money} a year.', { team: t.name, years: o.years, money: money(o.salary) });
-    const call = s.flags.remortgage ? tr('You call your parents. Nobody can speak for a while.') : tr('You read the contract four times to make sure it is real.');
+    const lg = legacyOf(s);
+    const call = lg
+      ? tr('You call {parent}, who manages to sound calm for about four seconds.', { parent: parentName(lg) })
+      : s.flags.remortgage ? tr('You call your parents. Nobody can speak for a while.') : tr('You read the contract four times to make sure it is real.');
     pushFeed(s, { k: 'mile', icon: '📝', title: tr('You are a Formula 1 driver'), text: cat(deal, call), tone: 'purple' });
   } else if (o.kind === 'seat' && (prevTeam !== t.id || o.tag === 'renew')) {
     const cost = o.cost ? tr('The seat costs {money}.', { money: money(o.cost) }) : t.series !== 'F1' && s.driver.academy ? tr('The academy pays.') : '';
@@ -704,7 +737,9 @@ export function pickOffer(s, i) {
   }
 
   offseasonFill(s, r);
-  const reg = teamDevelopment(s, r, s.year + 1);
+  // Regulation changes come on the same years of a career, whenever it starts.
+  const shift = (legacyOf(s)?.year ?? START_YEAR) - START_YEAR;
+  const reg = teamDevelopment(s, r, s.year + 1 - shift);
   const lines = [];
   const rn = rivalNews(s);
   if (rn) lines.push(rn);

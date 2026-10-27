@@ -6,7 +6,7 @@ import { standingsOrder, offerNote, offerLabel } from '../engine/market.js';
 import { nameOf } from '../engine/world.js';
 import { ovr } from '../engine/player.js';
 import { ACH_BY_ID, achWords } from '../engine/achievements.js';
-import { shareText, summaryWords } from '../engine/legacy.js';
+import { shareText, summaryWords, heirOf, familyLine } from '../engine/legacy.js';
 import { dailyGoalText } from '../engine/daily.js';
 import { TRACKS } from '../data/tracks.js';
 import { nation } from '../data/nations.js';
@@ -419,7 +419,7 @@ function retireCard(app, e) {
   return h(
     'section',
     { class: 'f-retire' },
-    h('div', { class: 'head' }, helmet(e.helmet, { gold: app.supporter }), h('div', null, h('b', null, `#${e.number ?? ''} ${e.name} ${e.flag}`), h('div', { style: 'color:var(--ink-3);font-size:14px' }, cat(how, t('{bg}, {style}.', { bg: words.bg, style: words.style.toLowerCase() }))))),
+    h('div', { class: 'head' }, helmet(e.helmet, { gold: app.supporter }), h('div', null, h('b', null, `#${e.number ?? ''} ${e.name} ${e.flag}`), h('div', { style: 'color:var(--ink-3);font-size:14px' }, cat(how, t('{bg}, {style}.', { bg: words.bg, style: words.style.toLowerCase() }), familyLine(e.family))))),
     h('div', { class: 'tier' }, words.tier),
     h('div', { class: 'grid4' }, stats.map(([k, v]) => h('div', { class: 'big-stat' }, h('b', null, v), h('span', null, k)))),
     rankLine,
@@ -427,10 +427,24 @@ function retireCard(app, e) {
     h('div', { class: 'kv' }, h('span', null, t('Net worth '), h('b', null, money(e.worth))), h('span', null, t('Legacy score '), h('b', null, e.score)), h('span', null, t('Seed '), h('b', null, e.seed))),
     e.daily ? h('div', { class: 'kv', style: 'margin-top:6px' }, h('span', null, t('Daily goal: {goal} ', { goal: daily }), h('b', null, e.daily.done ? t('Completed') : t('Not completed')))) : null,
     h('div', { class: 'row', style: 'flex-wrap:wrap;margin-top:14px' }, shareBtn, copyBtn, f.starts ? h('button', { class: 'btn', onClick: () => openRecords(app) }, t('All-time records')) : null, h('button', { class: 'btn', onClick: () => openHallOfFame(app) }, t('Hall of fame'))),
+    heirBox(app),
     boardBox(app, e),
     app.supporter
       ? h('div', { class: 'thanks-box' }, h('p', { style: 'margin:0' }, t('☕ Thank you for being in the pit crew. You keep this free for everyone.')))
       : h('div', { class: 'thanks-box' }, h('p', null, t('Enjoyed that career? Lights Out is free with no ads. A coffee keeps new teams, tracks and stories coming.')), coffeeButton(app, { reason: 'retire' })),
+  );
+}
+
+// A career that ended with a kid can carry on through them.
+function heirBox(app) {
+  const heir = app.s?.stage === 'retired' ? heirOf(app.s) : null;
+  if (!heir) return null;
+  return h(
+    'div',
+    { class: 'lb-box' },
+    h('h4', null, t('The next generation')),
+    h('p', null, t('Your kid wants to race. Same surname, same flag, the family helmet colours, and the whole paddock watching.')),
+    h('div', { class: 'row', style: 'flex-wrap:wrap' }, h('button', { class: 'btn btn-go', onClick: () => app.showTitle({ heir }) }, t('Continue with your kid'))),
   );
 }
 
@@ -616,7 +630,8 @@ function renderDock(app) {
       h(
         'div',
         { class: 'row', style: 'flex-wrap:wrap' },
-        h('button', { class: 'btn btn-go', onClick: () => app.showTitle() }, t('Start a new career')),
+        heirOf(s) ? h('button', { class: 'btn btn-go', onClick: () => app.showTitle({ heir: heirOf(s) }) }, t('Continue with your kid')) : null,
+        h('button', { class: heirOf(s) ? 'btn' : 'btn btn-go', onClick: () => app.showTitle() }, t('Start a new career')),
       ),
     );
   } else {
