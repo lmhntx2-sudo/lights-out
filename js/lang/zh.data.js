@@ -214,6 +214,8 @@ export const ZD = {
     paid_in_full: { name: '實至名歸', desc: '以圍場貴族身份贏得 F1 比賽。' },
     endurance: { name: '轉戰耐力賽', desc: '離開方程式賽車，轉戰耐力賽。' },
     family: { name: '賽車世家', desc: '成為父母。' },
+    heir: { name: '家學淵源', desc: '以第二代車手身分贏得一場大獎賽。' },
+    surpass: { name: '青出於藍', desc: '贏得比上一代更多的大獎賽。' },
     pit_crew: { name: '維修站團隊', desc: '請開發者喝杯咖啡，為開發加油。' },
     daily: { name: '每日車手', desc: '完成一次每日挑戰。' },
   },

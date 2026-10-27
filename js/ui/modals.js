@@ -8,7 +8,7 @@ import { overall } from '../engine/player.js';
 import { ACHIEVEMENTS, netWorth, achWords } from '../engine/achievements.js';
 import { nation } from '../data/nations.js';
 import { GAME } from '../config.js';
-import { allTime, summaryWords } from '../engine/legacy.js';
+import { allTime, summaryWords, familyLine } from '../engine/legacy.js';
 import { todayKey, dailySetup, dailyGoalText } from '../engine/daily.js';
 import { checkDisplayName, NAME_MIN, NAME_MAX } from '../core/displayname.js';
 import { fetchBoard, submitCareer, localizeError } from '../api.js';
@@ -238,6 +238,7 @@ export function openHallOfFame(app) {
                 age: l.age,
                 year: l.endYear,
               })),
+              l.family ? h('div', { class: 's' }, familyLine(l.family)) : null,
               h('div', { class: 's' }, t('Legacy {score}. Seed {seed}', { score: l.score, seed: l.seed })),
             ),
             h('button', { class: 'btn btn-sm', onClick: () => { dlg.close(); app.showTitle({ seed: l.seed }); } }, t('Replay seed')),
@@ -263,7 +264,7 @@ export function openRecords(app) {
         'tbody',
         null,
         list.slice(0, 25).map((r, i) =>
-          h('tr', { class: r.kind === 'me' ? 'me' : r.kind === 'rival' ? 'rival' : '' }, h('td', { class: 'r' }, i + 1), h('td', null, `${r.flag} ${r.name}`), h('td', { class: 'r' }, r.titles), h('td', { class: 'r' }, r.wins), h('td', { class: 'r' }, r.starts), h('td', null, r.era)),
+          h('tr', { class: r.kind === 'me' || r.kind === 'rival' || r.kind === 'parent' ? r.kind : '' }, h('td', { class: 'r' }, i + 1), h('td', null, `${r.flag} ${r.name}`), h('td', { class: 'r' }, r.titles), h('td', { class: 'r' }, r.wins), h('td', { class: 'r' }, r.starts), h('td', null, r.era)),
         ),
       ),
     );

@@ -6,6 +6,15 @@ export function overall(st) {
   return st.pace * 0.3 + st.racecraft * 0.2 + st.consistency * 0.2 + st.composure * 0.12 + st.technical * 0.06 + st.wet * 0.12;
 }
 
+const CJK = /[぀-ヿ㐀-鿿가-힯]/;
+
+// Chinese, Japanese and Korean names read family name first, with no space.
+export function fullName(first, last) {
+  const f = String(first).trim();
+  const l = String(last).trim();
+  return CJK.test(f + l) ? `${l}${f}` : `${f} ${l}`.trim();
+}
+
 export function createPlayer(setup, r) {
   const bg = BACKGROUNDS[setup.bg];
   const style = STYLES[setup.style];
@@ -21,12 +30,11 @@ export function createPlayer(setup, r) {
   const first = setup.first.trim();
   const last = setup.last.trim();
   const num = Math.round(Number(setup.number));
-  // Chinese, Japanese and Korean names read family name first, with no space.
-  // They also have no letters for a three-letter code, so the code is the name itself.
-  const cjk = /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/.test(first + last);
+  const cjk = CJK.test(first + last);
+  // CJK names have no letters for a three-letter code, so the code is the name itself.
   const code = cjk && !/[a-z]/i.test(first + last) ? [...`${last}${first}`].slice(0, 3).join('') : driverCode(last || first);
   return {
-    first, last, name: cjk ? `${last}${first}` : `${first} ${last}`.trim(), code,
+    first, last, name: fullName(first, last), code,
     number: num >= 2 && num <= 99 ? num : r.int(2, 99),
     nat: setup.nat, style: setup.style, bg: setup.bg, helmet: setup.helmet,
     age: 15, stats, caps, pot,

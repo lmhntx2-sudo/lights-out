@@ -8,8 +8,9 @@
 import { newGame, prompt, advance, choose, pickOffer, retireNow } from './game.js';
 import { cleanSeed } from '../core/rng.js';
 import { NATIONS } from '../data/nations.js';
-import { STYLES, BACKGROUNDS } from './constants.js';
+import { STYLES, BACKGROUNDS, START_YEAR } from './constants.js';
 import { dailySetup } from './daily.js';
+import { TIERS, tierFromRecord, inheritance, MAX_GEN } from './legacy.js';
 
 // A long career is about 1,500 calls; this leaves plenty of room.
 export const MAX_ACTIONS = 12000;
@@ -33,7 +34,7 @@ const DAILY_SEED = /^daily-(\d{4}-\d{2}-\d{2})$/;
 // the fields newGame reads. Anything the title screen could not produce is refused.
 export function validateSetup(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) fail('setup', 'The career setup is missing.');
-  const { seed, first, last, nat, style, bg, helmet, number, daily } = raw;
+  const { seed, first, last, nat, style, bg, helmet, number, daily, legacy } = raw;
   if (typeof seed !== 'string' || !seed || cleanSeed(seed) !== seed) fail('setup', 'The world seed is not valid.');
   if (typeof first !== 'string' || typeof last !== 'string' || first.length > 30 || last.length > 30) fail('setup', 'The driver name is not valid.');
   if (!first.trim() && !last.trim()) fail('setup', 'The driver needs a name.');
@@ -55,7 +56,46 @@ export function validateSetup(raw) {
     }
     setup.daily = { date: want.date, goal: want.goal, goalText: want.goalText };
   }
+  // Ordinary careers have no legacy key at all, so their setups stay byte for byte as they were.
+  if (legacy != null) {
+    if (setup.daily) fail('legacy', 'A daily challenge cannot be a second-generation career.');
+    setup.legacy = validateLegacy(legacy, setup);
+  }
   return setup;
+}
+
+const int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
+const name = (v) => typeof v === 'string' && v.length <= 30;
+
+// A second-generation career: the parent's record, and what the kid inherits from
+// it. The parent's career is not submitted, so this is a claim, but only one the
+// title screen could make: every number is bounded, the record has to add up,
+// and the background, money and fame must be exactly what the parent's net worth
+// and tier hand down (legacy.js inheritance), which never beats a royalty start.
+export function validateLegacy(raw, setup) {
+  const bad = (what) => fail('legacy', `The family inheritance is not valid: ${what}.`);
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) bad('it is not a record');
+  const { gen, first, last, tier, titles, wins, podiums, poles, starts, worth, number, from, to, year, rival, money, fame } = raw;
+  if (!int(gen, 2, MAX_GEN)) bad('generation');
+  if (!name(first) || !name(last) || (!first.trim() && !last.trim())) bad('parent name');
+  if (last !== setup.last) bad('the family name');
+  if (!int(starts, 0, 1000) || !int(wins, 0, starts) || !int(podiums, wins, starts) || !int(poles, 0, starts) || !int(titles, 0, Math.min(50, starts))) bad('parent record');
+  if (!own(TIERS, tier)) bad('tier');
+  const rec = { titles, wins, podiums, starts };
+  if (starts > 0 ? tier !== tierFromRecord(rec) : !['endurance', 'f2', 'junior'].includes(tier) || titles || wins || podiums || poles) bad('tier and record');
+  if (!int(worth, 0, 1e11)) bad('net worth');
+  if (!int(number, 2, 99)) bad('race number');
+  if (!int(year, START_YEAR + 1, START_YEAR + 60 * (gen - 1))) bad('start year');
+  if (!int(from, START_YEAR, year - 1) || !int(to, from, year - 1)) bad('era');
+  let rv = null;
+  if (rival != null) {
+    if (typeof rival !== 'object' || !name(rival.first) || !name(rival.last) || !NATIONS.some((n) => n.id === rival.nat)) bad('rival');
+    rv = { first: rival.first, last: rival.last, nat: rival.nat };
+  }
+  const inh = inheritance(worth, tier);
+  if (setup.bg !== inh.bg) bad('background');
+  if (money !== inh.money || fame !== inh.fame) bad('money or fame');
+  return { gen, first, last, tier, titles, wins, podiums, poles, starts, worth, number, from, to, year, rival: rv, money, fame };
 }
 
 function step(s, a, k) {

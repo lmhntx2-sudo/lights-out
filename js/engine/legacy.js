@@ -1,13 +1,15 @@
-// Retirement: the career summary, the epilogue and the share text.
+// Retirement: the career summary, the epilogue and the share text. Also the
+// family line: what a retired parent passes on to a second-generation career.
 import { nation, flagOf } from '../data/nations.js';
 import { LEGENDS } from '../data/legends.js';
-import { SINFO } from './constants.js';
+import { SINFO, BACKGROUNDS, START_YEAR, START_AGE } from './constants.js';
 import { netWorth } from './achievements.js';
-import { overall } from './player.js';
+import { overall, fullName } from './player.js';
+import { legacyOf } from './helpers.js';
 import { money, plural } from '../core/fmt.js';
 import { t as tr, loc, bgText, styleName, seriesName } from '../i18n.js';
 
-const TIERS = {
+export const TIERS = {
   goat: 'The greatest of all time',
   great: 'All-time great',
   multi: 'Multiple world champion',
@@ -22,7 +24,11 @@ const TIERS = {
 };
 
 function tierOf(s, how) {
-  const f = s.career.tot.F1;
+  return tierFromRecord(s.career.tot.F1, how, s.career.hist.some((h) => h.series === 'F2'));
+}
+
+// The tier a Formula 1 record (titles, wins, podiums, starts) earns.
+export function tierFromRecord(f, how, reachedF2) {
   if (f.titles >= 7) return 'goat';
   if (f.titles >= 4) return 'great';
   if (f.titles >= 2) return 'multi';
@@ -32,8 +38,84 @@ function tierOf(s, how) {
   if (f.podiums >= 1) return 'podium';
   if (f.starts >= 1) return 'f1';
   if (how === 'endurance') return 'endurance';
-  const reached = s.career.hist.some((h) => h.series === 'F2');
-  return reached ? 'f2' : 'junior';
+  return reachedF2 ? 'f2' : 'junior';
+}
+
+// ------------------------------------------------------------ the family line
+//
+// A career that ends with a kid (the 'parent' flag) can be continued by that kid.
+// Everything the kid inherits travels in setup.legacy, so the global leaderboard
+// can replay the kid's career and check the inheritance (replay.js validateLegacy).
+//
+// The kid's start never beats a royalty start. A parent worth RICH (half a billion) or
+// more means the royalty background itself and nothing on top: the family
+// fortune is the background. Anyone else's kid is a karting prodigy with a share
+// of the savings and a little of the fame, capped at the gap between the two
+// backgrounds, so money and fame top out exactly at a royalty start's.
+export const RICH = 5e8;
+const SHARE = 0.02;
+const ROYAL = BACKGROUNDS.royalty;
+const PRODIGY = BACKGROUNDS.prodigy;
+export const INHERIT_CAP = { money: Math.min(1e6, ROYAL.money - PRODIGY.money), fame: ROYAL.fame - PRODIGY.fame };
+const TIER_FAME = { goat: 7, great: 7, multi: 6, champ: 5, serial: 4, winner: 3, podium: 2, f1: 2, endurance: 1, f2: 1, junior: 0 };
+export const MAX_GEN = 20;
+
+export function inheritance(worth, tier) {
+  if (worth >= RICH) return { bg: 'royalty', money: 0, fame: 0 };
+  return {
+    bg: 'prodigy',
+    money: Math.min(INHERIT_CAP.money, Math.round((Math.max(0, worth) * SHARE) / 10000) * 10000),
+    fame: Math.min(INHERIT_CAP.fame, TIER_FAME[tier] ?? 0),
+  };
+}
+
+// What a retired parent hands down: the setup.legacy for the kid's career, plus
+// what the title screen fixes (surname, nationality, background) or suggests (helmet).
+export function heirOf(s) {
+  if (!s?.flags?.parent || s.stage !== 'retired' || !s.retired) return null;
+  const d = s.driver;
+  const f = s.career.tot.F1;
+  const prev = legacyOf(s);
+  const worth = Math.max(0, Math.min(1e11, Math.round(s.retired.worth)));
+  const tier = s.retired.tierKey;
+  const inh = inheritance(worth, tier);
+  const rv = s.drivers[s.rivalId];
+  // The kid is born the year after the news and starts in cars at fifteen,
+  // but never before the parent has hung up the helmet.
+  const year = Math.max(s.flags.parent + 1 + START_AGE, s.year + 1);
+  const legacy = {
+    gen: Math.min(MAX_GEN, (prev?.gen || 1) + 1),
+    first: d.first,
+    last: d.last,
+    tier,
+    titles: f.titles,
+    wins: f.wins,
+    podiums: f.podiums,
+    poles: f.poles,
+    starts: f.starts,
+    worth,
+    number: d.number,
+    from: s.career.rookieYear ?? prev?.year ?? START_YEAR,
+    to: s.year,
+    year,
+    rival: rv ? { first: rv.first, last: rv.last, nat: rv.nat } : null,
+    money: inh.money,
+    fame: inh.fame,
+  };
+  return { legacy, last: d.last, nat: d.nat, bg: inh.bg, helmet: { c1: d.helmet.c1, c2: d.helmet.c2 }, parent: d.name };
+}
+
+export const parentName = (lg) => fullName(lg.first, lg.last);
+export const tierName = (key) => loc('tier', key, null, TIERS[key]);
+
+const GEN_WORDS = { 2: () => tr('Second generation'), 3: () => tr('Third generation'), 4: () => tr('Fourth generation'), 5: () => tr('Fifth generation') };
+
+// "Second generation, child of Lennox Hartley." Saved summaries keep the numbers,
+// so this follows the current language.
+export function familyLine(fam) {
+  if (!fam) return '';
+  const gen = GEN_WORDS[fam.gen] ? GEN_WORDS[fam.gen]() : tr('Generation {n}', { n: fam.gen });
+  return tr('{gen}, child of {parent}.', { gen, parent: fam.parent });
 }
 
 // Tier, background and style of a saved career in the current language. Careers
@@ -70,6 +152,19 @@ function epilogue(s, how) {
   if (s.flags.crypto) lines.push(tr("You still get letters from CoinRocket's lawyers."));
   if (s.flags.remortgage) lines.push(s.flags.paid_back ? tr("Your parents' new house has a trophy room. Your mum dusts it every day.") : tr('You never did pay back that mortgage. Your parents never once mentioned it.'));
 
+  const lg = legacyOf(s);
+  if (lg) {
+    const parent = parentName(lg);
+    const mine = [f.titles, f.wins, f.podiums, f.starts];
+    const theirs = [lg.titles, lg.wins, lg.podiums, lg.starts];
+    const k = mine.findIndex((v, i) => v !== theirs[i]);
+    if (k < 0 && !f.starts) lines.push(tr('Neither you nor {parent} ever started a Grand Prix. The kart track still has both your names on the wall.', { parent }));
+    else if (k < 0) lines.push(tr('You finished with exactly the same record as {parent}. The family still argues about who was better.', { parent }));
+    else if (mine[k] > theirs[k]) lines.push(tr('You finished with a better record than {parent}, and you mention it at every family dinner.', { parent }));
+    else lines.push(tr('{parent} still has the better record, and brings it up at every family dinner.', { parent }));
+    if (s.flags.family_loan) lines.push(tr('You paid {parent} back every cent. They framed the cheque.', { parent }));
+  }
+
   const rv = s.drivers[s.rivalId];
   if (rv) {
     const name = `${rv.first} ${rv.last}`;
@@ -82,7 +177,8 @@ function epilogue(s, how) {
 }
 
 // Everyone who ever started a Grand Prix in this world: the fictional legends
-// from before 2026, every AI driver since, and you.
+// from before 2026, every AI driver since, your parent if you are the second
+// generation, and you.
 export function allTime(s) {
   const rows = LEGENDS.map((l) => ({ ...l, flag: flagOf(l.nat), kind: 'legend' }));
   for (const d of Object.values(s.drivers)) {
@@ -91,6 +187,10 @@ export function allTime(s) {
       name: `${d.first} ${d.last}`, nat: d.nat, flag: flagOf(d.nat), titles: d.titles, wins: d.wins, podiums: d.podiums, starts: d.starts,
       era: d.out ? tr('Retired') : tr('Active'), kind: d.id === s.rivalId ? 'rival' : 'ai',
     });
+  }
+  const lg = legacyOf(s);
+  if (lg?.starts > 0) {
+    rows.push({ name: parentName(lg), nat: s.driver.nat, flag: flagOf(s.driver.nat), titles: lg.titles, wins: lg.wins, podiums: lg.podiums, starts: lg.starts, era: `${lg.from}-${lg.to}`, kind: 'parent' });
   }
   const f = s.career.tot.F1;
   if (f.starts > 0) rows.push({ name: s.driver.name, nat: s.driver.nat, flag: flagOf(s.driver.nat), titles: f.titles, wins: f.wins, podiums: f.podiums, starts: f.starts, era: tr('You'), kind: 'me' });
@@ -126,6 +226,7 @@ export function buildSummary(s, how) {
   const worth = netWorth(s);
   const score = Math.round(f1.titles * 1000 + f1.wins * 50 + f1.podiums * 15 + f1.poles * 20 + f1.starts * 2 + jr.titles * 120 + jr.wins * 10 + d.fame * 3);
   const best = [...c.hist].sort((a, b) => SINFO[b.series].lvl - SINFO[a.series].lvl || (a.pos || 99) - (b.pos || 99))[0];
+  const lg = legacyOf(s);
   return {
     name: d.name,
     code: d.code,
@@ -155,6 +256,7 @@ export function buildSummary(s, how) {
     number: s.driver.number,
     ranks: allTimeRanks(s),
     livery: liveryOf(s),
+    ...(lg ? { family: { gen: lg.gen, parent: parentName(lg), tierKey: lg.tier } } : {}),
     at: Date.now(),
   };
 }

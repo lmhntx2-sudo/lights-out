@@ -69,6 +69,24 @@ If you change how the engine plays out (events, odds, balance), careers that wer
 progress when the change went live replay differently on the server and get refused.
 Careers started after the change are fine. Text-only changes are safe.
 
+## Second generation
+
+If a career ends with a kid (say yes to the romance, the ring and the big news), the kid can
+carry it on: the retirement card offers "Continue with your kid". The kid keeps the surname and
+nationality and starts from the parent's helmet colours. The background depends on how the
+parent's career went. A parent who retired worth $500M or more means paddock royalty and
+nothing on top. Anyone else's kid is a karting prodigy with up to $1M and +7 fame from the
+family, which never adds up to more than a royalty start. Five family events only happen in
+these careers: the press comparing you to your parent, the parent on the pit wall or in the
+commentary box, the family race number, the kid of the parent's old rival, and living in the
+parent's shadow. The retirement card and Hall of Fame show the family line, and the all-time
+records list the parent next to the kid.
+
+Everything the kid inherits travels in `setup.legacy`, so the global leaderboard can replay the
+kid's career like any other. `validateLegacy` in `js/engine/replay.js` bounds every field,
+checks that the parent's record adds up, and recomputes the background, money and fame from the
+parent's net worth and tier. Ordinary careers have no `legacy` field and play exactly as before.
+
 ## Set up donations ("Fuel the dev")
 
 Amounts are in Hong Kong dollars: HK$30, HK$50, HK$100 and HK$200. Edit `js/config.js` and
@@ -116,6 +134,7 @@ The game is a static site, but the global leaderboard needs Netlify (Functions a
 ```bash
 npm test                     # plays 120+ full careers headless, checks invariants and the leaderboard
 node tools/balance.mjs 80    # outcome stats per background, for tuning difficulty
+node tools/fingerprint.mjs   # one hash over 40 careers; compare with an older copy of js/
 ```
 
 The leaderboard tests replay recorded careers, check that tampered logs are refused, and
@@ -134,6 +153,7 @@ Where things live:
 | `js/engine/market.js` | Contracts, offers, AI careers, car development. |
 | `js/engine/achievements.js` | Achievements. |
 | `js/engine/replay.js` | Rebuilds a career from its setup and action log, for the leaderboard. |
+| `js/engine/legacy.js` | Retirement summary, epilogue, all-time records, and what a parent hands down to a kid. |
 | `js/ui/` | Title screen, game screen, dialogs, donations. |
 | `js/i18n.js` | Languages: English and 繁體中文 (Traditional Chinese). |
 | `js/engine/events.zh.js` | Chinese words for every event, keyed by event id. |

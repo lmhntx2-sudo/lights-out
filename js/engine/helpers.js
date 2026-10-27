@@ -10,6 +10,10 @@ export function pay(s, f1Amount) {
 
 export const firstName = (full) => String(full || '').split(' ')[0];
 
+// Second-generation careers carry the parent's story in s.setup.legacy (see
+// legacy.js). Ordinary careers have none, and nothing family-related ever runs for them.
+export const legacyOf = (s) => s.setup?.legacy || null;
+
 export function pushFeed(s, entry) {
   entry.n = ++s.fn;
   entry.yr = s.year;

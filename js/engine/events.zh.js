@@ -6,12 +6,18 @@
 // must have the same length and order as the English one (tests check this).
 // Text can be a string or an (s, c) => string function, exactly as in events.js.
 
-import { firstName } from './helpers.js';
+import { firstName, legacyOf } from './helpers.js';
 import { TRAINING } from './constants.js';
 import { F1_TEAMS } from '../data/teams.js';
 import { nation } from '../data/nations.js';
-import { money } from '../core/fmt.js';
+import { money, plural } from '../core/fmt.js';
 import { trackShortById, trackPlaceById, seriesName, trainingText, natName } from '../i18n.js';
+import { parentName } from './legacy.js';
+import { fullName } from './player.js';
+
+// Second-generation careers: the parent's name, and the parent's old rival's.
+const P = (s) => parentName(legacyOf(s));
+const RP = (s) => fullName(legacyOf(s).rival.first, legacyOf(s).rival.last);
 
 // Track names in context objects are English; the ids give the Chinese ones.
 const trk = (c) => trackShortById(c.trackId, c.track);
@@ -32,12 +38,16 @@ export const EVENTS_ZH = {
   pro_kart: {
     title: '8 歲：第一輛卡丁車',
     text: (s) =>
-      ({
-        royalty: '老爸的司機從一輛搬家貨車上卸下一輛全新卡丁車，座椅上繡著你的名字縮寫。附送一位全職技師，名叫 Klaus。',
-        prodigy: '爺爺從鄰居的雜物棚拖出一輛殘舊的 60cc 卡丁車，渾身二行程機油味，還有一股「這主意很糟」的味道。你一見鍾情。',
-        grafter: '老爸用割草機引擎和幾根鋼管替你拼了一輛卡丁車，全靠束帶和希望撐著。它是整條街最快的東西。',
-        simracer: '你在房間的模擬器上跑過一萬圈。叔叔終於帶你去真正的卡丁車場。座椅很硬，而現實世界沒有重來鍵。',
-      })[s.driver.bg],
+      legacyOf(s)
+        ? s.driver.bg === 'royalty'
+          ? `${P(s)} 當年的老技師從車隊貨車上卸下一輛全新卡丁車，座椅上繡著你的名字縮寫，車頭漆著家族的頭盔配色。`
+          : `${P(s)} 把自己人生第一輛卡丁車從車庫拖出來，花了整個週末讓它重新發動。車頭還印著當年的 #${legacyOf(s).number}。`
+        : ({
+            royalty: '老爸的司機從一輛搬家貨車上卸下一輛全新卡丁車，座椅上繡著你的名字縮寫。附送一位全職技師，名叫 Klaus。',
+            prodigy: '爺爺從鄰居的雜物棚拖出一輛殘舊的 60cc 卡丁車，渾身二行程機油味，還有一股「這主意很糟」的味道。你一見鍾情。',
+            grafter: '老爸用割草機引擎和幾根鋼管替你拼了一輛卡丁車，全靠束帶和希望撐著。它是整條街最快的東西。',
+            simracer: '你在房間的模擬器上跑過一萬圈。叔叔終於帶你去真正的卡丁車場。座椅很硬，而現實世界沒有重來鍵。',
+          })[s.driver.bg],
     choices: [
       { label: '每個週末都泡在附近的卡丁車場', ok: '下雨、寒冷、鏈條斷掉，你照去不誤。到了聖誕節，賽道上每個坑洞你都瞭如指掌。' },
       { label: '每晚研究車載鏡頭影片', ok: '你還不會寫「彎心」兩個字，就已經從模糊的影片裡背熟了每個剎車點。' },
@@ -51,7 +61,10 @@ export const EVENTS_ZH = {
 
   pro_final: {
     title: '11 歲：全國總決賽',
-    text: (s, c) => `全國卡丁車總決賽最後一圈。你排第二，落後 ${c.rival} 一個車身——那個人人都說是明日之星的小子。${firstName(c.rival)} 的老爸已經在拍頒獎台了。`,
+    text: (s, c) =>
+      `全國卡丁車總決賽最後一圈。你排第二，落後 ${c.rival} 一個車身——那個人人都說是明日之星的小子。${
+        legacyOf(s)?.rival ? `${RP(s)}——當年跟 ${P(s)} 纏鬥多年的老對手——已經在拍頒獎台了。` : `${firstName(c.rival)} 的老爸已經在拍頒獎台了。`
+      }`,
     choices: [
       {
         label: '在髮夾彎從內線硬塞',
@@ -80,16 +93,22 @@ export const EVENTS_ZH = {
     title: '14 歲：錢的問題',
     text: (s) =>
       s.driver.bg === 'royalty'
-        ? '老爸在晚餐桌上把一張支票推過來：「你媽想你當律師。證明她錯了。」'
-        : '一季汽車賽的花費比你家的房子還貴，真的。爸媽讓你在廚房餐桌前坐下。',
+        ? legacyOf(s)
+          ? `${P(s)} 在晚餐桌上把一張支票推過來：「我當年每個車位都是求人求回來的。你不用。別浪費。」`
+          : '老爸在晚餐桌上把一張支票推過來：「你媽想你當律師。證明她錯了。」'
+        : legacyOf(s)
+          ? `${P(s)} 讓你在廚房餐桌前坐下：「我的賽車生涯是自己付錢的，你也一樣。我幫你起步，之後就靠你自己。」`
+          : '一季汽車賽的花費比你家的房子還貴，真的。爸媽讓你在廚房餐桌前坐下。',
     choices: (s) =>
       s.driver.bg === 'royalty'
         ? [
             { label: '收下支票', ok: '兩百萬，用鋼筆簽的。圍場裡沒人會讓你忘記這件事。' },
-            { label: '拒絕，用自己的方式來', ok: '老爸不是氣炸了就是很自豪。在他臉上很難分辨。' },
+            { label: '拒絕，用自己的方式來', ok: legacyOf(s) ? `${P(s)} 不是氣炸了就是很自豪。賽車手的臉，向來很難分辨。` : '老爸不是氣炸了就是很自豪。在他臉上很難分辨。' },
           ]
         : [
-            { label: '把房子再抵押', ok: '他們眼都不眨就簽了。你暗暗發誓，將來要買一間更好的房子給他們。' },
+            legacyOf(s)
+              ? { label: `向 ${P(s)} 借錢`, ok: `${P(s)} 借錢給你，還找律師擬了一份借據。你承諾會一分不少地還清。` }
+              : { label: '把房子再抵押', ok: '他們眼都不眨就簽了。你暗暗發誓，將來要買一間更好的房子給他們。' },
             { label: '找贊助商：街口的土耳其烤肉店', ok: 'Dönerland Express 付了六萬元，把一根旋轉中的烤肉柱印在你的頭盔上。客觀來說，這是圍場裡最好看的頭盔。' },
             {
               label: '有天分就夠了',
@@ -1232,6 +1251,81 @@ export const EVENTS_ZH = {
     choices: [
       { label: '捐出今年的頭盔', ok: '頭盔以離譜的高價拍出。你帶著支票親自到病房探望。' },
       { label: '送一頂簽名帽', ok: '院方很感激，籌到的錢剛好夠買一部新遊戲機。' },
+    ],
+  },
+
+  // ------------------------------------------------------ second generation
+
+  legacy_press: {
+    title: '姓氏的重量',
+    text: (s) => `一本賽車雜誌把你的照片和 ${P(s)} 同齡時的照片並排刊登：同一面國旗、同一個姓氏、同一套頭盔配色。標題問：「星二代，能否青出於藍？」`,
+    choices: (s) => [
+      {
+        label: '照單全收：「上一代贏過的，我全都要，還要更多。」',
+        ok: '這句話傳遍各大媒體。贊助商最愛賽車世家的故事。',
+        ko: '從此以後，你每跑一個爛週末，雜誌都會寫成「家族危機」。',
+      },
+      { label: '請記者寫你本人就好', ok: '一篇關於你自己駕駛風格的短訪問。沒什麼人看，但你喜歡自己說話的樣子。' },
+      { label: `跟 ${P(s)} 一起拍封面`, ok: '兩代車手同登封面，一天之內賣光。' },
+    ],
+  },
+
+  legacy_pitwall: {
+    title: (s, c) => (c.f1 ? `${trk(c)}：${P(s)} 坐鎮評述席` : `${trk(c)}：${P(s)} 站上維修牆`),
+    text: (s, c) =>
+      c.f1
+        ? `${P(s)} 今天坐在評述席上。全世界幾百萬觀眾即將聽到，${P(s)} 到底怎樣評價自己孩子的駕駛。`
+        : `${P(s)} 戴著借來的車隊帽、掛著耳機站在維修牆上，努力裝出一點也不緊張的樣子。`,
+    choices: (s, c) => [
+      {
+        label: c.f1 ? '給評述席一點尖叫的理由' : `在第一彎試試 ${P(s)} 當年的招牌超車`,
+        ok: c.f1 ? `一記外線超車，整個評述席都跳了起來。${P(s)} 在直播中破音了。` : '遲剎車、切回內線、超車成功，跟當年一模一樣。維修牆上有人用力揮拳。',
+        ko: `你剎車太遲，衝出了賽道。賽後，${P(s)} 突然對自己的手機非常感興趣。`,
+      },
+      {
+        label: '把一切拋諸腦後，跑自己的比賽',
+        ok: '低頭專心，不理上一代的影子。乾淨、快速，完全屬於你。',
+        ko: '你一直忍不住想別人會怎樣評價你，圈速出賣了你。',
+      },
+    ],
+  },
+
+  legacy_number: {
+    title: '家族車號',
+    text: (s) => `自從 ${P(s)} 退役後，F1 再沒有人用過 #${legacyOf(s).number}。車隊需要知道，你的賽車要印哪個號碼。`,
+    choices: (s, c) => [
+      { label: `讓 ${P(s)} 的 #${legacyOf(s).number} 重出江湖`, ok: `賽車還沒跑過一圈，周邊商品就已經賣光。${P(s)} 在家裡假裝自己沒有哭。` },
+      { label: `保留自己的 #${c.number}`, ok: `你想大家記住的是你的號碼，不是上一代的。${P(s)} 說，換作是自己，也會這樣做。` },
+    ],
+  },
+
+  legacy_rival_kid: {
+    title: (s, c) => `${trk(c)}：世仇再續`,
+    text: (s, c) => `${c.rival.name} 就在你${c.rival.directlyAhead ? '前面' : '後面'}。對方的家長 ${RP(s)}，當年跟 ${P(s)} 碰車碰了好多年。評述員等這一刻已經等了一整季。`,
+    choices: (s, c) => [
+      {
+        label: '替上一代了結恩怨',
+        ok: '你贏下這場對決。此刻某處，兩位退役車手正在瘋狂互傳一大堆驚嘆號。',
+        ko: `這一回合 ${c.rival.last} 勝出。這段恩怨又多延續了一代。`,
+      },
+      {
+        label: '乾淨比賽，這段恩怨不必傳到第三代',
+        ok: `一場硬碰硬但公平的較量。賽後 ${c.rival.last} 跟你握手——你們的家長一輩子都沒做到。`,
+        ko: '乾淨是乾淨，但太保守了，你跟前面的車越拉越遠。',
+      },
+    ],
+  },
+
+  legacy_record: {
+    title: '活在上一代的影子裡',
+    text: (s) => `${P(s)} 生涯拿過 ${plural(legacyOf(s).wins, 'win')}，你目前有 ${plural(s.career.tot.F1.wins, 'win')}。直播節目上，主持人問你：會不會有一天跟上一代一樣出色？`,
+    choices: [
+      {
+        label: '「等我退役那天再問我吧。」',
+        ok: '全場大笑。這段片段讓你看起來老成了十年——是好的那種。',
+        ko: '這句話說出口比你想像中尖酸得多，片段被播了整整一個星期。',
+      },
+      { label: '笑著說：「沒人比得上我家那位。不信你去問本人。」', ok: '全場都笑了，包括當晚看重播的那一位。' },
     ],
   },
 
