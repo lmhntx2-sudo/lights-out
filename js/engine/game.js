@@ -718,7 +718,7 @@ function endSeason(s, r) {
   if (r.next() < 0.55) {
     const ctx = { ...contextBase(s, r), champion };
     const ev = pickEvent(s, r, 'offseason', ctx);
-    // After Macau, if there is a Macau trip to make first.
+    // With the Macau invitation open, this one waits until after the race.
     if (ev && s.pending) s.queue.push({ id: ev.id, c: ctx, after: null });
     else if (ev) present(s, ev, ctx, null);
   }
@@ -794,7 +794,7 @@ function finishMacau(s, race) {
   if (won) {
     d.fame = Math.min(100, d.fame + 4);
     const again = s.career.macau.filter((m) => !m.dnf && m.pos === 1).length > 1;
-    if (again) story(s, tr('Two Macau wins. Only a handful of drivers in history have done that.'), { title: tr('Macau, again'), tone: 'green' });
+    if (again) story(s, tr('You win in Macau again. Only a handful of drivers in history have won it more than once.'), { title: tr('Macau, again'), tone: 'green' });
     else mile(s, 'macau', '🏮', tr('Macau winner'), tr('You win the {gp}. Your name goes on the list of winners, a few lines below {senna} and {schumacher}.', { gp: trackName(track), ...macauGreats() }), 'purple');
     s.flags.macau_win = s.year;
     unlock(s, 'macau_win');

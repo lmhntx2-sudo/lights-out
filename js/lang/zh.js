@@ -548,7 +548,7 @@ export const ZH = {
   'Guia Circuit. No points, no championship, just the most famous trophy in junior racing.': '東望洋賽道。沒有積分，沒有錦標，只有青年方程式最負盛名的獎盃。',
   'Macau winner': '澳門冠軍',
   'You win the {gp}. Your name goes on the list of winners, a few lines below {senna} and {schumacher}.': '你贏得了{gp}！冠軍名單上添了你的名字，就在{senna}和{schumacher}下面幾行。',
-  'Two Macau wins. Only a handful of drivers in history have done that.': '兩奪澳門冠軍。史上只有寥寥幾位車手做得到。',
+  'You win in Macau again. Only a handful of drivers in history have won it more than once.': '你再一次在澳門封王。史上贏過不止一次的車手，寥寥可數。',
   'Macau, again': '再次稱王澳門',
   'Your name is still on the list of Macau Grand Prix winners, a few lines below {senna} and {schumacher}.': '澳門格蘭披治大賽車的冠軍名單上，你的名字仍然排在{senna}和{schumacher}下面幾行。',
   'Non-championship race.': '非錦標賽賽事。',
