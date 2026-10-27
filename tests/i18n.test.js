@@ -168,7 +168,11 @@ test('every interface string has a translation with the same placeholders', () =
   const missing = [...keys.keys()].filter((k) => ZH[k] == null);
   assert.deepEqual(missing, [], 'English text without a Chinese translation');
   // The Chinese may use extra values the caller passes (it names the country, English uses the adjective).
-  const EXTRA = { '{name}, {adj} and eight years old': ['{nation}'] };
+  const EXTRA = {
+    '{name}, {adj} and eight years old': ['{nation}'],
+    'The first {adj} in Formula 1': ['{nation}'],
+    'No {adj} driver had ever started a Formula 1 race. Now one has. Back home the race is on every screen, and people who had never watched a Grand Prix are suddenly experts on tyre strategy.': ['{nation}'],
+  };
   const holes = (x) => (x.match(/\{\w+\}/g) || []).sort();
   for (const [k, v] of Object.entries(ZH)) {
     if (typeof v !== 'string') continue;

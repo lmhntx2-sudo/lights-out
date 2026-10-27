@@ -25,6 +25,9 @@ export function todayKey(d = new Date()) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
+// Nationalities added later stay out, so the pick for any date never changes.
+const DAILY_NATIONS = NATIONS.filter((n) => !n.cv);
+
 export function dailySetup(dateKey) {
   const h = { rng: hashSeed(`daily-${dateKey}`) };
   const r = new Rng(h);
@@ -32,7 +35,7 @@ export function dailySetup(dateKey) {
   return {
     date: dateKey,
     seed: `daily-${dateKey}`,
-    nat: r.pick(NATIONS).id,
+    nat: r.pick(DAILY_NATIONS).id,
     style: r.pick(Object.keys(STYLES)),
     bg: r.pick(Object.keys(BACKGROUNDS)),
     goal: goal.id,

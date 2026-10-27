@@ -124,6 +124,7 @@ export const ZD = {
     imola: { name: '伊莫拉站', short: '伊莫拉', place: '伊莫拉' },
     paulricard: { name: '保羅·里卡德站', short: '保羅·里卡德', place: '勒卡斯特萊' },
     hockenheim: { name: '霍根海姆站', short: '霍根海姆', place: '霍根海姆' },
+    macau: { name: '澳門格蘭披治大賽車', short: '澳門', place: '澳門東望洋賽道' },
   },
 
   nation: {
@@ -154,6 +155,7 @@ export const ZD = {
     CN: '中國',
     TW: '台灣',
     HK: '香港',
+    MO: '澳門',
     KR: '韓國',
     TH: '泰國',
     IN: '印度',
@@ -218,6 +220,13 @@ export const ZD = {
     surpass: { name: '青出於藍', desc: '贏得比上一代更多的大獎賽。' },
     pit_crew: { name: '維修站團隊', desc: '請開發者喝杯咖啡，為開發加油。' },
     daily: { name: '每日車手', desc: '完成一次每日挑戰。' },
+    macau_win: { name: '澳門冠軍', desc: '贏得澳門格蘭披治大賽車。' },
+  },
+
+  // Real people, where Hong Kong and Taiwan spell them differently.
+  person: {
+    senna: { hk: '冼拿', tw: '塞納' },
+    schumacher: { hk: '舒麥加', tw: '舒馬克' },
   },
 
   daily: {

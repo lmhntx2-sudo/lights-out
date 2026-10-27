@@ -11,6 +11,9 @@ import { CONTENT_VERSION, STYLES, BACKGROUNDS } from '../js/engine/constants.js'
 import { NATIONS } from '../js/data/nations.js';
 import { setLang } from '../js/i18n.js';
 
+// The nationality list as it was before content versions, so old-career fingerprints
+// don't shift when a later version adds a nationality.
+const V1_NATS = NATIONS.filter((n) => (n.cv ?? 1) === 1);
 const STYLE_KEYS = Object.keys(STYLES);
 const BG_KEYS = Object.keys(BACKGROUNDS);
 const CJK = /[㐀-鿿]/;
@@ -65,7 +68,7 @@ test('careers started before content version 2 play exactly as they did', () => 
   // fix in 18cdb7a changed careers 0 and 8 and nothing else.)
   const h = createHash('sha256');
   for (let i = 0; i < 40; i++) {
-    const s = play(newGame(setup(`cv1-${i}`, i, { cv: 1 })));
+    const s = play(newGame(setup(`cv1-${i}`, i, { cv: 1, nat: V1_NATS[i % V1_NATS.length].id })));
     const r = s.retired;
     h.update(JSON.stringify([s.rng, s.feed.length, s.fn, s.log.length, r.score, r.worth, r.f1, r.junior, r.age, r.seasons, r.ach, r.tierKey]));
   }

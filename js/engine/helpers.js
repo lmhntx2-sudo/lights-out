@@ -17,6 +17,11 @@ export const firstName = (full) => String(full || '').split(' ')[0];
 // legacy.js). Ordinary careers have none, and nothing family-related ever runs for them.
 export const legacyOf = (s) => s.setup?.legacy || null;
 
+// Your first sponsor from the money talk at fourteen is the local shop where you
+// grew up. Only the words depend on it: the deal, the 'kebab' flag and the
+// kebab_king achievement are the same everywhere.
+export const sponsorKind = (nat) => ({ HK: 'hk', MO: 'mo', TW: 'tw' })[nat] || 'doner';
+
 export function pushFeed(s, entry) {
   entry.n = ++s.fn;
   entry.yr = s.year;

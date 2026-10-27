@@ -98,3 +98,6 @@ export const trackPlace = (tr) => (tr ? loc('track', tr.id, 'place', tr.place) :
 export const trackShortById = (id, en) => loc('track', id, 'short', en);
 export const trackPlaceById = (id, en) => loc('track', id, 'place', en);
 export const natName = (n) => (n ? loc('nation', n.id, null, n.name) : '');
+
+// Two real Macau Grand Prix winners (1983 and 1990), spelled the local way.
+export const macauGreats = () => ({ senna: loc('person', 'senna', null, 'Senna'), schumacher: loc('person', 'schumacher', null, 'Schumacher') });

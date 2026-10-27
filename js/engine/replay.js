@@ -35,19 +35,19 @@ const DAILY_SEED = /^daily-(\d{4}-\d{2}-\d{2})$/;
 export function validateSetup(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) fail('setup', 'The career setup is missing.');
   const { seed, first, last, nat, style, bg, helmet, number, daily, legacy } = raw;
+  // Careers from before content versions have no cv: they replay on version 1.
+  const cv = raw.cv ?? 1;
+  if (!Number.isInteger(cv) || cv < 1 || cv > CONTENT_VERSION) fail('setup', 'The content version is not valid.');
   if (typeof seed !== 'string' || !seed || cleanSeed(seed) !== seed) fail('setup', 'The world seed is not valid.');
   if (typeof first !== 'string' || typeof last !== 'string' || first.length > 30 || last.length > 30) fail('setup', 'The driver name is not valid.');
   if (!first.trim() && !last.trim()) fail('setup', 'The driver needs a name.');
-  if (!NATIONS.some((n) => n.id === nat)) fail('setup', 'The nationality is not valid.');
+  if (!NATIONS.some((n) => n.id === nat && (n.cv ?? 1) <= cv)) fail('setup', 'The nationality is not valid.');
   if (!own(STYLES, style)) fail('setup', 'The driving style is not valid.');
   if (!own(BACKGROUNDS, bg)) fail('setup', 'The background is not valid.');
   if (!helmet || !HEX.test(helmet.c1) || !HEX.test(helmet.c2)) fail('setup', 'The helmet colours are not valid.');
   if (!Number.isInteger(number) || number < 2 || number > 99) fail('setup', 'The race number is not valid.');
-  // Careers from before content versions have no cv and play as version 1.
-  // It is always passed on explicitly, so newGame never upgrades an old career.
-  const cv = raw.cv ?? 1;
-  if (!Number.isInteger(cv) || cv < 1 || cv > CONTENT_VERSION) fail('setup', 'The content version is not valid.');
 
+  // cv is always passed on, so newGame never mistakes an old career for a new one.
   const setup = { seed, first, last, nat, style, bg, helmet: { c1: helmet.c1, c2: helmet.c2 }, number, daily: null, cv };
   if (daily != null) {
     // A daily challenge has to be exactly the one the title screen hands out for

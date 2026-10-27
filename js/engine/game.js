@@ -11,27 +11,29 @@ import { Rng, hashSeed } from '../core/rng.js';
 import { START_YEAR, START_AGE, SINFO, SERIES, BACKGROUNDS, CONTENT_VERSION } from './constants.js';
 import { TRACKS, CALENDARS } from '../data/tracks.js';
 import { nation, flagOf } from '../data/nations.js';
+import { LEGENDS } from '../data/legends.js';
 import { ACADEMY_TEAMS, F1_TEAMS } from '../data/teams.js';
 import { createWorld, makeAIDriver, teamsOf, seatsOf, nameOf, teammateOf, carTier, carRank } from './world.js';
 import { createPlayer, growPlayer, overall, ovr, raceNumber } from './player.js';
 import { driverCode } from '../data/names.js';
 import { prepareRace, classify, pointsFor } from './race.js';
-import { EVENTS, PROLOGUE, PROLOGUE_AGE } from './events.js';
+import { EVENTS, PROLOGUE, PROLOGUE_AGE, MACAU_RACE } from './events.js';
 import { pickEvent, present, resolve } from './story.js';
 import { checkAch, unlock } from './achievements.js';
 import {
   newStand, addResult, tallyAI, standingsOrder, simSeriesSeason, offseasonAI, generateOffers,
   takeOffer, offseasonFill, teamDevelopment, slPoints, rivalNews, playerValue, wantF1,
 } from './market.js';
-import { pushFeed, story, legacyOf } from './helpers.js';
+import { pushFeed, story, legacyOf, contentVersion, sponsorKind } from './helpers.js';
 import { buildSummary, parentName, tierName } from './legacy.js';
 import { checkDaily } from './daily.js';
 import { money, plural } from '../core/fmt.js';
-import { t as tr, cat, natName, bgText, seriesName, trackName, trackShort } from '../i18n.js';
+import { t as tr, cat, natName, bgText, seriesName, trackName, trackShort, macauGreats } from '../i18n.js';
 
-// "Australian Grand Prix" in F1, "Bahrain round" in the junior series.
+// "Australian Grand Prix" in F1, "Bahrain round" in the junior series, and
+// special events always by their own name.
 export function roundName(track, series) {
-  return series === 'F1' || track.name.endsWith('round') ? trackName(track) : tr('{track} round', { track: trackShort(track) });
+  return series === 'F1' || track.special || track.name.endsWith('round') ? trackName(track) : tr('{track} round', { track: trackShort(track) });
 }
 
 // Street, fast or technical: only ever used in words, never in the race maths.
@@ -190,8 +192,10 @@ export function choose(s, i) {
   if (!s.pending) return;
   s.log?.push(`c${i}`);
   const r = new Rng(s);
+  const p = s.pending;
   const after = resolve(s, r, i);
   if (after === 'race') finishRace(s, r);
+  else if (after === 'macau') macauNext(s, r, p);
   else if (after === 'prologue') {
     s.proStep++;
     if (s.proStep < PROLOGUE.length) presentPrologue(s);
@@ -467,6 +471,39 @@ function mile(s, key, icon, title, text, tone = 'green') {
   pushFeed(s, { k: 'mile', icon, title, text, tone });
 }
 
+// What your first sponsor does when you win a Grand Prix.
+const SPONSOR_WIN = {
+  doner: () => tr('Dönerland Express gives free kebabs to the whole town.'),
+  hk: () => tr('Sun Keung Kee gives free iced lemon tea to the whole street.'),
+  tw: () => tr('A-Ma Boba gives free pearl milk tea to the whole town.'),
+  mo: () => tr('Ping Kee gives free pork chop buns to the whole of Taipa.'),
+};
+
+// Places that have never had a driver start a Grand Prix, in this world's past
+// or the real one. China is not here: Zhou Guanyu started for the mainland in 2022.
+const NEVER_RACED = ['HK', 'MO', 'TW', 'KR', 'SG', 'AE', 'SA'];
+
+const FIRST_FROM = {
+  HK: () => [tr('First from Hong Kong'), tr("No driver from Hong Kong had ever started a Formula 1 race. Now one has. Back home, the cha chaan teng by your old school has the race on every screen and nobody has touched their milk tea. Your group chat has nine hundred unread messages. Someone has hung a bedsheet from a footbridge in Mong Kok: 'Hong Kong finally has an F1 driver!'")],
+  TW: () => [tr('First from Taiwan'), tr("No driver from Taiwan had ever started a Formula 1 race. Now one has. At a night market in Taichung someone has wheeled a TV out next to the fried chicken stall, and the crowd has blocked the whole lane. Your old karting coach at Penbay posts a single word, 'Finally.' By morning it has two hundred thousand likes.")],
+  MO: () => [tr('First from Macau'), tr('No driver from Macau had ever started a Formula 1 race. Every November the best young drivers in the world come to race on your streets. This time one of yours went out into the world. Around Senado Square the race is on every phone, and the bakery next to your old school is handing out free egg tarts.')],
+};
+
+// The first Grand Prix start by a driver from a country that has never had one.
+// It needs no dice, so it only changes the feed, and only from content version 2.
+function firstFromHome(s) {
+  const nat = s.driver.nat;
+  if (contentVersion(s) < 2 || !NEVER_RACED.includes(nat)) return;
+  if (LEGENDS.some((l) => l.nat === nat)) return;
+  if (Object.values(s.drivers).some((d) => !d.isPlayer && d.nat === nat && d.starts > 0)) return;
+  const n = nation(nat);
+  const [title, text] = FIRST_FROM[nat]?.() || [
+    tr('The first {adj} in Formula 1', { adj: n.adj, nation: natName(n) }),
+    tr('No {adj} driver had ever started a Formula 1 race. Now one has. Back home the race is on every screen, and people who had never watched a Grand Prix are suddenly experts on tyre strategy.', { adj: n.adj, nation: natName(n) }),
+  ];
+  mile(s, 'f1first', n.flag, title, text, 'purple');
+}
+
 function finishRace(s, r) {
   const se = s.season;
   const race = se.race;
@@ -521,7 +558,10 @@ function finishRace(s, r) {
 
     const at = { track: trackShort(track), gp: trackName(track), pos };
     if (f1) {
-      if (tot.starts === 1) mile(s, 'f1start', '🏎️', tr('Formula 1 driver'), tr('Race one done at {track}. Whatever happens now, you are one of only a few hundred people in history to start a Grand Prix.', at), 'purple');
+      if (tot.starts === 1) {
+        mile(s, 'f1start', '🏎️', tr('Formula 1 driver'), tr('Race one done at {track}. Whatever happens now, you are one of only a few hundred people in history to start a Grand Prix.', at), 'purple');
+        firstFromHome(s);
+      }
       if (tot.starts === 100) mile(s, 'f1start100', '💯', tr('100 Grands Prix'), tr('Race one hundred, at {track}. The team gives you a cake shaped like your helmet. It tastes like fondant and pride.', at));
       if (tot.starts === 200) mile(s, 'f1start200', '🎂', tr('200 Grands Prix'), tr('Two hundred starts. The mechanics who were there for your first race are now in charge of the garage.'));
       if (tot.starts === 300) mile(s, 'f1start300', '🦾', tr('300 Grands Prix'), tr('Three hundred starts. You have now spent more time in a Formula 1 car than in your own kitchen.'), 'purple');
@@ -535,7 +575,7 @@ function finishRace(s, r) {
         const crowd = lg
           ? tr('{parent} is in the garage and, for once, has nothing to say.', { parent })
           : s.flags.remortgage ? tr('Your parents are in the garage, holding each other, crying.') : tr('The team carries you on their shoulders.');
-        const kebab = s.flags.kebab && tr('Dönerland Express gives free kebabs to the whole town.');
+        const kebab = s.flags.kebab && SPONSOR_WIN[sponsorKind(d.nat)]();
         mile(s, 'f1win', '🏁', tr('Grand Prix winner'), cat(tr('You win the {gp}.', at), crowd, kebab), 'purple');
         if (lg && tot.wins === lg.wins + 1) {
           const text = lg.wins ? tr('Win number {n}. That is one more Grand Prix than {parent} ever won.', { n: tot.wins, parent }) : tr('{parent} never won a Grand Prix. You just did.', { parent });
@@ -712,10 +752,92 @@ function endSeason(s, r) {
 
   s.offers = generateOffers(s, r);
   s.stage = 'offers';
+  if (macauInvited(s, pos)) present(s, EVENTS.macau_invite, macauCtx(s), 'macau');
   if (r.next() < 0.55) {
     const ctx = { ...contextBase(s, r), champion };
     const ev = pickEvent(s, r, 'offseason', ctx);
-    if (ev) present(s, ev, ctx, null);
+    // With the Macau invitation open, this one waits until after the race.
+    if (ev && s.pending) s.queue.push({ id: ev.id, c: ctx, after: null });
+    else if (ev) present(s, ev, ctx, null);
+  }
+}
+
+// ------------------------------------------------------------------ Macau
+
+// The Macau Grand Prix: a one-off Formula 3 race on the Guia Circuit in
+// November, between the season and the contracts. It is worth no points and
+// touches no standings, season record or career totals. Top 8 in Formula 3 get
+// an invitation, and so does any driver from Macau, Hong Kong, China or Taiwan.
+const MACAU_LOCALS = ['MO', 'HK', 'CN', 'TW'];
+
+function macauInvited(s, pos) {
+  if (contentVersion(s) < 2) return false;
+  const local = MACAU_LOCALS.includes(s.driver.nat);
+  return s.season.series === 'F3' && s.career.role === 'race' && !s.driver.injured && pos > 0 && (pos <= 8 || local);
+}
+
+// No dice here: the context for the Macau decisions.
+function macauCtx(s) {
+  const t = s.teams[s.career.team];
+  return { year: s.year, series: 'F3', team: t.short, color: t.color, eng: t.engineer, nat: s.driver.nat, track: TRACKS.macau.short, trackId: 'macau', lap: 8 };
+}
+
+const myGrid = (race) => classify(race).grid.find((e) => e.id === 'P')?.grid ?? 0;
+
+// Called after each Macau decision with the decision that was just made.
+function macauNext(s, r, p) {
+  const race = s.season.race;
+  if (p.id === 'macau_invite') {
+    if (s.flags.macau !== s.year) return;
+    const fresh = prepareRace(s, r, TRACKS.macau, 'F3');
+    fresh.mode = 'race';
+    fresh.special = true;
+    // The race-day risk at Macau is in your own decisions.
+    const me = fresh.entries.find((e) => e.id === 'P');
+    if (!me) return;
+    me.dnf = false;
+    me.dnfWhy = null;
+    s.season.race = fresh;
+    pushFeed(s, {
+      k: 'chapter',
+      year: s.year,
+      big: trackShort(TRACKS.macau),
+      title: tr('{gp}, November {year}', { gp: trackName(TRACKS.macau), year: s.year }),
+      sub: tr('Guia Circuit. No points, no championship, just the most famous trophy in junior racing.'),
+      color: p.c.color,
+      series: 'F3',
+    });
+    present(s, EVENTS[MACAU_RACE[0]], p.c, 'macau');
+    return;
+  }
+  const k = MACAU_RACE.indexOf(p.id);
+  if (!race?.special || k < 0) return;
+  if (k + 1 < MACAU_RACE.length) present(s, EVENTS[MACAU_RACE[k + 1]], { ...p.c, grid: myGrid(race) }, 'macau');
+  else finishMacau(s, race);
+}
+
+function finishMacau(s, race) {
+  const track = TRACKS.macau;
+  const d = s.driver;
+  const { grid, order, fl } = classify(race);
+  s.season.race = null;
+  const pi = order.findIndex((e) => e.id === 'P');
+  const pe = order[pi];
+  const pos = pi + 1;
+  const won = !pe.dnf && pos === 1;
+  const me = { pos, grid: pe.grid, dnf: pe.dnf, why: pe.dnfWhy, pts: 0, pole: grid[0].id === 'P', fl: fl === 'P' && !pe.dnf };
+  // The usual result card, minus the championship.
+  pushFeed(s, { ...raceCard(s, race, track, grid, order, me), round: null, of: null, champ: null, special: true });
+  (s.career.macau ||= []).push({ year: s.year, pos, dnf: pe.dnf, grid: pe.grid });
+  if (won) {
+    d.fame = Math.min(100, d.fame + 4);
+    const again = s.career.macau.filter((m) => !m.dnf && m.pos === 1).length > 1;
+    if (again) story(s, tr('You win in Macau again. Only a handful of drivers in history have won it more than once.'), { title: tr('Macau, again'), tone: 'green' });
+    else mile(s, 'macau', '🏮', tr('Macau winner'), tr('You win the {gp}. Your name goes on the list of winners, a few lines below {senna} and {schumacher}.', { gp: trackName(track), ...macauGreats() }), 'purple');
+    s.flags.macau_win = s.year;
+    unlock(s, 'macau_win');
+  } else if (!pe.dnf && pos <= 3) {
+    d.fame = Math.min(100, d.fame + 2);
   }
 }
 
