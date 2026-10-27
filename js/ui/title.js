@@ -13,13 +13,16 @@ import { coffeeButton } from './donate.js';
 import { openHallOfFame, openAchievements, openSettings, openBackup, openAbout, allUnlocked, openLeaderboard, confirmDialog } from './modals.js';
 import { car } from './car.js';
 import { sfx } from './sfx.js';
-import { t, getLang, LANGS, loc, natName, styleName, styleDesc, bgText } from '../i18n.js';
+import { t, getLang, LANGS, loc, natName, styleName, styleDesc, bgText, isZh } from '../i18n.js';
 
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-function randomName(nat) {
+// A kid whose family name is written in Chinese characters gets a Chinese given name.
+const HAN_GIVEN = ['卓言', '子朗', '心悅', '浩然', '曉晴', '天佑', '詠恩', '俊希', '嘉怡', '朗晴', '樂軒', '芷澄'];
+
+function randomName(nat, family) {
   const pool = NAME_POOLS[nation(nat).names] || NAME_POOLS.en;
-  return { first: pick(pool.f), last: pick(pool.l) };
+  return { first: /[\u3400-\u9fff]/.test(family || '') ? pick(HAN_GIVEN) : pick(pool.f), last: pick(pool.l) };
 }
 
 function gantry() {
@@ -73,7 +76,7 @@ export function renderTitle(app, { seed, daily, form: kept, heir } = {}) {
     seed: cleanSeed(seed) || newSeed(),
   };
   if (dly && !kept) Object.assign(form, { nat: dly.nat, style: dly.style, bg: dly.bg, seed: dly.seed });
-  if (heir && !kept) Object.assign(form, { first: randomName(heir.nat).first, last: heir.last, nat: heir.nat, bg: heir.bg, helmet: { ...heir.helmet } });
+  if (heir && !kept) Object.assign(form, { first: randomName(heir.nat, heir.last).first, last: heir.last, nat: heir.nat, bg: heir.bg, helmet: { ...heir.helmet } });
   app.title = { opts: { seed, daily, heir }, form };
   // Fields the family decides, like the daily challenge decides its own.
   const fixed = !!dly || !!heir;
@@ -169,7 +172,7 @@ export function renderTitle(app, { seed, daily, form: kept, heir } = {}) {
   const dice = h('button', {
     class: 'btn icon-btn', type: 'button', title: t('Random name'), 'aria-label': t('Random name'),
     onClick: () => {
-      const n = randomName(form.nat);
+      const n = randomName(form.nat, heir && form.last);
       form.first = first.value = n.first;
       if (!heir) form.last = last.value = n.last;
     },
@@ -249,7 +252,7 @@ export function renderTitle(app, { seed, daily, form: kept, heir } = {}) {
   const start = h('button', { class: 'btn btn-go', type: 'button' }, dly ? t('Start the daily challenge') : t('Start your engine'));
   start.addEventListener('click', () => {
     if (!form.first.trim() && !form.last.trim()) {
-      const n = randomName(form.nat);
+      const n = randomName(form.nat, heir && form.last);
       form.first = first.value = n.first;
       if (!heir) form.last = n.last;
     }
@@ -295,7 +298,7 @@ function heirBanner(heir) {
   const text = heir.bg === 'royalty'
     ? t('Background: {bg}. {parent} retired worth {money}, so the family fortune is the whole inheritance.', { bg, parent: heir.parent, money: money(lg.worth) })
     : t('Background: {bg}. From the family: {money} and +{fame} fame.', { bg, money: money(lg.money), fame: lg.fame });
-  return h('div', { class: 'daily-banner' }, h('b', null, familyLine({ gen: lg.gen, parent: heir.parent })), ' ', text);
+  return h('div', { class: 'daily-banner' }, h('b', null, familyLine({ gen: lg.gen, parent: heir.parent })), isZh() ? '' : ' ', text);
 }
 
 // Full-screen lights before the first race of a new career.

@@ -271,6 +271,7 @@ export function shareText(sum, url) {
       : tr('{wins}, {podiums} in {starts}.', n);
   return [
     tr('🏁 {name} {flag} retired at {age}: {tier}.', { name: sum.name, flag: sum.flag, age: sum.age, tier: summaryWords(sum).tier }),
+    familyLine(sum.family),
     stats,
     tr('Net worth {money}. Legacy score {score}.', { money: money(sum.worth), score: sum.score }),
     tr('Seed: {seed}', { seed: sum.seed }),

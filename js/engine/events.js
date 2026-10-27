@@ -1695,8 +1695,8 @@ ev({
 ev({
   id: 'legacy_pitwall',
   phase: 'race',
-  w: 3,
-  gap: 30,
+  w: 2,
+  gap: 70,
   when: (s) => !!legacyOf(s),
   title: (s, c) => (c.f1 ? `${c.track}: ${P(s)} on commentary` : `${c.track}: ${P(s)} on the pit wall`),
   text: (s, c) =>

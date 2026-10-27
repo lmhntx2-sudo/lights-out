@@ -263,8 +263,11 @@ export function openRecords(app) {
       h(
         'tbody',
         null,
-        list.slice(0, 25).map((r, i) =>
-          h('tr', { class: r.kind === 'me' || r.kind === 'rival' || r.kind === 'parent' ? r.kind : '' }, h('td', { class: 'r' }, i + 1), h('td', null, `${r.flag} ${r.name}`), h('td', { class: 'r' }, r.titles), h('td', { class: 'r' }, r.wins), h('td', { class: 'r' }, r.starts), h('td', null, r.era)),
+        // The top 25, plus you and your parent wherever you rank.
+        list.map((r, i) =>
+          i < 25 || r.kind === 'me' || r.kind === 'parent'
+            ? h('tr', { class: r.kind === 'me' || r.kind === 'rival' || r.kind === 'parent' ? r.kind : '' }, h('td', { class: 'r' }, i + 1), h('td', null, `${r.flag} ${r.name}`), h('td', { class: 'r' }, r.titles), h('td', { class: 'r' }, r.wins), h('td', { class: 'r' }, r.starts), h('td', null, r.era))
+            : null,
         ),
       ),
     );
