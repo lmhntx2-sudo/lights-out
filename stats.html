@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Lights Out: play stats</title>
+    <meta name="theme-color" content="#15151e" />
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="css/style.css" />
+    <style>
+      .stats { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+      .stats h1 { font-family: var(--display); font-style: italic; font-weight: 900; margin: 0 0 4px; letter-spacing: .02em; }
+      .stats .sub { color: var(--ink-3); margin: 0 0 20px; font-size: 14px; }
+      .stats .kerb { height: 6px; background: var(--kerb); margin-bottom: 20px; border-radius: 2px; }
+      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 24px; }
+      .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+      .card .n { font-family: var(--display); font-weight: 800; font-size: 30px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+      .card .l { color: var(--ink-2); font-size: 13px; }
+      .card .d { color: var(--ink-3); font-size: 12px; }
+      .stats h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-2); margin: 0 0 8px; }
+      .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+      table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 14px; }
+      th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+      th:first-child, td:first-child { text-align: left; }
+      th { background: var(--panel-2); color: var(--ink-2); font-weight: 600; position: sticky; top: 0; }
+      tr:last-child td { border-bottom: 0; }
+      td.zero { color: var(--ink-3); }
+      .bar { display: inline-block; height: 8px; background: var(--red); border-radius: 2px; vertical-align: middle; margin-right: 8px; }
+      .err { color: var(--yellow); }
+      .note { color: var(--ink-3); font-size: 13px; margin-top: 16px; }
+    </style>
+  </head>
+  <body>
+    <main class="stats">
+      <h1>LIGHTS OUT · PLAY STATS</h1>
+      <p class="sub" id="sub">Loading…</p>
+      <div class="kerb"></div>
+      <div class="cards" id="cards"></div>
+      <h2>By day (Hong Kong time)</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Visitors</th><th>Players</th><th>Careers started</th><th>Careers finished</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <p class="note">
+        Visitors: different browsers that opened the game. Players: different browsers that started at least one career.
+        Counting is anonymous: each browser sends a random id and nothing else, and browsers set to "do not track" are not counted.
+      </p>
+    </main>
+    <script type="module">
+      const $ = (id) => document.getElementById(id);
+      const fmt = (n) => Number(n || 0).toLocaleString('en');
+      const card = (n, label, detail) => {
+        const el = document.createElement('div');
+        el.className = 'card';
+        el.innerHTML = '<div class="n"></div><div class="l"></div><div class="d"></div>';
+        el.children[0].textContent = fmt(n);
+        el.children[1].textContent = label;
+        el.children[2].textContent = detail || '';
+        return el;
+      };
+      try {
+        const res = await fetch('/api/stats?days=30', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`The stats service answered ${res.status}.`);
+        const data = await res.json();
+        const { totals, days } = data;
+        const today = days[0] || {};
+        $('sub').textContent = totals.since ? `Counting since ${totals.since}. Today is ${data.today} in Hong Kong.` : 'Nothing counted yet.';
+        $('cards').append(
+          card(totals.visitors, 'Visitors, all time', `${fmt(today.visitors)} today`),
+          card(totals.players, 'Players, all time', `${fmt(today.players)} today`),
+          card(totals.starts, 'Careers started', `${fmt(today.starts)} today`),
+          card(totals.finishes, 'Careers finished', `${fmt(today.finishes)} today`),
+        );
+        const top = Math.max(1, ...days.map((d) => d.visitors));
+        for (const d of days) {
+          const tr = document.createElement('tr');
+          const cells = [d.date, d.visitors, d.players, d.starts, d.finishes];
+          cells.forEach((v, i) => {
+            const td = document.createElement('td');
+            if (i === 0) td.textContent = v;
+            else {
+              if (!v) td.className = 'zero';
+              if (i === 1 && v) {
+                const bar = document.createElement('span');
+                bar.className = 'bar';
+                bar.style.width = `${Math.round((v / top) * 60)}px`;
+                td.append(bar);
+              }
+              td.append(fmt(v));
+            }
+            tr.append(td);
+          });
+          $('rows').append(tr);
+        }
+      } catch (e) {
+        $('sub').innerHTML = '';
+        const p = document.createElement('span');
+        p.className = 'err';
+        p.textContent = `Could not load the stats. ${e.message || ''}`;
+        $('sub').append(p);
+      }
+    </script>
+  </body>
+</html>

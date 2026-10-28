@@ -98,6 +98,10 @@ export const store = {
     set('boardMine', ids.slice(0, 200));
   },
 
+  // Random id for the anonymous play counter (see stats.js). Not in backups.
+  statsId: () => get('statsId', ''),
+  setStatsId: (v) => set('statsId', v),
+
   exportAll: () => ({
     app: 'lights-out',
     v: 1,

@@ -5,6 +5,7 @@ import { relocalize } from './engine/story.js';
 import { store } from './store.js';
 import { setSound } from './ui/sfx.js';
 import { setLang, htmlLang, t } from './i18n.js';
+import { ping } from './stats.js';
 
 function applyLang(lang) {
   setLang(lang, store.langVariant());
@@ -40,6 +41,7 @@ const app = {
     app.title = null;
     app.s = newGame(setup);
     app.save();
+    ping('start');
     lightsOverlay(app, () => mountGame(app));
   },
 
@@ -85,3 +87,4 @@ setSound(app.settings.sound !== false);
 
 const params = new URLSearchParams(location.search);
 renderTitle(app, { seed: params.get('seed') || undefined, daily: params.has('daily') });
+ping('open');

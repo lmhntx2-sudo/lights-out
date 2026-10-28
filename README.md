@@ -6,8 +6,8 @@ far you get in Formula 1. Every race can throw up a decision: safety car calls, 
 orders, last-lap lunges, sponsors, rivals, contracts, money and life off track.
 
 Plain HTML, CSS and JavaScript, with no framework and no build step. The game runs
-entirely in the browser and works offline. The only backend is the optional global
-leaderboard, a single Netlify Function.
+entirely in the browser and works offline. The only backend is two small Netlify
+Functions: the optional global leaderboard and an anonymous play counter.
 
 What's in it: a race number you pick, team liveries, an F1-broadcast-style timing tower,
 Race Control banners, team targets each season, podium and championship celebrations,
@@ -71,6 +71,26 @@ Careers started after the change are fine. Text-only changes are safe. To add co
 without breaking careers in progress, bump `CONTENT_VERSION` in `js/engine/constants.js`
 and gate the new content on `contentVersion(s)`: every career keeps the version it
 started with (`s.setup.cv`, missing means 1), and the server replays it with that version.
+
+## Play stats
+
+To show how many people play, the game sends three events to `/api/stats`: the game
+was opened, a career started, a career finished. Each event carries only a random id
+made in that browser (kept in localStorage, never in backups), so the counter can count
+people rather than page loads. The server keeps a salted hash of that id and nothing
+else about the player. Browsers with Global Privacy Control or Do Not Track turned on
+send nothing.
+
+Counts are kept per Hong Kong day (UTC+8): visitors (browsers that opened the game),
+players (browsers that started a career), careers started and careers finished, plus
+all-time totals. One connection can send at most 120 events an hour. See them at
+`/stats.html` (not linked from the game, and kept out of search engines), or as JSON from
+`GET /api/stats?days=30`.
+
+Data lives in Netlify Blobs in a store called `stats`. Deploy previews, branch deploys
+and `npm start` each use their own store, so testing never adds to the real numbers.
+Set `STATS_SALT` in Netlify's environment variables to choose the hash salt; otherwise
+it uses `LEADERBOARD_SALT`, or a random salt kept in the store.
 
 ## Second generation
 
@@ -163,7 +183,10 @@ Where things live:
 | `js/lang/zh.js`, `js/lang/zh.data.js` | Chinese for the interface, and names of tracks, nations, achievements and so on. |
 | `js/api.js` | The browser side of the global leaderboard. |
 | `netlify/functions/leaderboard.mjs` | The leaderboard function (`/api/leaderboard`). |
-| `netlify/lib/` | Leaderboard logic and the name blocklist. Not shipped to players. |
+| `netlify/functions/stats.mjs` | The anonymous play counter (`/api/stats`). |
+| `netlify/lib/` | Leaderboard and play counter logic, and the name blocklist. Not shipped to players. |
+| `js/stats.js` | The browser side of the play counter. |
+| `stats.html` | The play stats page for the developer. |
 
 The same seed plus the same choices always replays the same career, in either language.
 

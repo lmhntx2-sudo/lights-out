@@ -17,6 +17,7 @@ import {
   openDialog, confirmDialog, statBars, openLeaderboard, openSubmitDialog, boardResultText,
 } from './modals.js';
 import { canSubmit } from '../api.js';
+import { ping } from '../stats.js';
 import { openDonate, maybeNudge, coffeeButton } from './donate.js';
 import { openRecords } from './modals.js';
 import { car } from './car.js';
@@ -59,6 +60,7 @@ function act(app, fn, { animate = false } = {}) {
   if (s.stage === 'retired' && s.retired && !s.retired.saved) {
     s.retired.saved = true;
     store.addLife(s.retired);
+    ping('finish');
   }
   const freshAch = app.save();
   const prevN = app.view.lastN;

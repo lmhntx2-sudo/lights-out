@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const out = join(root, 'dist');
-const include = ['index.html', 'manifest.webmanifest', 'css', 'js', 'assets'];
+const include = ['index.html', 'stats.html', 'manifest.webmanifest', 'css', 'js', 'assets'];
 
 await rm(out, { recursive: true, force: true });
 await mkdir(out, { recursive: true });

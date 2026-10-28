@@ -39,25 +39,27 @@ async function save(req, res, path) {
   res.writeHead(200).end('saved');
 }
 
-// Dev helper: /api/leaderboard runs the real Netlify Function against Netlify's
-// local Blobs server (data in tmp/blobs). Without `npm install` the game still
-// runs and the leaderboard just shows its "not available" message.
-async function startLeaderboard() {
+// Dev helper: /api/leaderboard and /api/stats run the real Netlify Functions
+// against Netlify's local Blobs server (data in tmp/blobs). Without
+// `npm install` the game still runs and the leaderboard just shows its
+// "not available" message.
+async function startFunctions() {
   try {
     const { startLocalBlobs } = await import('./local-blobs.mjs');
-    const { default: fn } = await import('../netlify/functions/leaderboard.mjs');
+    const { default: leaderboard } = await import('../netlify/functions/leaderboard.mjs');
+    const { default: stats } = await import('../netlify/functions/stats.mjs');
     await startLocalBlobs();
-    return fn;
+    return { '/api/leaderboard': leaderboard, '/api/stats': stats };
   } catch {
     console.log('Global leaderboard is off. Run npm install to try it locally.');
-    return null;
+    return {};
   }
 }
 
-const leaderboard = await startLeaderboard();
+const functions = await startFunctions();
 
-async function api(req, res) {
-  if (!leaderboard) {
+async function api(req, res, fn) {
+  if (!fn) {
     res.writeHead(503, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: 'The global leaderboard is not running. Run npm install, then npm start.' }));
     return;
   }
@@ -65,7 +67,7 @@ async function api(req, res) {
   for await (const c of req) chunks.push(c);
   const body = req.method === 'GET' || req.method === 'HEAD' ? undefined : Buffer.concat(chunks);
   const request = new Request(new URL(req.url, `http://localhost:${port}`), { method: req.method, headers: req.headers, body });
-  const out = await leaderboard(request, { ip: req.socket.remoteAddress, deploy: { context: 'dev' } });
+  const out = await fn(request, { ip: req.socket.remoteAddress, deploy: { context: 'dev' } });
   res.writeHead(out.status, Object.fromEntries(out.headers));
   res.end(Buffer.from(await out.arrayBuffer()));
 }
@@ -73,7 +75,7 @@ async function api(req, res) {
 createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost');
-    if (url.pathname === '/api/leaderboard') return await api(req, res);
+    if (url.pathname === '/api/leaderboard' || url.pathname === '/api/stats') return await api(req, res, functions[url.pathname]);
     if (req.method === 'POST' && url.pathname.startsWith('/__save/')) return await save(req, res, url.pathname);
     let path = normalize(decodeURIComponent(url.pathname)).replace(/^([/\\])+/, '');
     let file = join(root, path);
