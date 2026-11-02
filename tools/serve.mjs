@@ -25,8 +25,9 @@ const TYPES = {
 
 // Dev helper: POST /__save/assets/og.png (or /__save/tmp/x.png) with a PNG body writes it
 // to disk. Used to export images rendered in the browser (social preview, app icons).
+// tmp/ also takes .mp4 and .webm, for promo videos recorded from a canvas.
 async function save(req, res, path) {
-  const m = /^\/__save\/(assets|tmp)\/([a-z0-9-]+\.png)$/.exec(path);
+  const m = /^\/__save\/(assets)\/([a-z0-9-]+\.png)$/.exec(path) || /^\/__save\/(tmp)\/([a-z0-9-]+\.(?:png|mp4|webm))$/.exec(path);
   if (!m) {
     res.writeHead(400).end('bad name');
     return;
