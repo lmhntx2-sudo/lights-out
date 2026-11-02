@@ -39,6 +39,15 @@
   --font: 'Twemoji Country Flags', 'Titillium Web', 'PingFang TC', 'Noto Sans TC', 'Microsoft JhengHei', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --display: 'Twemoji Country Flags', 'Saira', 'Titillium Web', 'PingFang TC', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
 }
+/* The same for 日本語 and 한국어, with Japanese and Korean system fonts. */
+:root:lang(ja), [lang='ja'] {
+  --font: 'Twemoji Country Flags', 'Titillium Web', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic UI', 'Yu Gothic', Meiryo, system-ui, sans-serif;
+  --display: 'Twemoji Country Flags', 'Saira', 'Titillium Web', 'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic UI', 'Yu Gothic', Meiryo, sans-serif;
+}
+:root:lang(ko), [lang='ko'] {
+  --font: 'Twemoji Country Flags', 'Titillium Web', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
+  --display: 'Twemoji Country Flags', 'Saira', 'Titillium Web', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+}
 
 * { box-sizing: border-box; }
 html, body { margin: 0; }
@@ -83,6 +92,11 @@ a { color: var(--yellow); }
 .btn-go:hover { background: var(--red-hot); border-color: var(--red-hot); }
 .btn-ghost { background: transparent; border-color: transparent; color: var(--ink-2); }
 .btn-ghost:hover { background: var(--panel); color: var(--ink); border-color: var(--line); }
+/* The language picker: a select dressed as a ghost button. */
+.lang-btn { gap: 4px; }
+.lang-pick { appearance: none; background: transparent; border: 0; color: inherit; font: inherit; cursor: pointer; padding: 0 2px; }
+.lang-pick:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+.lang-pick option { background: var(--panel); color: var(--ink); }
 .btn-coffee { background: #2b2410; border-color: #6b5a1c; color: var(--yellow); }
 .btn-coffee:hover { background: #3a3014; border-color: var(--yellow); }
 .btn-sm { padding: 6px 10px; font-size: 14px; }
@@ -352,6 +366,8 @@ a { color: var(--yellow); }
 .trow.me .tn { color: #444; }
 .trow.rival .tn::after { content: ' (rival)'; color: #ff8a80; }
 :lang(zh-Hant) .trow.rival .tn::after { content: '（宿敵）'; }
+:lang(ja) .trow.rival .tn::after { content: '（ライバル）'; }
+:lang(ko) .trow.rival .tn::after { content: ' (라이벌)'; }
 .trow.out { opacity: .55; }
 .td.up { color: var(--green); }
 .td.down { color: #ff7a70; }
@@ -478,8 +494,12 @@ dialog::backdrop { background: rgba(5, 5, 8, .75); backdrop-filter: blur(3px); }
 .table tr.me td { color: var(--yellow); font-weight: 700; }
 .table tr.rival td:nth-child(2)::after { content: ' (rival)'; color: #ff8a80; font-weight: 400; }
 :lang(zh-Hant) .table tr.rival td:nth-child(2)::after { content: '（宿敵）'; }
+:lang(ja) .table tr.rival td:nth-child(2)::after { content: '（ライバル）'; }
+:lang(ko) .table tr.rival td:nth-child(2)::after { content: ' (라이벌)'; }
 .table tr.parent td:nth-child(2)::after { content: ' (parent)'; color: var(--purple); font-weight: 400; }
 :lang(zh-Hant) .table tr.parent td:nth-child(2)::after { content: '（上一代）'; }
+:lang(ja) .table tr.parent td:nth-child(2)::after { content: '（親）'; }
+:lang(ko) .table tr.parent td:nth-child(2)::after { content: ' (부모)'; }
 .table .r { text-align: right; }
 .sec { margin: 18px 0 8px; font-size: 15px; font-weight: 700; }
 .ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }

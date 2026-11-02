@@ -1,5 +1,6 @@
-// Languages. English is the source text and the key; Traditional Chinese
-// (繁體中文) is written for Hong Kong and Taiwan players.
+// Languages. English is the source text and the key. Traditional Chinese
+// (繁體中文) is written for Hong Kong and Taiwan players; Japanese (日本語)
+// and Korean (한국어) follow the same shape.
 //
 //   t('Hall of fame')                    '名人堂'
 //   t('Goal for {date}: ', { date })     placeholders go in braces
@@ -10,12 +11,23 @@
 // active at that moment. Only words depend on the language, never the game.
 import { ZH } from './lang/zh.js';
 import { ZD } from './lang/zh.data.js';
+import { JA } from './lang/ja.js';
+import { JD } from './lang/ja.data.js';
+import { KO } from './lang/ko.js';
+import { KD } from './lang/ko.data.js';
 import { STAT_LABEL, STAT_HINT, SINFO, STYLES, BACKGROUNDS, TRAINING } from './engine/constants.js';
 
+// [code, name in its own language, BCP 47 tag for lang attributes]
 export const LANGS = [
-  ['en', 'English'],
-  ['zh', '繁體中文'],
+  ['en', 'English', 'en'],
+  ['zh', '繁體中文', 'zh-Hant'],
+  ['ja', '日本語', 'ja'],
+  ['ko', '한국어', 'ko'],
 ];
+
+// Interface text and game-data names for each language but English.
+const DICT = { zh: ZH, ja: JA, ko: KO };
+const DATA = { zh: ZD, ja: JD, ko: KD };
 
 let lang = 'en';
 // Place names differ between Hong Kong and Taiwan (意大利 or 義大利), so the
@@ -24,20 +36,25 @@ let variant = 'hk';
 
 export const getLang = () => lang;
 export const isZh = () => lang === 'zh';
-export const htmlLang = () => (lang === 'zh' ? (variant === 'tw' ? 'zh-Hant-TW' : 'zh-Hant-HK') : 'en');
+export const langTag = (code) => LANGS.find(([c]) => c === code)?.[2] || 'en';
+export const htmlLang = () => (lang === 'zh' ? (variant === 'tw' ? 'zh-Hant-TW' : 'zh-Hant-HK') : langTag(lang));
+// Chinese and Japanese run sentences together; English and Korean put a space between them.
+export const gap = () => (lang === 'zh' || lang === 'ja' ? '' : ' ');
 
 export function setLang(l, v) {
-  lang = l === 'zh' ? 'zh' : 'en';
+  lang = LANGS.some(([c]) => c === l) ? l : 'en';
   if (v) variant = v === 'tw' ? 'tw' : 'hk';
 }
 
-// 繁體中文 for zh-HK, zh-TW, zh-MO and zh-Hant browsers, English for everyone else.
+// 繁體中文 for zh-HK, zh-TW, zh-MO and zh-Hant browsers, 日本語 and 한국어 for
+// Japanese and Korean ones, English for everyone else.
 export function detectLang(primary = '', all = []) {
   const list = [primary, ...all].map((x) => String(x || '').toLowerCase());
   const region = list.map((x) => /^zh-(?:hant-)?(hk|tw|mo)\b/.exec(x)?.[1]).find(Boolean);
+  const first = list[0];
   return {
-    lang: /^zh-(hk|tw|mo|hant)/.test(list[0]) ? 'zh' : 'en',
-    variant: region ? (region === 'tw' ? 'tw' : 'hk') : list[0].startsWith('zh-hant') ? 'tw' : 'hk',
+    lang: /^zh-(hk|tw|mo|hant)/.test(first) ? 'zh' : /^ja\b/.test(first) ? 'ja' : /^ko\b/.test(first) ? 'ko' : 'en',
+    variant: region ? (region === 'tw' ? 'tw' : 'hk') : first.startsWith('zh-hant') ? 'tw' : 'hk',
   };
 }
 
@@ -49,8 +66,7 @@ function fill(tpl, vars) {
 }
 
 function template(en) {
-  if (lang !== 'zh') return en;
-  const z = ZH[en];
+  const z = DICT[lang]?.[en];
   return z == null ? en : z;
 }
 
@@ -59,8 +75,8 @@ export function t(en, vars) {
   return typeof tpl === 'function' ? tpl(vars || {}) : fill(tpl, vars);
 }
 
-// Sentences side by side: a space between them in English, none after a Chinese full stop.
-export const cat = (...parts) => parts.filter(Boolean).join(lang === 'zh' ? '' : ' ');
+// Sentences side by side: a space between them in English and Korean, none after a Chinese or Japanese full stop.
+export const cat = (...parts) => parts.filter(Boolean).join(gap());
 
 // Like t(), but placeholders may be DOM nodes. Returns a list to pass to h().
 export function tn(en, vars = {}) {
@@ -77,8 +93,7 @@ export function tn(en, vars = {}) {
 
 // A localised field of game data, falling back to the English value.
 export function loc(kind, id, field, en) {
-  if (lang !== 'zh') return en;
-  const row = ZD[kind]?.[id];
+  const row = DATA[lang]?.[kind]?.[id];
   const v = field ? row?.[field] : row;
   return v == null ? en : pick(v);
 }

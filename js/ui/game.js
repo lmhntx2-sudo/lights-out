@@ -25,7 +25,7 @@ import { raceNumber } from '../engine/player.js';
 import { confetti, takeover } from './celebrate.js';
 import { sfx } from './sfx.js';
 import { openShare } from './share.js';
-import { t, tn, cat, isZh, statName, seriesName, trackShortById } from '../i18n.js';
+import { t, tn, cat, gap, statName, seriesName, trackShortById } from '../i18n.js';
 
 const ROW = 26;
 
@@ -278,7 +278,7 @@ const R = {
   season: (app, e) => {
     const series = seriesName(e.series);
     const verdict = e.champion
-      ? h('p', { class: 'verdict' }, h('b', null, t('{series} champion.', { series })), `${isZh() ? '' : ' '}${t('{wins}, {pts}.', { wins: plural(e.wins, 'win'), pts: plural(e.pts, 'point') })}`)
+      ? h('p', { class: 'verdict' }, h('b', null, t('{series} champion.', { series })), `${gap()}${t('{wins}, {pts}.', { wins: plural(e.wins, 'win'), pts: plural(e.pts, 'point') })}`)
       : e.pos
         ? h('p', { class: 'verdict' }, ...tn('You finish {pos} with {pts}.', { pos: h('b', null, `P${e.pos}`), pts: plural(e.pts, 'point') }))
         : h('p', { class: 'verdict' }, t('A season on the sidelines.'));

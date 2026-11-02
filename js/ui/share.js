@@ -5,13 +5,19 @@ import { carSvg } from './car.js';
 import { helmetSvg } from './helmet.js';
 import { shareText, summaryWords } from '../engine/legacy.js';
 import { money } from '../core/fmt.js';
-import { t } from '../i18n.js';
+import { t, getLang } from '../i18n.js';
 
 const W = 1080;
 const H = 1350;
 const RED = '#e10600';
-// Saira and Titillium have no Chinese, so names and text in Chinese fall back to these.
-const CJK = '"PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+// Saira and Titillium have no Chinese, Japanese or Korean, so names and text in
+// those scripts fall back to a system font for the language in use.
+const CJK_FONTS = {
+  zh: '"PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif',
+  ja: '"Hiragino Sans", "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif',
+  ko: '"Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif',
+};
+const cjk = () => CJK_FONTS[getLang()] || CJK_FONTS.zh;
 
 function svgImage(markup) {
   return new Promise((resolve) => {
@@ -73,7 +79,7 @@ export async function renderCard(sum) {
     await Promise.all([
       document.fonts.load('italic 900 80px Saira'),
       document.fonts.load('700 60px "Titillium Web"'),
-      document.fonts.load(`600 30px "Titillium Web", ${CJK}`),
+      document.fonts.load(`600 30px "Titillium Web", ${cjk()}`),
       document.fonts.load('60px "Twemoji Country Flags"', sum.flag),
     ]);
   } catch {
@@ -102,9 +108,9 @@ export async function renderCard(sum) {
 
   // brand and start lights
   g.fillStyle = '#ffffff';
-  setFont(g, `italic 900 46px Saira, ${CJK}`, 'expanded');
+  setFont(g, `italic 900 46px Saira, ${cjk()}`, 'expanded');
   g.fillText('LIGHTS OUT', 64, 100);
-  setFont(g, `600 26px "Titillium Web", ${CJK}`);
+  setFont(g, `600 26px "Titillium Web", ${cjk()}`);
   g.fillStyle = '#b9b9c6';
   g.fillText(t('Racing career simulator'), 66, 136);
   for (let i = 0; i < 5; i++) {
@@ -135,22 +141,22 @@ export async function renderCard(sum) {
 
   // name and tier
   g.fillStyle = '#ffffff';
-  const nameSize = fit(g, `${sum.name} ${sum.flag}`, 62, W - 260, (s) => `700 ${s}px "Twemoji Country Flags", "Titillium Web", ${CJK}`);
-  setFont(g, `700 ${nameSize}px "Twemoji Country Flags", "Titillium Web", ${CJK}`);
+  const nameSize = fit(g, `${sum.name} ${sum.flag}`, 62, W - 260, (s) => `700 ${s}px "Twemoji Country Flags", "Titillium Web", ${cjk()}`);
+  setFont(g, `700 ${nameSize}px "Twemoji Country Flags", "Titillium Web", ${cjk()}`);
   g.fillText(`${sum.name} ${sum.flag}`, 180, 568);
-  setFont(g, `600 28px "Titillium Web", ${CJK}`);
+  setFont(g, `600 28px "Titillium Web", ${cjk()}`);
   g.fillStyle = '#b9b9c6';
   const words = summaryWords(sum);
   g.fillText(`#${sum.number ?? ''}  ${t('{bg}, {style}', { bg: words.bg, style: words.style.toLowerCase() })}`, 182, 606);
 
   g.fillStyle = champ ? '#d4af37' : '#ffffff';
-  setFont(g, `italic 900 86px Saira, ${CJK}`, 'expanded');
+  setFont(g, `italic 900 86px Saira, ${cjk()}`, 'expanded');
   let size = 86;
   const tier = words.tier.toUpperCase();
   let lines = wrap(g, tier, W - 128);
   while (lines.length > 2 && size > 40) {
     size -= 6;
-    setFont(g, `italic 900 ${size}px Saira, ${CJK}`, 'expanded');
+    setFont(g, `italic 900 ${size}px Saira, ${cjk()}`, 'expanded');
     lines = wrap(g, tier, W - 128);
   }
   lines.forEach((l, i) => g.fillText(l, 60, 712 + i * size * 0.95));
@@ -169,16 +175,16 @@ export async function renderCard(sum) {
     roundRect(g, x, by, bw, 168, 14);
     g.fill();
     g.fillStyle = i === 0 && champ ? '#d4af37' : '#ffffff';
-    fit(g, String(v), 76, bw - 40, (s) => `italic 900 ${s}px Saira, ${CJK}`);
+    fit(g, String(v), 76, bw - 40, (s) => `italic 900 ${s}px Saira, ${cjk()}`);
     g.fillText(String(v), x + 22, by + 96);
-    setFont(g, `600 26px "Titillium Web", ${CJK}`);
+    setFont(g, `600 26px "Titillium Web", ${cjk()}`);
     g.fillStyle = '#82828f';
     g.fillText(k, x + 24, by + 140);
   });
 
   // story lines
   let y = by + 230;
-  setFont(g, `600 30px "Titillium Web", ${CJK}`);
+  setFont(g, `600 30px "Titillium Web", ${cjk()}`);
   g.fillStyle = '#f7f7f9';
   const facts = [];
   if (sum.ranks && (f.titles || f.wins)) facts.push(t('#{titles} all-time for titles, #{wins} for wins.', sum.ranks));
@@ -192,7 +198,7 @@ export async function renderCard(sum) {
   }
   if (sum.lines?.[0] && y < H - 230) {
     g.fillStyle = '#b9b9c6';
-    setFont(g, `italic 600 28px "Titillium Web", ${CJK}`);
+    setFont(g, `italic 600 28px "Titillium Web", ${cjk()}`);
     for (const l of wrap(g, sum.lines[0], W - 128).slice(0, 2)) {
       g.fillText(l, 64, y + 6);
       y += 40;
@@ -207,9 +213,9 @@ export async function renderCard(sum) {
     g.fillRect(x, H - 150, 60, 8);
   }
   g.fillStyle = '#ffffff';
-  setFont(g, `700 36px "Titillium Web", ${CJK}`);
+  setFont(g, `700 36px "Titillium Web", ${cjk()}`);
   g.fillText(t('Play free at {host}', { host: location.host }), 64, H - 82);
-  setFont(g, `600 26px "Titillium Web", ${CJK}`);
+  setFont(g, `600 26px "Titillium Web", ${cjk()}`);
   g.fillStyle = '#82828f';
   g.fillText(t('Seed {seed}: same seed, same world', { seed: sum.seed }), 64, H - 40);
   return c;

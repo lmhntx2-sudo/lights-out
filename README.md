@@ -178,9 +178,9 @@ Where things live:
 | `js/engine/replay.js` | Rebuilds a career from its setup and action log, for the leaderboard. |
 | `js/engine/legacy.js` | Retirement summary, epilogue, all-time records, and what a parent hands down to a kid. |
 | `js/ui/` | Title screen, game screen, dialogs, donations. |
-| `js/i18n.js` | Languages: English and 繁體中文 (Traditional Chinese). |
-| `js/engine/events.zh.js` | Chinese words for every event, keyed by event id. |
-| `js/lang/zh.js`, `js/lang/zh.data.js` | Chinese for the interface, and names of tracks, nations, achievements and so on. |
+| `js/i18n.js` | Languages: English, 繁體中文 (Traditional Chinese), 日本語 (Japanese) and 한국어 (Korean). |
+| `js/engine/events.zh.js`, `events.ja.js`, `events.ko.js` | The words for every event in each language, keyed by event id. |
+| `js/lang/zh.js`, `ja.js`, `ko.js` and their `.data.js` files | The interface in each language, and names of tracks, nations, achievements and so on. |
 | `js/api.js` | The browser side of the global leaderboard. |
 | `netlify/functions/leaderboard.mjs` | The leaderboard function (`/api/leaderboard`). |
 | `netlify/functions/stats.mjs` | The anonymous play counter (`/api/stats`). |
@@ -188,19 +188,24 @@ Where things live:
 | `js/stats.js` | The browser side of the play counter. |
 | `stats.html` | The play stats page for the developer. |
 
-The same seed plus the same choices always replays the same career, in either language.
+The same seed plus the same choices always replays the same career, in any language.
 
 ## Languages
 
-The game is in English and 繁體中文, written for Hong Kong and Taiwan players. It starts in
-繁體中文 when the browser's language is zh-HK, zh-TW, zh-MO or zh-Hant, and in English
-otherwise. Players switch on the title screen or in Settings. Place names follow the
+The game is in English, 繁體中文 (written for Hong Kong and Taiwan players), 日本語 and
+한국어. It starts in 繁體中文 when the browser's language is zh-HK, zh-TW, zh-MO or
+zh-Hant, in Japanese or Korean when it is ja or ko, and in English otherwise. Players
+switch with the 🌐 picker on the title screen or in Settings. Place names follow the
 browser's region where Hong Kong and Taiwan spell them differently (意大利 or 義大利).
 
 English text is the key for its own translation. When you add or change an event, add its
-Chinese to `js/engine/events.zh.js` with the same choices in the same order; for any other
-text, run `node tools/i18n-keys.mjs --missing` to list what still needs Chinese.
-`npm test` fails if something is missing, so a new event cannot ship half-translated.
+words to `js/engine/events.zh.js`, `events.ja.js` and `events.ko.js` with the same choices in
+the same order; for any other text, run `node tools/i18n-keys.mjs --missing zh` (or `ja`,
+`ko`) to list what still needs translating. `npm test` fails if something is missing in any
+language, so a new event cannot ship half-translated.
+
+Korean particles change with the word before them (이/가, 을/를), so in Korean text a
+name is followed by 선수 or 님, and a team by 팀, before any particle.
 
 The social preview image (`assets/og.png`) and app icons were drawn in the browser and saved
 through the local dev server's `/__save/` endpoint, which only exists in `tools/serve.mjs`.

@@ -1,21 +1,25 @@
-import { isZh } from '../i18n.js';
+import { getLang } from '../i18n.js';
 
 export const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 const trim = (x) => x.replace(/\.?0+$/, '');
 
-// Chinese counts money in 萬 (ten thousand) and 億 (a hundred million).
-function moneyZh(sign, a) {
-  if (a >= 1e8) return `${sign}$${trim((a / 1e8).toFixed(a >= 1e9 ? 1 : 2))}億`;
-  if (a >= 1e5) return `${sign}$${Math.round(a / 1e4)}萬`;
-  if (a >= 1e4) return `${sign}$${trim((a / 1e4).toFixed(1))}萬`;
+// Chinese, Japanese and Korean count money in ten thousands and hundred
+// millions: 萬/億, 万/億 and 만/억.
+const MYRIAD = { zh: ['萬', '億'], ja: ['万', '億'], ko: ['만', '억'] };
+
+function moneyMyriad(sign, a, [wan, yi]) {
+  if (a >= 1e8) return `${sign}$${trim((a / 1e8).toFixed(a >= 1e9 ? 1 : 2))}${yi}`;
+  if (a >= 1e5) return `${sign}$${Math.round(a / 1e4)}${wan}`;
+  if (a >= 1e4) return `${sign}$${trim((a / 1e4).toFixed(1))}${wan}`;
   return `${sign}$${Math.round(a)}`;
 }
 
 export function money(n) {
   const sign = n < 0 ? '-' : '';
   const a = Math.abs(n);
-  if (isZh()) return moneyZh(sign, a);
+  const units = MYRIAD[getLang()];
+  if (units) return moneyMyriad(sign, a, units);
   if (a >= 1e9) return `${sign}$${(a / 1e9).toFixed(2)}B`;
   if (a >= 1e7) return `${sign}$${Math.round(a / 1e6)}M`;
   if (a >= 1e6) return `${sign}$${(a / 1e6).toFixed(1)}M`;
@@ -23,21 +27,48 @@ export function money(n) {
   return `${sign}$${Math.round(a)}`;
 }
 
-// Measure words for counts in Chinese, keyed by the English singular.
-const ZH_UNITS = {
-  win: '場勝利',
-  point: '分',
-  year: '年',
-  race: '場',
-  title: '屆冠軍',
-  'world title': '屆世界冠軍',
-  start: '場出賽',
-  podium: '次登台',
-  'junior win': '場青年組勝利',
+// Measure words for counts, keyed by the English singular. Chinese puts a space
+// after the number; Japanese and Korean counters follow it directly (3勝, 3승).
+const UNITS = {
+  zh: {
+    win: '場勝利',
+    point: '分',
+    year: '年',
+    race: '場',
+    title: '屆冠軍',
+    'world title': '屆世界冠軍',
+    start: '場出賽',
+    podium: '次登台',
+    'junior win': '場青年組勝利',
+  },
+  ja: {
+    win: '勝',
+    point: 'ポイント',
+    year: '年',
+    race: '戦',
+    title: '度のタイトル',
+    'world title': '度の世界タイトル',
+    start: '戦出走',
+    podium: '回の表彰台',
+    'junior win': '勝（ジュニア）',
+  },
+  ko: {
+    win: '승',
+    point: '점',
+    year: '년',
+    race: '경기',
+    title: '회 우승',
+    'world title': '회 월드 챔피언',
+    start: '회 출전',
+    podium: '회 포디움',
+    'junior win': '승(주니어)',
+  },
 };
 
 export const plural = (n, one, many = one + 's') => {
-  if (isZh() && ZH_UNITS[one]) return `${n} ${ZH_UNITS[one]}`;
+  const lang = getLang();
+  const unit = UNITS[lang]?.[one];
+  if (unit) return lang === 'zh' ? `${n} ${unit}` : `${n}${unit}`;
   return `${n} ${n === 1 ? one : many}`;
 };
 

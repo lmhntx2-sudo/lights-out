@@ -13,16 +13,27 @@ import { coffeeButton } from './donate.js';
 import { openHallOfFame, openAchievements, openSettings, openBackup, openAbout, allUnlocked, openLeaderboard, confirmDialog } from './modals.js';
 import { car } from './car.js';
 import { sfx } from './sfx.js';
-import { t, getLang, LANGS, loc, natName, styleName, styleDesc, bgText, isZh } from '../i18n.js';
+import { t, getLang, LANGS, loc, natName, styleName, styleDesc, bgText, gap } from '../i18n.js';
 
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-// A kid whose family name is written in Chinese characters gets a Chinese given name.
+// A kid whose family name is written in Chinese characters, kana or Hangul
+// gets a given name in the same script. Kanji alone reads as Japanese when the
+// game is in Japanese.
 const HAN_GIVEN = ['卓言', '子朗', '心悅', '浩然', '曉晴', '天佑', '詠恩', '俊希', '嘉怡', '朗晴', '樂軒', '芷澄'];
+const JA_GIVEN = ['翔太', '結衣', '蓮', '陽菜', '大翔', '美咲', '悠真', '葵', '颯', '凛', '湊', '結菜'];
+const KO_GIVEN = ['민준', '서연', '도윤', '지우', '하준', '서윤', '시우', '하은', '주원', '지민', '예준', '수아'];
+
+function givenIn(family = '') {
+  if (/[\uac00-\ud7af]/.test(family)) return pick(KO_GIVEN);
+  if (/[\u3040-\u30ff]/.test(family) || (getLang() === 'ja' && /[\u3400-\u9fff]/.test(family))) return pick(JA_GIVEN);
+  if (/[\u3400-\u9fff]/.test(family)) return pick(HAN_GIVEN);
+  return null;
+}
 
 function randomName(nat, family) {
   const pool = NAME_POOLS[nation(nat).names] || NAME_POOLS.en;
-  return { first: /[\u3400-\u9fff]/.test(family || '') ? pick(HAN_GIVEN) : pick(pool.f), last: pick(pool.l) };
+  return { first: givenIn(family || '') || pick(pool.f), last: pick(pool.l) };
 }
 
 function gantry() {
@@ -48,10 +59,14 @@ export function runLights(pods, { step = 520, done } = {}) {
   }, hold);
 }
 
-// The button that flips to the other language, written in that language.
+// The language picker, each language written in itself.
 function langButton(app) {
-  const [code, label] = LANGS.find(([c]) => c !== getLang());
-  return h('button', { class: 'btn btn-ghost', lang: code === 'zh' ? 'zh-Hant' : 'en', onClick: () => app.setLanguage(code) }, `🌐 ${label}`);
+  const list = h(
+    'select',
+    { class: 'lang-pick', 'aria-label': 'Language · 語言 · 言語 · 언어', onChange: (e) => app.setLanguage(e.target.value) },
+    LANGS.map(([code, label, tag]) => h('option', { value: code, lang: tag, selected: code === getLang() }, label)),
+  );
+  return h('label', { class: 'btn btn-ghost lang-btn' }, '🌐 ', list);
 }
 
 // heir: a retired parent's kid (legacy.js heirOf). Surname, nationality and
@@ -298,7 +313,7 @@ function heirBanner(heir) {
   const text = heir.bg === 'royalty'
     ? t('Background: {bg}. {parent} retired worth {money}, so the family fortune is the whole inheritance.', { bg, parent: heir.parent, money: money(lg.worth) })
     : t('Background: {bg}. From the family: {money} and +{fame} fame.', { bg, money: money(lg.money), fame: lg.fame });
-  return h('div', { class: 'daily-banner' }, h('b', null, familyLine({ gen: lg.gen, parent: heir.parent })), isZh() ? '' : ' ', text);
+  return h('div', { class: 'daily-banner' }, h('b', null, familyLine({ gen: lg.gen, parent: heir.parent })), gap(), text);
 }
 
 // Full-screen lights before the first race of a new career.

@@ -430,12 +430,12 @@ export function openSettings(app) {
     wrap.append(...btns);
     return wrap;
   };
-  const langs = LANGS.map(([code, label]) => [code, label, code === 'zh' ? 'zh-Hant' : 'en']);
+  const langs = LANGS.map(([code, label, tag]) => [code, label, tag]);
   const body = h(
     'div',
     null,
     // Written in both languages so anyone can find it.
-    h('div', { class: 'setting' }, h('div', null, h('b', null, 'Language · 語言'), h('p', null, t('In a career already under way, the story so far stays in the language it was written in. Everything new uses the language you pick.'))), seg(langs, getLang(), (v) => {
+    h('div', { class: 'setting' }, h('div', null, h('b', null, 'Language · 語言 · 言語 · 언어'), h('p', null, t('In a career already under way, the story so far stays in the language it was written in. Everything new uses the language you pick.'))), seg(langs, getLang(), (v) => {
       if (v === getLang()) return;
       dlg.close();
       app.setLanguage(v);

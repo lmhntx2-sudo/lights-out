@@ -1,8 +1,13 @@
 // Picking, presenting and resolving decision moments.
 import { EVENTS } from './events.js';
 import { EVENTS_ZH } from './events.zh.js';
+import { EVENTS_JA } from './events.ja.js';
+import { EVENTS_KO } from './events.ko.js';
 import { SINFO } from './constants.js';
-import { isZh, statName, t as tr } from '../i18n.js';
+import { getLang, statName, t as tr } from '../i18n.js';
+
+// Event words in each language but English, which lives in events.js itself.
+const EVENT_WORDS = { zh: EVENTS_ZH, ja: EVENTS_JA, ko: EVENTS_KO };
 import { val, pushFeed } from './helpers.js';
 import { overall } from './player.js';
 import { unlock } from './achievements.js';
@@ -84,7 +89,7 @@ export function wordingOf(s, ev, c) {
 // first. A translation or variant only ever replaces text: choices, odds and
 // outcomes always come from the event itself in events.js.
 function wordsOf(ev, k) {
-  const z = isZh() ? EVENTS_ZH[ev.id] : null;
+  const z = EVENT_WORDS[getLang()]?.[ev.id] ?? null;
   const pick = (w) => (k ? w?.variants?.[k - 1] : null);
   return (z ? [pick(z), z] : [pick(ev)]).filter(Boolean);
 }

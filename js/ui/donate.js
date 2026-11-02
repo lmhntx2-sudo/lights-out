@@ -3,7 +3,7 @@ import { DONATE, isPlaceholder, liveMethods, price, tierLink, tipJarOpen } from 
 import { h, toast } from './dom.js';
 import { openDialog } from './modals.js';
 import { store } from '../store.js';
-import { t, loc, isZh, htmlLang } from '../i18n.js';
+import { t, loc, gap, htmlLang } from '../i18n.js';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -94,7 +94,7 @@ export function openDonate(app, reason = '') {
     isLocal() && !open
       ? h('div', { class: 'dev-warning' }, t('Only you see this, on localhost: no payment method is set up yet. Fill one in '), h('code', null, 'js/config.js'), t('.'))
       : null,
-    h('div', { class: 'donate-hero' }, h('span', { class: 'cup', 'aria-hidden': 'true' }, '☕'), h('p', null, intro ? h('b', null, intro, isZh() ? '' : ' ') : null, lead)),
+    h('div', { class: 'donate-hero' }, h('span', { class: 'cup', 'aria-hidden': 'true' }, '☕'), h('p', null, intro ? h('b', null, intro, gap()) : null, lead)),
     picker,
     open ? panel : null,
     claim,

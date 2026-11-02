@@ -1,6 +1,6 @@
 // Lists every literal t('...'), tr('...') and tn('...') key in js/, so the
-// Chinese dictionary in js/lang/zh.js can be checked for gaps.
-// Usage: node tools/i18n-keys.mjs [--missing]
+// dictionaries in js/lang (zh.js, ja.js, ko.js) can be checked for gaps.
+// Usage: node tools/i18n-keys.mjs [--missing] [zh|ja|ko]
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -42,9 +42,10 @@ export function scanKeys() {
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { keys, dynamic } = scanKeys();
-  const { ZH } = await import(pathToFileURL(join(root, 'js', 'lang', 'zh.js')).href);
+  const lang = ['zh', 'ja', 'ko'].find((l) => process.argv.includes(l)) || 'zh';
+  const dict = (await import(pathToFileURL(join(root, 'js', 'lang', `${lang}.js`)).href))[lang.toUpperCase()];
   const only = process.argv.includes('--missing');
-  for (const [k, where] of keys) if (!only || ZH[k] == null) console.log(`${JSON.stringify(k)}  ${where[0]}`);
+  for (const [k, where] of keys) if (!only || dict[k] == null) console.log(`${JSON.stringify(k)}  ${where[0]}`);
   if (dynamic.length) console.log(`\nTemplate-literal keys (not checkable): ${dynamic.join(', ')}`);
-  console.log(`\n${keys.size} keys, ${[...keys.keys()].filter((k) => ZH[k] == null).length} missing in zh.js`);
+  console.log(`\n${keys.size} keys, ${[...keys.keys()].filter((k) => dict[k] == null).length} missing in ${lang}.js`);
 }

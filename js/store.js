@@ -70,7 +70,7 @@ export const store = {
     return fresh;
   },
 
-  // lang is 'en' or 'zh'. Until the player picks one, it follows the browser.
+  // lang is 'en', 'zh', 'ja' or 'ko'. Until the player picks one, it follows the browser.
   settings: () => ({ anim: reducedMotion() ? 'off' : 'full', lang: browserLang().lang, ...get('settings', {}) }),
   langVariant: () => browserLang().variant,
   saveSettings: (v) => set('settings', v),
