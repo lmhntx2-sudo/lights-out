@@ -72,6 +72,7 @@ export const JD = {
     australia: { name: 'オーストラリアGP', short: 'オーストラリア', place: 'メルボルン' },
     china: { name: '中国GP', short: '中国', place: '上海' },
     japan: { name: '日本GP', short: '日本', place: '鈴鹿' },
+    korea: { name: '韓国GP', short: '韓国', place: '霊岩' },
     bahrain: { name: 'バーレーンGP', short: 'バーレーン', place: 'サクヒール' },
     saudi: { name: 'サウジアラビアGP', short: 'サウジアラビア', place: 'ジッダ' },
     miami: { name: 'マイアミGP', short: 'マイアミ', place: 'マイアミ・ガーデンズ' },
@@ -196,6 +197,7 @@ export const JD = {
     pit_crew: { name: 'ピットクルー', desc: '開発者にコーヒーをおごって応援する。' },
     daily: { name: 'デイリードライバー', desc: 'デイリーチャレンジを達成する。' },
     macau_win: { name: 'マカオの覇者', desc: 'マカオグランプリで優勝する。' },
+    history_maker: { name: '歴史を変えた者', desc: '母国のドライバーとして史上初めてグランプリで優勝する。' },
   },
 
   person: {

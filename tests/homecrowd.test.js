@@ -47,7 +47,7 @@ test('new careers get the current content version, old ones keep none', () => {
 test('validateSetup passes the content version through and refuses bad ones', () => {
   assert.equal(validateSetup(setup('v')).cv, 1, 'a setup from before versions replays as version 1');
   assert.equal(validateSetup(setup('v', 'GB', { cv: 2 })).cv, 2);
-  for (const cv of [0, 3, '2', 1.5, -1, CONTENT_VERSION + 1]) assert.throws(() => validateSetup(setup('v', 'GB', { cv })), ReplayError, `cv ${cv}`);
+  for (const cv of [0, '2', 1.5, -1, CONTENT_VERSION + 1]) assert.throws(() => validateSetup(setup('v', 'GB', { cv })), ReplayError, `cv ${cv}`);
   // Macau arrived in version 2, so a version-1 career can't be from Macau.
   assert.throws(() => validateSetup(setup('v', 'MO', { cv: 1 })), ReplayError);
   assert.throws(() => validateSetup(setup('v', 'MO')), ReplayError);

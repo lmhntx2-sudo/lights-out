@@ -593,4 +593,46 @@ export const KO = {
   'Your name is still on the list of Macau Grand Prix winners, a few lines below {senna} and {schumacher}.': '마카오 그랑프리 역대 우승자 명단에는 지금도 {senna}, {schumacher}의 몇 줄 아래에 당신의 이름이 있다.',
   'Non-championship race.': '논타이틀 레이스.',
   'Raced the Macau Grand Prix: {results}': '마카오 그랑프리 출전: {results}',
+
+  // ------------------------------------------------------------ Japan and Korea pack
+  'Ramen king':
+    '라멘의 왕',
+  'Fried chicken king':
+    '치킨의 왕',
+  'Menya Hayate gives free ramen to the whole shopping street.':
+    '멘야 하야테가 상점가 사람들 모두에게 라멘을 공짜로 돌린다.',
+  'Halmae Chicken gives free fried chicken to every flat in your old apartment block.':
+    '할매치킨이 예전에 살던 아파트 동 전 세대에 치킨을 공짜로 돌린다.',
+  'Menya Hayate now has forty branches. Every one has a photo of your helmet on the wall.':
+    '멘야 하야테는 이제 지점이 40곳. 모든 가게 벽에 당신의 헬멧 사진이 걸려 있다.',
+  'Menya Hayate still has your first helmet sticker on the meal ticket machine.':
+    '멘야 하야테의 식권 자판기에는 지금도 당신의 첫 헬멧 스티커가 붙어 있다.',
+  'Halmae Chicken now has forty branches. Every one has a photo of your helmet on the wall.':
+    '할매치킨은 이제 지점이 40곳. 모든 가게 벽에 당신의 헬멧 사진이 걸려 있다.',
+  'Halmae Chicken still has your first helmet sticker on the fryer.':
+    '할매치킨의 튀김기에는 지금도 당신의 첫 헬멧 스티커가 붙어 있다.',
+  'Sponsored by Menya Hayate since age 14':
+    '14세부터 멘야 하야테 후원',
+  'Sponsored by Halmae Chicken since age 14':
+    '14세부터 할매치킨 후원',
+  'First from Korea':
+    '한국 최초',
+  'No driver from Korea had ever started a Formula 1 race. Now one has. In a PC bang in Seoul, sixty sim racers have stopped their own races to watch yours on the big screen. Your mum has phoned every relative you have, twice. Down in Yeongam, someone has unlocked the gates of the empty Grand Prix circuit and is walking up and down the grid.':
+    '지금까지 F1 결승에 출전한 한국인 드라이버는 없었다. 이제 한 명이 나왔다. 서울의 한 PC방에서는 심레이서 예순 명이 자기 레이스를 멈추고 대형 화면으로 당신의 레이스를 보고 있다. 엄마는 친척 모두에게 전화를 돌렸다. 그것도 두 번씩. 저 아래 영암에서는 누군가 텅 빈 그랑프리 서킷의 문을 열고 그리드 위를 왔다 갔다 하고 있다.',
+  'Japan\'s first Grand Prix winner':
+    '일본 최초의 그랑프리 우승자',
+  'No Japanese driver had ever won a Formula 1 race. There were podiums that came so close, and decades of fans who kept coming to Suzuka anyway. Now it has happened. In Shibuya the giant screens over the crossing replay your last lap again and again, and for once nobody is crossing. Your old karting club has put your photo up by the gate, next to the little shrine.':
+    '지금까지 F1에서 우승한 일본인 드라이버는 없었다. 아깝게 놓친 포디움은 여러 번 있었고, 그래도 수십 년 동안 팬들은 스즈카를 찾았다. 그리고 지금, 마침내 이루어졌다. 시부야 스크램블 교차로 위 대형 전광판에서는 당신의 마지막 랩이 몇 번이고 다시 나오고, 이번만큼은 아무도 길을 건너지 않는다. 예전 카트 클럽은 입구의 작은 신사 옆에 당신의 사진을 걸었다.',
+  'Korea\'s first Grand Prix winner':
+    '한국 최초의 그랑프리 우승자',
+  'No driver from Korea had ever won a Formula 1 race. Now one has. Every chicken place in Hongdae has the race on and nobody is going home. The news anchor cannot get through the headline without stopping. Your mum has given up answering the phone, because it will not stop ringing.':
+    '지금까지 F1에서 우승한 한국인 드라이버는 없었다. 이제 한 명이 나왔다. 홍대의 치킨집마다 레이스를 틀어 놓았고, 아무도 집에 가지 않는다. 뉴스 앵커는 헤드라인을 읽다가 몇 번이나 말을 멈춘다. 엄마는 전화 받기를 포기했다. 벨이 도무지 멈추지 않으니까.',
+  'The first {adj} Grand Prix winner':
+    '{nation} 최초의 그랑프리 우승자',
+  'No {adj} driver had ever won a Formula 1 race. Now one has. Back home it is on every front page, and people who had never watched a Grand Prix are setting alarms for the next one.':
+    '지금까지 F1에서 우승한 {nation} 드라이버는 없었다. 이제 한 명이 나왔다. 고향에서는 모든 신문 1면을 당신이 장식했고, 그랑프리를 본 적도 없던 사람들이 다음 레이스에 맞춰 알람을 맞추고 있다.',
+  'The Korean Grand Prix is back':
+    '코리아 그랑프리가 돌아왔다',
+  'Formula 1 last raced in Korea in 2013, and the circuit at Yeongam has been quiet ever since. Then a Korean driver started a Grand Prix. This year the Korean Grand Prix is back on the calendar, the week after Suzuka, and every ticket sold out in nine minutes.':
+    'F1이 마지막으로 한국에서 열린 건 2013년. 그 뒤로 영암 서킷은 내내 조용했다. 그런데 한국인 드라이버가 그랑프리에 출전했다. 올해 코리아 그랑프리가 스즈카 바로 다음 주로 캘린더에 돌아왔고, 티켓은 9분 만에 매진됐다.',
 };

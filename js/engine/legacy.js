@@ -134,6 +134,8 @@ const SPONSOR_LATER = {
   hk: (big) => (big ? tr('Sun Keung Kee now has forty branches. Every one has a photo of your helmet on the wall.') : tr('Sun Keung Kee still has your first helmet sticker on the milk tea urn.')),
   tw: (big) => (big ? tr('A-Ma Boba now has forty branches. Every one has a photo of your helmet on the wall.') : tr('A-Ma Boba still has your first helmet sticker on the cup-sealing machine.')),
   mo: (big) => (big ? tr('Ping Kee now has forty branches. Every one has a photo of your helmet on the wall.') : tr('Ping Kee still has your first helmet sticker on the grill hood.')),
+  jp: (big) => (big ? tr('Menya Hayate now has forty branches. Every one has a photo of your helmet on the wall.') : tr('Menya Hayate still has your first helmet sticker on the meal ticket machine.')),
+  kr: (big) => (big ? tr('Halmae Chicken now has forty branches. Every one has a photo of your helmet on the wall.') : tr('Halmae Chicken still has your first helmet sticker on the fryer.')),
 };
 
 function epilogue(s, how) {

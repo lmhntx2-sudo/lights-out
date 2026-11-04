@@ -138,6 +138,8 @@ const SPONSOR_LIFE = {
   hk: () => t('Sponsored by Sun Keung Kee Café since age 14'),
   tw: () => t('Sponsored by A-Ma Boba since age 14'),
   mo: () => t('Sponsored by Ping Kee since age 14'),
+  jp: () => t('Sponsored by Menya Hayate since age 14'),
+  kr: () => t('Sponsored by Halmae Chicken since age 14'),
 };
 
 export function openProfile(app) {

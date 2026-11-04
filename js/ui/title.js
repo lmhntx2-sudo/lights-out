@@ -13,7 +13,7 @@ import { coffeeButton } from './donate.js';
 import { openHallOfFame, openAchievements, openSettings, openBackup, openAbout, allUnlocked, openLeaderboard, confirmDialog } from './modals.js';
 import { car } from './car.js';
 import { sfx } from './sfx.js';
-import { t, getLang, LANGS, loc, natName, styleName, styleDesc, bgText, gap } from '../i18n.js';
+import { t, getLang, getVariant, LANGS, loc, natName, styleName, styleDesc, bgText, gap } from '../i18n.js';
 
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
@@ -30,6 +30,9 @@ function givenIn(family = '') {
   if (/[\u3400-\u9fff]/.test(family)) return pick(HAN_GIVEN);
   return null;
 }
+
+// A new career starts with the flag that goes with the game's language.
+const homeNat = () => ({ ja: 'JP', ko: 'KR', zh: getVariant() === 'tw' ? 'TW' : 'HK' })[getLang()] || 'GB';
 
 function randomName(nat, family) {
   const pool = NAME_POOLS[nation(nat).names] || NAME_POOLS.en;
@@ -79,11 +82,12 @@ export function renderTitle(app, { seed, daily, form: kept, heir } = {}) {
   // A language switch redraws the title with the same form, and without the intro again.
   const anim = app.settings.anim !== 'off' && !kept;
 
-  const init = randomName('GB');
+  const nat = homeNat();
+  const init = randomName(nat);
   const form = kept || {
     first: init.first,
     last: init.last,
-    nat: 'GB',
+    nat,
     style: 'fighter',
     bg: 'prodigy',
     helmet: { c1: '#F2F2F2', c2: '#E8002D' },

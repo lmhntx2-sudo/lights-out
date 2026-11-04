@@ -73,6 +73,7 @@ export const ZD = {
     australia: { name: '澳洲大獎賽', short: '澳洲', place: '墨爾本' },
     china: { name: '中國大獎賽', short: '中國', place: '上海' },
     japan: { name: '日本大獎賽', short: '日本', place: '鈴鹿' },
+    korea: { name: '韓國大獎賽', short: '韓國', place: '靈岩' },
     bahrain: { name: '巴林大獎賽', short: '巴林', place: { hk: '沙基爾', tw: '薩基爾' } },
     saudi: {
       name: { hk: '沙地阿拉伯大獎賽', tw: '沙烏地阿拉伯大獎賽' },
@@ -221,6 +222,7 @@ export const ZD = {
     pit_crew: { name: '維修站團隊', desc: '請開發者喝杯咖啡，為開發加油。' },
     daily: { name: '每日車手', desc: '完成一次每日挑戰。' },
     macau_win: { name: '澳門冠軍', desc: '贏得澳門格蘭披治大賽車。' },
+    history_maker: { name: '創造歷史', desc: '成為家鄉第一位贏得大獎賽的車手。' },
   },
 
   // Real people, where Hong Kong and Taiwan spell them differently.

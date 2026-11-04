@@ -591,4 +591,46 @@ export const ZH = {
   'Your name is still on the list of Macau Grand Prix winners, a few lines below {senna} and {schumacher}.': '澳門格蘭披治大賽車的冠軍名單上，你的名字仍然排在{senna}和{schumacher}下面幾行。',
   'Non-championship race.': '非錦標賽賽事。',
   'Raced the Macau Grand Prix: {results}': '出戰澳門格蘭披治大賽車：{results}',
+
+  // ------------------------------------------------------------ Japan and Korea pack
+  'Ramen king':
+    '拉麵之王',
+  'Fried chicken king':
+    '炸雞之王',
+  'Menya Hayate gives free ramen to the whole shopping street.':
+    '麵屋疾風請整條商店街的人吃拉麵。',
+  'Halmae Chicken gives free fried chicken to every flat in your old apartment block.':
+    '奶奶炸雞請你以前住的那棟公寓每一戶吃炸雞。',
+  'Menya Hayate now has forty branches. Every one has a photo of your helmet on the wall.':
+    '麵屋疾風現在有四十家分店，每一家的牆上都掛著你的頭盔照片。',
+  'Menya Hayate still has your first helmet sticker on the meal ticket machine.':
+    '麵屋疾風的食券機上，仍貼著你第一頂頭盔的貼紙。',
+  'Halmae Chicken now has forty branches. Every one has a photo of your helmet on the wall.':
+    '奶奶炸雞現在有四十家分店，每一家的牆上都掛著你的頭盔照片。',
+  'Halmae Chicken still has your first helmet sticker on the fryer.':
+    '奶奶炸雞的炸爐上，仍貼著你第一頂頭盔的貼紙。',
+  'Sponsored by Menya Hayate since age 14':
+    '14 歲起由麵屋疾風贊助',
+  'Sponsored by Halmae Chicken since age 14':
+    '14 歲起由奶奶炸雞贊助',
+  'First from Korea':
+    '韓國第一人',
+  'No driver from Korea had ever started a Formula 1 race. Now one has. In a PC bang in Seoul, sixty sim racers have stopped their own races to watch yours on the big screen. Your mum has phoned every relative you have, twice. Down in Yeongam, someone has unlocked the gates of the empty Grand Prix circuit and is walking up and down the grid.':
+    '從來沒有韓國車手在 F1 起跑過。現在有了。首爾一間網吧裡，六十個模擬賽車手停下自己的比賽，擠在大螢幕前看你的。你媽媽給每個親戚都打了電話，而且每人打了兩次。南邊的靈岩，有人打開了那座空置多年的大獎賽賽道的大門，在發車格上來回踱步。',
+  'Japan\'s first Grand Prix winner':
+    '日本首位大獎賽冠軍',
+  'No Japanese driver had ever won a Formula 1 race. There were podiums that came so close, and decades of fans who kept coming to Suzuka anyway. Now it has happened. In Shibuya the giant screens over the crossing replay your last lap again and again, and for once nobody is crossing. Your old karting club has put your photo up by the gate, next to the little shrine.':
+    '從來沒有日本車手贏過 F1 分站。有過差一點點的頒獎台，也有幾十年來照樣年年湧到鈴鹿的車迷。現在，終於實現了。澀谷十字路口上方的大螢幕一遍又一遍地重播你的最後一圈，這一次，沒有人在過馬路。你以前的卡丁車俱樂部把你的照片掛在門口，就在那座小神社旁邊。',
+  'Korea\'s first Grand Prix winner':
+    '韓國首位大獎賽冠軍',
+  'No driver from Korea had ever won a Formula 1 race. Now one has. Every chicken place in Hongdae has the race on and nobody is going home. The news anchor cannot get through the headline without stopping. Your mum has given up answering the phone, because it will not stop ringing.':
+    '從來沒有韓國車手贏過 F1 分站。現在有了。弘大每一間炸雞店都在播比賽，沒有人肯回家。新聞主播讀頭條時哽咽了好幾次。你媽媽已經放棄接電話了，因為電話根本響個不停。',
+  'The first {adj} Grand Prix winner':
+    '第一位{nation}大獎賽冠軍',
+  'No {adj} driver had ever won a Formula 1 race. Now one has. Back home it is on every front page, and people who had never watched a Grand Prix are setting alarms for the next one.':
+    '從來沒有{nation}車手贏過 F1 分站。現在有了。家鄉每一份報紙的頭版都是你，從來沒看過大獎賽的人，已經為下一場定好了鬧鐘。',
+  'The Korean Grand Prix is back':
+    '韓國大獎賽回來了',
+  'Formula 1 last raced in Korea in 2013, and the circuit at Yeongam has been quiet ever since. Then a Korean driver started a Grand Prix. This year the Korean Grand Prix is back on the calendar, the week after Suzuka, and every ticket sold out in nine minutes.':
+    'F1 上一次在韓國比賽是 2013 年，之後靈岩賽道一直靜悄悄。然後，一位韓國車手在大獎賽起跑了。今年，韓國大獎賽重返賽曆，就排在鈴鹿之後一週，門票九分鐘內全部售罄。',
 };

@@ -72,6 +72,7 @@ export const KD = {
     australia: { name: '호주 그랑프리', short: '호주', place: '멜버른' },
     china: { name: '중국 그랑프리', short: '중국', place: '상하이' },
     japan: { name: '일본 그랑프리', short: '일본', place: '스즈카' },
+    korea: { name: '코리아 그랑프리', short: '한국', place: '영암' },
     bahrain: { name: '바레인 그랑프리', short: '바레인', place: '사키르' },
     saudi: { name: '사우디아라비아 그랑프리', short: '사우디아라비아', place: '제다' },
     miami: { name: '마이애미 그랑프리', short: '마이애미', place: '마이애미 가든스' },
@@ -196,6 +197,7 @@ export const KD = {
     pit_crew: { name: '피트 크루', desc: '개발자에게 커피를 사서 응원한다.' },
     daily: { name: '데일리 드라이버', desc: '데일리 챌린지를 완료한다.' },
     macau_win: { name: '마카오의 왕', desc: '마카오 그랑프리에서 우승한다.' },
+    history_maker: { name: '역사를 쓰다', desc: '고국 출신 드라이버로는 처음으로 그랑프리에서 우승한다.' },
   },
 
   person: {

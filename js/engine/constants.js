@@ -4,8 +4,11 @@
 //   1  the original game
 //   2  home-crowd pack (Macau Grand Prix, first driver from your country, Macau
 //      nationality) and the variety pass (reserve-season events). Both shipped
-//      together, so they share version 2. Anything new after them is version 3.
-export const CONTENT_VERSION = 2;
+//      together, so they share version 2.
+//   3  Japan and Korea pack: the Korean Grand Prix at Yeongam, the first Grand
+//      Prix winner from your country, and Suzuka, Yeongam, manga and variety
+//      show events. Anything new after it is version 4.
+export const CONTENT_VERSION = 3;
 
 export const START_YEAR = 2026;
 export const START_AGE = 15;

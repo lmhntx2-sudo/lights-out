@@ -41,7 +41,7 @@ export const NATIONS = [
   { id: 'TW', name: 'Taiwan', adj: 'Taiwanese', flag: '🇹🇼', region: 'ap', names: 'zh', home: [], market: 1.0 },
   { id: 'HK', name: 'Hong Kong', adj: 'Hongkonger', flag: '🇭🇰', region: 'ap', names: 'zh', home: [], market: 1.05 },
   { id: 'MO', name: 'Macau', adj: 'Macanese', flag: '🇲🇴', region: 'ap', names: 'zh', home: [], market: 1.0, cv: 2 },
-  { id: 'KR', name: 'South Korea', adj: 'Korean', flag: '🇰🇷', region: 'ap', names: 'kr', home: [], market: 1.0 },
+  { id: 'KR', name: 'South Korea', adj: 'Korean', flag: '🇰🇷', region: 'ap', names: 'kr', home: ['korea'], market: 1.0 },
   { id: 'TH', name: 'Thailand', adj: 'Thai', flag: '🇹🇭', region: 'ap', names: 'th', home: [], market: 0.95 },
   { id: 'IN', name: 'India', adj: 'Indian', flag: '🇮🇳', region: 'ap', names: 'in', home: [], market: 1.1 },
   { id: 'SG', name: 'Singapore', adj: 'Singaporean', flag: '🇸🇬', region: 'ap', names: 'zh', home: ['singapore'], market: 1.0 },

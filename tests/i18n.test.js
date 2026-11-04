@@ -208,6 +208,8 @@ const EXTRA = {
   '{name}, {adj} and eight years old': ['{nation}'],
   'The first {adj} in Formula 1': ['{nation}'],
   'No {adj} driver had ever started a Formula 1 race. Now one has. Back home the race is on every screen, and people who had never watched a Grand Prix are suddenly experts on tyre strategy.': ['{nation}'],
+  'The first {adj} Grand Prix winner': ['{nation}'],
+  'No {adj} driver had ever won a Formula 1 race. Now one has. Back home it is on every front page, and people who had never watched a Grand Prix are setting alarms for the next one.': ['{nation}'],
 };
 const holes = (x) => (x.match(/\{\w+\}/g) || []).sort();
 

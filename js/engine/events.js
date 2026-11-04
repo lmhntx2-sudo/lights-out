@@ -77,6 +77,22 @@ const SPONSOR = {
     back: 'The pork chop bun returns. Merch sales explode. Ping Kee opens three new branches, and the tour buses start stopping outside.',
     photo: 'You send them a signed photo instead. It goes on the wall above the grill.',
   },
+  jp: {
+    label: 'Find a sponsor: the ramen shop by the station',
+    deal: 'Menya Hayate pays sixty grand to put a steaming bowl of ramen, soft-boiled egg and all, on your helmet. Objectively the best-looking helmet in the paddock.',
+    debut: 'Back in Japan, the owner of Menya Hayate has the race on the little TV above the noodle pots, and nobody in the queue is complaining.',
+    letter: 'Menya Hayate, your very first sponsor, sends a letter in shaky handwriting. Could their ramen bowl go back on your helmet, just for one race?',
+    back: 'The ramen bowl returns. Merch sales explode. Menya Hayate opens three new branches, and the queues start before breakfast.',
+    photo: 'You send them a signed photo instead. It goes on the wall above the meal ticket machine.',
+  },
+  kr: {
+    label: 'Find a sponsor: the fried chicken place in your neighbourhood',
+    deal: 'Halmae Chicken pays sixty grand to put a golden fried drumstick on your helmet. Objectively the best-looking helmet in the paddock.',
+    debut: 'Back in Korea, Halmae Chicken has the race on the TV next to the fryer, and the delivery riders are watching instead of delivering.',
+    letter: 'Halmae Chicken, your very first sponsor, sends a letter in shaky handwriting. Could their drumstick go back on your helmet, just for one race?',
+    back: 'The drumstick returns. Merch sales explode. Halmae Chicken opens three new branches, and every one sells out on race nights.',
+    photo: 'You send them a signed photo instead. It goes on the wall above the table where you used to do your homework.',
+  },
 };
 const sponsor = (s) => SPONSOR[sponsorKind(s.driver.nat)];
 
@@ -2283,6 +2299,87 @@ ev({
       ok: { text: 'They get within a tenth and spend the rest of the day trying to close it. So do you. Everyone gets faster.', fx: { stats: { pace: 1 } } },
       ko: { text: 'They beat your time on their third lap. The engineers are delighted. You are very quiet on the drive home.', fx: { stats: { composure: 1 } } },
     },
+  ],
+});
+
+// ------------------------------------------------------ Japan and Korea (content version 3)
+
+const jkOn = (s) => contentVersion(s) >= 3;
+
+ev({
+  id: 'suzuka_home',
+  phase: 'race',
+  w: 9,
+  gap: 12,
+  when: (s, c) => jkOn(s) && c.trackId === 'japan' && c.home,
+  title: 'Suzuka: the home crowd',
+  text: 'The grandstands at Suzuka are a sea of homemade hats. One fan has a model of your car on their head, rear wing and all. They camped out on Thursday and will stay until the last truck leaves, rain or shine. A whole country has waited a very long time for a Japanese driver to win here.',
+  choices: [
+    {
+      label: 'Give them the race they came for', stat: 'pace', base: 48,
+      ok: { text: 'Through the Esses like a metronome. Every lap, the grandstand at the hairpin stands up as you go past.', fx: { mod: 3, fame: 4 } },
+      ko: { text: 'Too keen into Turn 1 on the opening lap. You lock up, flat-spot a tyre, and the hats in the grandstand droop a little.', fx: { mod: -2.5, fame: 1 } },
+    },
+    { label: 'Bow to the grandstand before the race', ok: { text: 'You walk to the fence on Thursday and bow. Ten thousand people bow back. Something settles in your chest, and you drive a calm, tidy race.', fx: { mod: 1, fame: 3, stats: { composure: 1 } } } },
+  ],
+});
+
+ev({
+  id: 'korea_gp',
+  phase: 'race',
+  w: 10,
+  gap: 12,
+  when: (s, c) => jkOn(s) && c.trackId === 'korea',
+  title: 'Yeongam: the Korean Grand Prix',
+  text: 'For years the grandstands at Yeongam sat empty. Today every seat is taken. Fans came down from Seoul on the first train of the morning, and the whole place is clapping the old World Cup rhythm: "Dae-han-min-guk!" Clap clap, clap clap clap.',
+  choices: [
+    {
+      label: 'Feed off the chant', stat: 'composure', base: 50,
+      ok: { text: 'Every time you come past the main grandstand, the chant gets louder. It is the best you have ever driven.', fx: { mod: 3, fame: 4 } },
+      ko: { text: 'You try to win it all on the first lap and run wide at Turn 3. They keep chanting anyway, which somehow makes it worse.', fx: { mod: -2, fame: 1 } },
+    },
+    {
+      label: 'Use the long back straight', stat: 'racecraft', base: 50,
+      ok: { text: 'The back straight goes on forever. You sit in the tow, pull out late and sail past into Turn 3. Twice.', fx: { mod: 2.5, fame: 2 } },
+      ko: { text: 'You pull out of the tow too early and run out of speed. Side by side into Turn 3, behind on the way out.', fx: { mod: -1.5 } },
+    },
+  ],
+});
+
+ev({
+  id: 'manga_hero',
+  phase: 'between',
+  w: 1.5,
+  once: true,
+  when: (s) => jkOn(s) && s.driver.nat === 'JP' && (s.career.series === 'F1' || s.driver.fame >= 45),
+  title: 'A manga about you',
+  text: 'A weekly manga magazine in Tokyo wants to run a racing manga with a hero based on you. The artist sends the first sketches: your helmet, your car, and you, with much bigger hair and a lot more speed lines.',
+  choices: (s) => [
+    { label: 'Say yes and help with the story', ok: { text: 'Chapter one comes out on a Wednesday. By Saturday, kids at karting tracks all over Japan have copied your helmet design.', fx: { fame: 4, money: pay(s, 300000) } } },
+    {
+      label: 'Ask them to make your character lose sometimes', stat: 'composure', base: 50,
+      ok: { text: 'The artist loves it: a hero who loses is a hero people believe in. The manga is a hit, and an anime is announced before the season ends.', fx: { fame: 6, money: pay(s, 500000) } },
+      ko: { text: 'Your character now loses every single chapter. Readers adore the rival. You are not sure how to feel.', fx: { fame: 2 } },
+    },
+    { label: 'Politely decline', ok: { text: 'You would rather be known for what you do on track. The artist sends one drawing anyway, and you frame it.', fx: { stats: { composure: 1 } } } },
+  ],
+});
+
+ev({
+  id: 'variety_show',
+  phase: 'between',
+  w: 1.5,
+  once: true,
+  when: (s) => jkOn(s) && s.driver.nat === 'KR' && (s.career.series === 'F1' || s.driver.fame >= 45),
+  title: 'A variety show invitation',
+  text: 'The biggest weekend variety show in Korea wants you as a guest. The format: celebrities run around Seoul doing silly missions, and the losers get a face full of flour. This week there is a go-kart race.',
+  choices: (s) => [
+    {
+      label: 'Go, and play to win', stat: 'racecraft', base: 50,
+      ok: { text: 'You win the go-kart race by a lap and the name-tag game by pure stubbornness. It is the most-watched episode of the year.', fx: { fame: 5, money: pay(s, 200000) } },
+      ko: { text: 'You lose the go-kart race to a K-pop idol who had never driven before. The clip is on every channel. Somehow your fame goes up anyway.', fx: { fame: 3 } },
+    },
+    { label: 'Decline: the season comes first', ok: { text: 'The producers say the door is always open. Your engineer is quietly relieved.', fx: { teamRel: 2 } } },
   ],
 });
 

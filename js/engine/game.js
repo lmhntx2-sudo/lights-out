@@ -294,7 +294,10 @@ function startSeason(s, r) {
   const c = s.career;
   const series = c.series;
   const t = s.teams[c.team];
-  s.season = { year: s.year, series, cal: CALENDARS[series].slice(), round: 0, stand: {}, tstand: {}, race: null, role: c.role, decider: false };
+  const cal = CALENDARS[series].slice();
+  const korea = series === 'F1' && koreaBack(s);
+  if (korea) cal.splice(cal.indexOf('japan') + 1, 0, 'korea');
+  s.season = { year: s.year, series, cal, round: 0, stand: {}, tstand: {}, race: null, role: c.role, decider: false };
   for (const { id } of seatsOf(s, series)) s.season.stand[id] = newStand();
   for (const tm of teamsOf(s, series)) s.season.tstand[tm.id] = 0;
   delete s.flags.academyWarn;
@@ -317,6 +320,7 @@ function startSeason(s, r) {
     car: c.role === 'race' ? { color: t.color, accent: t.accent || '#FFFFFF', number: raceNumber(s) } : null,
     series,
   });
+  if (korea) mile(s, 'koreagp', flagOf('KR'), tr('The Korean Grand Prix is back'), tr('Formula 1 last raced in Korea in 2013, and the circuit at Yeongam has been quiet ever since. Then a Korean driver started a Grand Prix. This year the Korean Grand Prix is back on the calendar, the week after Suzuka, and every ticket sold out in nine minutes.'), 'purple');
 
   const ctx = contextBase(s, r);
   s.stage = 'race';
@@ -477,6 +481,8 @@ const SPONSOR_WIN = {
   hk: () => tr('Sun Keung Kee gives free iced lemon tea to the whole street.'),
   tw: () => tr('A-Ma Boba gives free pearl milk tea to the whole town.'),
   mo: () => tr('Ping Kee gives free pork chop buns to the whole of Taipa.'),
+  jp: () => tr('Menya Hayate gives free ramen to the whole shopping street.'),
+  kr: () => tr('Halmae Chicken gives free fried chicken to every flat in your old apartment block.'),
 };
 
 // Places that have never had a driver start a Grand Prix, in this world's past
@@ -487,6 +493,7 @@ const FIRST_FROM = {
   HK: () => [tr('First from Hong Kong'), tr("No driver from Hong Kong had ever started a Formula 1 race. Now one has. Back home, the cha chaan teng by your old school has the race on every screen and nobody has touched their milk tea. Your group chat has nine hundred unread messages. Someone has hung a bedsheet from a footbridge in Mong Kok: 'Hong Kong finally has an F1 driver!'")],
   TW: () => [tr('First from Taiwan'), tr("No driver from Taiwan had ever started a Formula 1 race. Now one has. At a night market in Taichung someone has wheeled a TV out next to the fried chicken stall, and the crowd has blocked the whole lane. Your old karting coach at Penbay posts a single word, 'Finally.' By morning it has two hundred thousand likes.")],
   MO: () => [tr('First from Macau'), tr('No driver from Macau had ever started a Formula 1 race. Every November the best young drivers in the world come to race on your streets. This time one of yours went out into the world. Around Senado Square the race is on every phone, and the bakery next to your old school is handing out free egg tarts.')],
+  KR: () => [tr('First from Korea'), tr('No driver from Korea had ever started a Formula 1 race. Now one has. In a PC bang in Seoul, sixty sim racers have stopped their own races to watch yours on the big screen. Your mum has phoned every relative you have, twice. Down in Yeongam, someone has unlocked the gates of the empty Grand Prix circuit and is walking up and down the grid.')],
 };
 
 // The first Grand Prix start by a driver from a country that has never had one.
@@ -502,6 +509,38 @@ function firstFromHome(s) {
     tr('No {adj} driver had ever started a Formula 1 race. Now one has. Back home the race is on every screen, and people who had never watched a Grand Prix are suddenly experts on tyre strategy.', { adj: n.adj, nation: natName(n) }),
   ];
   mile(s, 'f1first', n.flag, title, text, 'purple');
+}
+
+// Places whose drivers have never won a Grand Prix, in this world's past or the real one.
+const NEVER_WON = ['JP', 'KR', 'CN', 'HK', 'MO', 'TW', 'TH', 'IN', 'SG', 'AE', 'SA', 'DK'];
+
+const FIRST_WIN = {
+  JP: () => [tr("Japan's first Grand Prix winner"), tr('No Japanese driver had ever won a Formula 1 race. There were podiums that came so close, and decades of fans who kept coming to Suzuka anyway. Now it has happened. In Shibuya the giant screens over the crossing replay your last lap again and again, and for once nobody is crossing. Your old karting club has put your photo up by the gate, next to the little shrine.')],
+  KR: () => [tr("Korea's first Grand Prix winner"), tr('No driver from Korea had ever won a Formula 1 race. Now one has. Every chicken place in Hongdae has the race on and nobody is going home. The news anchor cannot get through the headline without stopping. Your mum has given up answering the phone, because it will not stop ringing.')],
+};
+
+// The first Grand Prix win for a country that has never had one: no AI driver
+// from there has won, and no parent did either. It needs no dice, but it adds to
+// the feed and unlocks an achievement, so it only happens from content version 3.
+function firstWinForHome(s) {
+  const nat = s.driver.nat;
+  if (contentVersion(s) < 3 || !NEVER_WON.includes(nat)) return;
+  if (LEGENDS.some((l) => l.nat === nat && l.wins > 0) || legacyOf(s)?.wins > 0) return;
+  if (Object.values(s.drivers).some((d) => !d.isPlayer && d.nat === nat && d.wins > 0)) return;
+  const n = nation(nat);
+  const [title, text] = FIRST_WIN[nat]?.() || [
+    tr('The first {adj} Grand Prix winner', { adj: n.adj, nation: natName(n) }),
+    tr('No {adj} driver had ever won a Formula 1 race. Now one has. Back home it is on every front page, and people who had never watched a Grand Prix are setting alarms for the next one.', { adj: n.adj, nation: natName(n) }),
+  ];
+  mile(s, 'f1natwin', n.flag, title, text, 'purple');
+  unlock(s, 'history_maker');
+}
+
+// The Korean Grand Prix last ran in 2013. A Korean driver in Formula 1 brings it
+// back, the week after Suzuka, from their second season on. It changes the
+// calendar, so only from content version 3.
+function koreaBack(s) {
+  return contentVersion(s) >= 3 && s.driver.nat === 'KR' && s.career.tot.F1.starts > 0;
 }
 
 function finishRace(s, r) {
@@ -577,6 +616,7 @@ function finishRace(s, r) {
           : s.flags.remortgage ? tr('Your parents are in the garage, holding each other, crying.') : tr('The team carries you on their shoulders.');
         const kebab = s.flags.kebab && SPONSOR_WIN[sponsorKind(d.nat)]();
         mile(s, 'f1win', '🏁', tr('Grand Prix winner'), cat(tr('You win the {gp}.', at), crowd, kebab), 'purple');
+        firstWinForHome(s);
         if (lg && tot.wins === lg.wins + 1) {
           const text = lg.wins ? tr('Win number {n}. That is one more Grand Prix than {parent} ever won.', { n: tot.wins, parent }) : tr('{parent} never won a Grand Prix. You just did.', { parent });
           mile(s, 'parentwins', '👪', tr('Out of the shadow'), text, 'purple');

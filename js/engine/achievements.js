@@ -69,6 +69,7 @@ export const ACHIEVEMENTS = [
   A('pit_crew', '☕', 'Pit crew', 'Fuel the developer with a coffee.', 'manual'),
   A('daily', '📅', 'Daily driver', 'Complete a daily challenge.', 'manual'),
   A('macau_win', '🏮', 'Macau winner', 'Win the Macau Grand Prix.', 'manual'),
+  A('history_maker', '🌏', 'History maker', 'Win the first Grand Prix ever won by a driver from your country.', 'manual'),
 ];
 
 export const ACH_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -78,6 +79,8 @@ const FIRST_SPONSOR = {
   hk: () => ({ icon: '🍍', name: tr('Pineapple bun king') }),
   tw: () => ({ icon: '🧋', name: tr('Bubble tea king') }),
   mo: () => ({ icon: '🍔', name: tr('Pork chop bun king') }),
+  jp: () => ({ icon: '🍜', name: tr('Ramen king') }),
+  kr: () => ({ icon: '🍗', name: tr('Fried chicken king') }),
 };
 
 // Icon, name and description in the current language. `nat` is the driver's

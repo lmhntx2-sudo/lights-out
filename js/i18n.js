@@ -35,6 +35,7 @@ let lang = 'en';
 let variant = 'hk';
 
 export const getLang = () => lang;
+export const getVariant = () => variant;
 export const isZh = () => lang === 'zh';
 export const langTag = (code) => LANGS.find(([c]) => c === code)?.[2] || 'en';
 export const htmlLang = () => (lang === 'zh' ? (variant === 'tw' ? 'zh-Hant-TW' : 'zh-Hant-HK') : langTag(lang));

@@ -14,6 +14,7 @@ import { setLang } from '../js/i18n.js';
 // The nationality list as it was before content versions, so old-career fingerprints
 // don't shift when a later version adds a nationality.
 const V1_NATS = NATIONS.filter((n) => (n.cv ?? 1) === 1);
+const V2_NATS = NATIONS.filter((n) => (n.cv ?? 1) <= 2);
 const STYLE_KEYS = Object.keys(STYLES);
 const BG_KEYS = Object.keys(BACKGROUNDS);
 const CJK = /[㐀-鿿]/;
@@ -75,20 +76,33 @@ test('careers started before content version 2 play exactly as they did', () => 
   assert.equal(h.digest('hex').slice(0, 24), 'e3f8bcc47b60bc0afde64b04');
 });
 
+test('careers started on content version 2 play exactly as they did', () => {
+  // Computed on 08eae03, the last commit before the Japan and Korea pack (version 3),
+  // with every nationality version 2 had.
+  const h = createHash('sha256');
+  for (let i = 0; i < 72; i++) {
+    const s = play(newGame(setup(`cv2-${i}`, i, { cv: 2, nat: V2_NATS[i % V2_NATS.length].id })));
+    const r = s.retired;
+    h.update(JSON.stringify([s.rng, s.feed.length, s.fn, s.log.length, r.score, r.worth, r.f1, r.junior, r.age, r.seasons, r.ach, r.tierKey]));
+  }
+  assert.equal(h.digest('hex').slice(0, 24), 'a29f25f60fecb59a2b3cdcf3');
+});
+
 test('new careers record the content version, old ones keep having none', () => {
-  assert.equal(CONTENT_VERSION, 2);
+  assert.equal(CONTENT_VERSION, 3);
   assert.equal(newGame(setup('cv-new')).setup.cv, CONTENT_VERSION);
   assert.equal('cv' in newGame(setup('cv-old', 0, { cv: 1 })).setup, false, 'version 1 is stored as no cv, like saves from before');
 
   // A setup from before content versions is checked and replayed as version 1.
   assert.equal(validateSetup(setup('cv-check')).cv, 1);
   assert.equal(validateSetup(setup('cv-check', 0, { cv: 2 })).cv, 2);
-  for (const cv of [0, 3, 1.5, '2']) {
+  assert.equal(validateSetup(setup('cv-check', 0, { cv: 3 })).cv, 3);
+  for (const cv of [0, 4, 1.5, '2']) {
     assert.throws(() => validateSetup(setup('cv-check', 0, { cv })), ReplayError, `cv ${cv}`);
   }
 
   // Both kinds replay, and an old career gets back exactly the setup it had.
-  for (const cv of [1, 2]) {
+  for (const cv of [1, 2, 3]) {
     const s = play(newGame(validateSetup(setup(`cv-replay-${cv}`, cv, { cv }))), { affordable: true });
     const saved = JSON.parse(JSON.stringify(s));
     const r = replayCareer(saved.setup, saved.log);
