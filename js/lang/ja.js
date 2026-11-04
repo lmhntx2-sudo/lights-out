@@ -633,4 +633,9 @@ export const JA = {
     '韓国GPが帰ってきた',
   'Formula 1 last raced in Korea in 2013, and the circuit at Yeongam has been quiet ever since. Then a Korean driver started a Grand Prix. This year the Korean Grand Prix is back on the calendar, the week after Suzuka, and every ticket sold out in nine minutes.':
     'F1が最後に韓国で開催されたのは2013年。それ以来、霊岩のサーキットは静まり返っていた。そこへ韓国人ドライバーがグランプリに出走した。今年、韓国GPがカレンダーに復活する。鈴鹿の翌週だ。チケットは9分で完売した。',
+
+  // ------------------------------------------------------------ cutscenes
+  'Skip': 'スキップ',
+  'Cutscenes': 'カットシーン',
+  'Short 3D scenes for the biggest moments: your debut, a first win, a title, your home crowd and your family.': 'キャリアの大きな瞬間に短い3Dシーンを再生します：デビュー、初優勝、タイトル、地元の観客、そして家族。',
 };

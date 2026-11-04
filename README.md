@@ -11,6 +11,7 @@ Functions: the optional global leaderboard and an anonymous play counter.
 
 What's in it: a race number you pick, team liveries, an F1-broadcast-style timing tower,
 Race Control banners, team targets each season, podium and championship celebrations,
+short 3D cutscenes for the biggest moments,
 an all-time records table against fictional legends, shareable career-card images,
 achievements, a daily challenge, seeds you can share, a global leaderboard, optional
 sound effects, and a "Fuel the dev" tip jar.
@@ -91,6 +92,41 @@ Data lives in Netlify Blobs in a store called `stats`. Deploy previews, branch d
 and `npm start` each use their own store, so testing never adds to the real numbers.
 Set `STATS_SALT` in Netlify's environment variables to choose the hash salt; otherwise
 it uses `LEADERBOARD_SALT`, or a random salt kept in the store.
+
+## Cutscenes
+
+The biggest moments of a career play a short 3D scene, 7 to 9 seconds long:
+
+- the F1 debut, with the five red lights going out
+- the first Grand Prix win: the chequered flag, then the podium and the champagne
+- every world title
+- the proposal, on a beach after the race
+- the baby on the way
+- retirement
+
+The home crowd gets its own scene for a driver's first F1 start or first win as the
+country's first, a first home win, and the Macau Grand Prix. Hong Kong gets a neon street
+and the harbour. Japan gets Suzuka in spring, with Mt Fuji and the Ferris wheel. Korea
+gets the Han river, with the clap rhythm of "Dae-han-min-guk". Taiwan gets sky lanterns
+and Taipei 101, and Macau gets the Guia Circuit and Grand Lisboa. Everyone else gets a
+grandstand in their flag's colours.
+
+At most one scene plays per button press. They are skippable (Skip, Escape, Enter, Space
+or a tap) and can be switched off in Settings. They are off by default when race
+animations are off, which is also the default for anyone who asks their system for
+reduced motion.
+
+The scenes are built in code from simple shapes with [three.js](https://threejs.org)
+(`js/vendor/three.module.min.js`, r170, MIT). There are no model or texture files.
+three.js and the scenes load in the background once a career is on screen, so the game
+itself loads as fast as before. Without WebGL, or if loading fails, the game just carries
+on without them.
+
+Which moment gets a scene is decided in `js/ui/cutscene-pick.js`, from the career before
+and after a press. It never touches the engine, so careers play and replay exactly the same
+with or without cutscenes. To try a scene on its own, run `npm start` and open
+`http://localhost:5173/#cutscene=jp` (or `hk`, `kr`, `tw`, `mo`, `home:FR`, `debut`,
+`win`, `title`, `proposal`, `baby`, `retire`). Add `@4.5` to stop at 4.5 seconds.
 
 ## Second generation
 
@@ -178,6 +214,9 @@ Where things live:
 | `js/engine/replay.js` | Rebuilds a career from its setup and action log, for the leaderboard. |
 | `js/engine/legacy.js` | Retirement summary, epilogue, all-time records, and what a parent hands down to a kid. |
 | `js/ui/` | Title screen, game screen, dialogs, donations. |
+| `js/ui/cutscene-pick.js`, `js/ui/cutscene.js` | Which moment gets a cutscene, and the player that shows it. |
+| `js/scenes/` | The 3D cutscenes: `kit.js` (props and effects), `moments.js`, `places.js`. |
+| `js/vendor/three.module.min.js` | three.js r170, for the cutscenes. |
 | `js/i18n.js` | Languages: English, 繁體中文 (Traditional Chinese), 日本語 (Japanese) and 한국어 (Korean). |
 | `js/engine/events.zh.js`, `events.ja.js`, `events.ko.js` | The words for every event in each language, keyed by event id. |
 | `js/lang/zh.js`, `ja.js`, `ko.js` and their `.data.js` files | The interface in each language, and names of tracks, nations, achievements and so on. |
@@ -214,7 +253,8 @@ through the local dev server's `/__save/` endpoint, which only exists in `tools/
 
 Flag emoji are from [Twemoji](https://github.com/jdecked/twemoji), licensed CC-BY 4.0,
 packaged as a font by [country-flag-emoji-polyfill](https://github.com/talkjs/country-flag-emoji-polyfill)
-(MIT). The typeface is Saira, served by Google Fonts.
+(MIT). The typeface is Saira, served by Google Fonts. The cutscenes use
+[three.js](https://github.com/mrdoob/three.js) (MIT, Copyright 2010-2024 three.js authors).
 
 All teams, drivers and sponsors are fictional. This is a fan-made game and isn't affiliated
 with Formula 1, the FIA or any team.

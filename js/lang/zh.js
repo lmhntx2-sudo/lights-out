@@ -633,4 +633,9 @@ export const ZH = {
     '韓國大獎賽回來了',
   'Formula 1 last raced in Korea in 2013, and the circuit at Yeongam has been quiet ever since. Then a Korean driver started a Grand Prix. This year the Korean Grand Prix is back on the calendar, the week after Suzuka, and every ticket sold out in nine minutes.':
     'F1 上一次在韓國比賽是 2013 年，之後靈岩賽道一直靜悄悄。然後，一位韓國車手在大獎賽起跑了。今年，韓國大獎賽重返賽曆，就排在鈴鹿之後一週，門票九分鐘內全部售罄。',
+
+  // ------------------------------------------------------------ cutscenes
+  'Skip': '跳過',
+  'Cutscenes': '過場動畫',
+  'Short 3D scenes for the biggest moments: your debut, a first win, a title, your home crowd and your family.': '在生涯最重要的時刻播放簡短的 3D 動畫：F1 首秀、首場勝利、奪冠、家鄉觀眾和你的家庭。',
 };

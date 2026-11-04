@@ -35,7 +35,27 @@ function tone(freq, dur, { type = 'sine', vol = 0.06, at = 0, slide } = {}) {
   o.stop(t0 + dur + 0.03);
 }
 
+// A short burst of noise, like a hand clap.
+function clap() {
+  const a = audio();
+  if (!a) return;
+  const n = Math.floor(a.sampleRate * 0.09);
+  const buf = a.createBuffer(1, n, a.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n) ** 3;
+  const src = a.createBufferSource();
+  src.buffer = buf;
+  const f = a.createBiquadFilter();
+  f.type = 'bandpass';
+  f.frequency.value = 1400;
+  const g = a.createGain();
+  g.gain.value = 0.35;
+  src.connect(f).connect(g).connect(a.destination);
+  src.start();
+}
+
 export const sfx = {
+  clap,
   light: () => tone(820, 0.11, { type: 'square', vol: 0.03 }),
   go: () => {
     tone(70, 1.2, { type: 'sawtooth', vol: 0.045, slide: 380 });

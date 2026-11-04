@@ -6,6 +6,7 @@ import { standingsOrder, slPoints } from '../engine/market.js';
 import { nameOf } from '../engine/world.js';
 import { overall } from '../engine/player.js';
 import { sponsorKind } from '../engine/helpers.js';
+import { cutscenesOn } from './cutscene.js';
 import { ACHIEVEMENTS, netWorth, achWords } from '../engine/achievements.js';
 import { nation } from '../data/nations.js';
 import { GAME } from '../config.js';
@@ -444,6 +445,7 @@ export function openSettings(app) {
       openSettings(app);
     })),
     h('div', { class: 'setting' }, h('div', null, h('b', null, t('Race animations')), h('p', null, t('Start lights, the timing tower and confetti.'))), seg([['full', t('Full')], ['fast', t('Fast')], ['off', t('Off')]], app.settings.anim, (v) => { app.settings.anim = v; store.saveSettings(app.settings); })),
+    h('div', { class: 'setting' }, h('div', null, h('b', null, t('Cutscenes')), h('p', null, t('Short 3D scenes for the biggest moments: your debut, a first win, a title, your home crowd and your family.'))), seg([[true, t('On')], [false, t('Off')]], cutscenesOn(app), (v) => { app.settings.cuts = v; store.saveSettings(app.settings); })),
     h('div', { class: 'setting' }, h('div', null, h('b', null, t('Sound effects')), h('p', null, t('Start lights, team radio beeps and victory fanfares.'))), seg([[true, t('On')], [false, t('Off')]], app.settings.sound !== false, (v) => { app.settings.sound = v; setSound(v); store.saveSettings(app.settings); })),
   );
   dlg = openDialog(t('Settings'), body);

@@ -87,4 +87,8 @@ setSound(app.settings.sound !== false);
 
 const params = new URLSearchParams(location.search);
 renderTitle(app, { seed: params.get('seed') || undefined, daily: params.has('daily') });
+// Try a cutscene on its own, on localhost only: /#cutscene=jp or /#cutscene=home:FR
+if (['localhost', '127.0.0.1'].includes(location.hostname) && location.hash.startsWith('#cutscene=')) {
+  import('./ui/cutscene.js').then((m) => m.previewCutscene(decodeURIComponent(location.hash.slice(10))));
+}
 ping('open');

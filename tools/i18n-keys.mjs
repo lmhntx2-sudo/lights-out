@@ -22,7 +22,8 @@ export function scanKeys() {
   const keys = new Map();
   const dynamic = [];
   for (const file of files(join(root, 'js'))) {
-    if (file.includes(`${join('js', 'lang')}`)) continue;
+    // Translations themselves, and third-party code that only looks like t('...') calls.
+    if (file.includes(join('js', 'lang')) || file.includes(join('js', 'vendor'))) continue;
     // Comment lines often show example calls; skip them.
     const src = readFileSync(file, 'utf8').replace(/^\s*\/\/.*$/gm, '');
     for (const m of src.matchAll(CALL)) {

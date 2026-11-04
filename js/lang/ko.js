@@ -635,4 +635,9 @@ export const KO = {
     '코리아 그랑프리가 돌아왔다',
   'Formula 1 last raced in Korea in 2013, and the circuit at Yeongam has been quiet ever since. Then a Korean driver started a Grand Prix. This year the Korean Grand Prix is back on the calendar, the week after Suzuka, and every ticket sold out in nine minutes.':
     'F1이 마지막으로 한국에서 열린 건 2013년. 그 뒤로 영암 서킷은 내내 조용했다. 그런데 한국인 드라이버가 그랑프리에 출전했다. 올해 코리아 그랑프리가 스즈카 바로 다음 주로 캘린더에 돌아왔고, 티켓은 9분 만에 매진됐다.',
+
+  // ------------------------------------------------------------ cutscenes
+  'Skip': '건너뛰기',
+  'Cutscenes': '컷신',
+  'Short 3D scenes for the biggest moments: your debut, a first win, a title, your home crowd and your family.': '커리어의 가장 큰 순간에 짧은 3D 장면을 보여 줍니다: 데뷔, 첫 우승, 타이틀, 홈 관중, 그리고 가족.',
 };

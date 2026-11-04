@@ -23,6 +23,8 @@ import { openRecords } from './modals.js';
 import { car } from './car.js';
 import { raceNumber } from '../engine/player.js';
 import { confetti, takeover } from './celebrate.js';
+import { pickCutscene, snapshot } from './cutscene-pick.js';
+import { playCutscene, cutscenesOn, sceneContext, prefetchCutscenes } from './cutscene.js';
 import { sfx } from './sfx.js';
 import { openShare } from './share.js';
 import { t, tn, cat, gap, statName, seriesName, trackShortById } from '../i18n.js';
@@ -44,6 +46,7 @@ export function mountGame(app) {
   renderFeedAll(app);
   app.refresh();
   requestAnimationFrame(() => window.scrollTo({ top: document.documentElement.scrollHeight }));
+  if (cutscenesOn(app)) prefetchCutscenes();
 }
 
 // Run an engine action, then patch the screen.
@@ -51,6 +54,7 @@ function act(app, fn, { animate = false } = {}) {
   const s = app.s;
   const pendN = s.pending?.n;
   const achBefore = s.ach.length;
+  const before = snapshot(s);
   try {
     fn(s);
   } catch (e) {
@@ -69,7 +73,7 @@ function act(app, fn, { animate = false } = {}) {
   const added = appendNew(app, animated);
   app.refresh();
   for (const id of s.ach.slice(achBefore)) if (freshAch.includes(id)) achToast(id, s.driver.nat);
-  celebrate(app, s.feed.filter((e) => e.n > prevN), pendN ? s.feed.find((e) => e.n === pendN) : null, animated);
+  celebrate(app, s.feed.filter((e) => e.n > prevN), pendN ? s.feed.find((e) => e.n === pendN) : null, animated, before);
   if (s.nudge) {
     const reason = s.nudge;
     delete s.nudge;
@@ -79,23 +83,36 @@ function act(app, fn, { animate = false } = {}) {
   reveal(app, updated, added);
 }
 
-// Sounds, confetti and the championship moment.
-function celebrate(app, fresh, resolved, animated) {
+// Sounds, confetti, cutscenes and the championship moment.
+function celebrate(app, fresh, resolved, animated, before) {
   const motion = app.settings.anim !== 'off';
   if (resolved?.rolled) (resolved.ok ? sfx.ok : sfx.ko)();
   if (fresh.some((e) => e.k === 'event' && e.radio && e.picked == null)) setTimeout(sfx.radio, 300);
   const champ = fresh.find((e) => e.k === 'season' && e.champion);
   const win = fresh.filter((e) => e.k === 'race' && e.me && !e.me.dnf && e.me.pos === 1).pop();
+  // The biggest moment of this press gets a 3D scene, after the timing tower has played out.
+  const cut = before && cutscenesOn(app) ? pickCutscene(app.s, before, fresh, resolved) : null;
+  const wait = animated && fresh.some((e) => e.k === 'race') ? 1450 * (app.settings.anim === 'fast' ? 0.5 : 1) : 0;
+  const play = () => playCutscene(cut, sceneContext(app.s));
   if (champ) {
-    sfx.title();
-    if (motion) confetti([champ.car?.color || '#e10600', '#ffffff', '#d4af37', '#b05cff'], { count: 260, duration: 3400 });
-    const record = t('{pts} and {wins}.', { pts: plural(champ.pts, 'point'), wins: plural(champ.wins, 'win') });
-    takeover({
-      lines: champ.series === 'F1' ? [t('World'), t('Champion')] : [seriesName(champ.series), t('Champion')],
-      year: String(champ.year),
-      sub: cat(record, champ.series === 'F1' ? t('Your name is on the trophy forever.') : t('The next rung of the ladder is waiting.')),
-      livery: champ.car ? { ...champ.car, helmet: app.s.driver.helmet?.c1 } : null,
-    });
+    const show = (played) => {
+      if (!played) sfx.title();
+      if (motion) confetti([champ.car?.color || '#e10600', '#ffffff', '#d4af37', '#b05cff'], { count: 260, duration: 3400 });
+      const record = t('{pts} and {wins}.', { pts: plural(champ.pts, 'point'), wins: plural(champ.wins, 'win') });
+      takeover({
+        lines: champ.series === 'F1' ? [t('World'), t('Champion')] : [seriesName(champ.series), t('Champion')],
+        year: String(champ.year),
+        sub: cat(record, champ.series === 'F1' ? t('Your name is on the trophy forever.') : t('The next rung of the ladder is waiting.')),
+        livery: champ.car ? { ...champ.car, helmet: app.s.driver.helmet?.c1 } : null,
+      });
+    };
+    if (cut) setTimeout(() => play().then(show), wait);
+    else show(false);
+  } else if (cut) {
+    setTimeout(() => {
+      if (win && cut.scene !== 'win') sfx.win();
+      play();
+    }, wait);
   } else if (win) {
     const fire = () => {
       sfx.win();
