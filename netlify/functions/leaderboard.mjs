@@ -4,6 +4,7 @@
 import { getStore } from '@netlify/blobs';
 import { purgeCache } from '@netlify/functions';
 import { handleLeaderboard } from '../lib/leaderboard.mjs';
+import { preflight, withCors } from '../lib/cors.mjs';
 
 const env = (k) => globalThis.Netlify?.env.get(k) ?? process.env[k];
 
@@ -15,8 +16,9 @@ function storeName(context) {
 }
 
 export default async (req, context) => {
+  if (req.method === 'OPTIONS') return preflight();
   const store = getStore({ name: storeName(context), consistency: 'strong' });
-  return handleLeaderboard(req, {
+  return withCors(await handleLeaderboard(req, {
     store,
     ip: context?.ip,
     salt: env('LEADERBOARD_SALT'),
@@ -28,10 +30,10 @@ export default async (req, context) => {
         console.warn('Cache purge skipped:', e.message);
       }
     },
-  });
+  }));
 };
 
 export const config = {
   path: '/api/leaderboard',
-  method: ['GET', 'POST'],
+  method: ['GET', 'POST', 'OPTIONS'],
 };

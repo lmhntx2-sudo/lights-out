@@ -187,6 +187,12 @@ The game is a static site, but the global leaderboard needs Netlify (Functions a
   leaderboard won't work with those.
 - **Anywhere else** (Vercel, GitHub Pages): deploy the project root as a static site. The
   game works; the leaderboard buttons just say it isn't available.
+- **Game portals** (itch.io, Newgrounds, Game Jolt): `node tools/build.mjs --portal` makes
+  `tmp/lights-out-web.zip`, an HTML5 upload with `index.html` at the top. A portal serves the
+  game from its own domain, so this copy points the leaderboard and the play counter at the
+  live site (`SERVER.origin` in `js/config.js`), and both functions answer cross-site
+  requests (`netlify/lib/cors.mjs`). Nothing in the API depends on cookies or logins, and
+  the rate limits still apply.
 
 ## Develop
 

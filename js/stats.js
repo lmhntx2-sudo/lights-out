@@ -5,8 +5,9 @@
 // ask not to be tracked (Global Privacy Control, Do Not Track) send nothing.
 // Fire and forget: it never shows an error and never holds up the game.
 import { store } from './store.js';
+import { SERVER } from './config.js';
 
-const API = '/api/stats';
+const API = `${SERVER.origin}/api/stats`;
 let cached = null;
 
 function optedOut() {

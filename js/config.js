@@ -6,6 +6,13 @@ export const GAME = {
   storagePrefix: 'lightsout.v1.',
 };
 
+// Where the leaderboard and play counter live. Empty means this same site. The
+// copy for game portals (node tools/build.mjs --portal) points it at the real
+// site, because a portal such as itch.io serves the game from its own domain.
+export const SERVER = {
+  origin: '',
+};
+
 // "Fuel the dev" donations, in Hong Kong dollars.
 //
 // Fill in any payment method below and it appears in the donation window, with a

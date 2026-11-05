@@ -2,8 +2,9 @@
 // Nothing calls it on its own: every request comes from a button, and any
 // failure comes back as one plain sentence to show the player.
 import { t } from './i18n.js';
+import { SERVER } from './config.js';
 
-const API = '/api/leaderboard';
+const API = `${SERVER.origin}/api/leaderboard`;
 
 // The server and the name check speak English. Translate the sentences we know,
 // keeping any technical detail after them as it came.

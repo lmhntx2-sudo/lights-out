@@ -3,6 +3,7 @@
 // the caller's IP (used only, hashed, for rate limiting).
 import { getStore } from '@netlify/blobs';
 import { handleStats } from '../lib/stats.mjs';
+import { preflight, withCors } from '../lib/cors.mjs';
 
 const env = (k) => globalThis.Netlify?.env.get(k) ?? process.env[k];
 
@@ -14,11 +15,12 @@ function storeName(context) {
 }
 
 export default async (req, context) => {
+  if (req.method === 'OPTIONS') return preflight();
   const store = getStore({ name: storeName(context), consistency: 'strong' });
-  return handleStats(req, { store, ip: context?.ip, salt: env('STATS_SALT') || env('LEADERBOARD_SALT') });
+  return withCors(await handleStats(req, { store, ip: context?.ip, salt: env('STATS_SALT') || env('LEADERBOARD_SALT') }));
 };
 
 export const config = {
   path: '/api/stats',
-  method: ['GET', 'POST'],
+  method: ['GET', 'POST', 'OPTIONS'],
 };
