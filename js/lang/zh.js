@@ -638,4 +638,22 @@ export const ZH = {
   'Skip': '跳過',
   'Cutscenes': '過場動畫',
   'Short 3D scenes for the biggest moments: your debut, a first win, a title, your home crowd and your family.': '在生涯最重要的時刻播放簡短的 3D 動畫：F1 首秀、首場勝利、奪冠、家鄉觀眾和你的家庭。',
+
+  // ------------------------------------------------------------ trophy room, career chart, helmet designs
+  Trophies: '獎盃',
+  Stripe: '條紋',
+  Chevron: 'V 形紋',
+  Halves: '雙色',
+  Stars: '星星',
+  Flames: '火焰',
+  Checks: '方格',
+  'Helmet design': '頭盔圖案',
+  'Did not race': '沒有出賽',
+  'Results by round': '各站成績',
+  'Round {n}: {result}': '第 {n} 站：{result}',
+  'No trophies yet. Win a race and the cup goes on this shelf.': '還沒有獎盃。贏一場比賽，獎盃就會擺上這個架子。',
+  'World titles': '世界冠軍',
+  'Grand Prix wins': '大獎賽勝場',
+  'Junior race wins': '青年組分站勝場',
+  'Championship position by season': '每季總排名',
 };

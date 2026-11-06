@@ -640,4 +640,22 @@ export const KO = {
   'Skip': '건너뛰기',
   'Cutscenes': '컷신',
   'Short 3D scenes for the biggest moments: your debut, a first win, a title, your home crowd and your family.': '커리어의 가장 큰 순간에 짧은 3D 장면을 보여 줍니다: 데뷔, 첫 우승, 타이틀, 홈 관중, 그리고 가족.',
+
+  // ------------------------------------------------------------ trophy room, career chart, helmet designs
+  Trophies: '트로피',
+  Stripe: '스트라이프',
+  Chevron: '셰브론',
+  Halves: '투톤',
+  Stars: '별',
+  Flames: '불꽃',
+  Checks: '체커',
+  'Helmet design': '헬멧 디자인',
+  'Did not race': '불참',
+  'Results by round': '라운드별 결과',
+  'Round {n}: {result}': '{n}라운드: {result}',
+  'No trophies yet. Win a race and the cup goes on this shelf.': '아직 트로피가 없습니다. 레이스에서 우승하면 이 선반에 컵이 놓입니다.',
+  'World titles': '월드 타이틀',
+  'Grand Prix wins': '그랑프리 우승',
+  'Junior race wins': '주니어 레이스 우승',
+  'Championship position by season': '시즌별 챔피언십 순위',
 };

@@ -102,7 +102,7 @@ export function heirOf(s) {
     money: inh.money,
     fame: inh.fame,
   };
-  return { legacy, last: d.last, nat: d.nat, bg: inh.bg, helmet: { c1: d.helmet.c1, c2: d.helmet.c2 }, parent: d.name };
+  return { legacy, last: d.last, nat: d.nat, bg: inh.bg, helmet: { c1: d.helmet.c1, c2: d.helmet.c2, ...(d.helmet.p ? { p: d.helmet.p } : {}) }, parent: d.name };
 }
 
 export const parentName = (lg) => fullName(lg.first, lg.last);

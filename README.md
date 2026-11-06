@@ -9,9 +9,11 @@ Plain HTML, CSS and JavaScript, with no framework and no build step. The game ru
 entirely in the browser and works offline. The only backend is two small Netlify
 Functions: the optional global leaderboard and an anonymous play counter.
 
-What's in it: a race number you pick, team liveries, an F1-broadcast-style timing tower,
+What's in it: a race number you pick, a helmet in your colours and one of six designs,
+team liveries, an F1-broadcast-style timing tower, a round-by-round results strip,
 Race Control banners, team targets each season, podium and championship celebrations,
-short 3D cutscenes for the biggest moments,
+short 3D cutscenes for the biggest moments, a trophy room with a cup for every win,
+a chart of your championship finishes season by season,
 an all-time records table against fictional legends, shareable career-card images,
 achievements, a daily challenge, seeds you can share, a global leaderboard, optional
 sound effects, and a "Fuel the dev" tip jar.
@@ -202,6 +204,12 @@ node tools/balance.mjs 80    # outcome stats per background, for tuning difficul
 node tools/fingerprint.mjs   # one hash over 40 careers; compare with an older copy of js/
 ```
 
+Some state is kept only for display: `s.career.cups` (one entry per race win, for the
+trophy room) and `s.season.rounds` (each round's result, for the results strip). Writing
+them takes no dice and changes nothing else, so replays and the leaderboard are
+unaffected, and the fingerprint leaves them out so old and new copies still compare
+equal. Careers saved before they existed fall back to their season history.
+
 The leaderboard tests replay recorded careers, check that tampered logs are refused, and
 run the real function against a local Blobs server (that one is skipped until
 `npm install` has been run).
@@ -220,6 +228,8 @@ Where things live:
 | `js/engine/replay.js` | Rebuilds a career from its setup and action log, for the leaderboard. |
 | `js/engine/legacy.js` | Retirement summary, epilogue, all-time records, and what a parent hands down to a kid. |
 | `js/ui/` | Title screen, game screen, dialogs, donations. |
+| `js/ui/car.js`, `js/ui/helmet.js` | The car (top-down, in any livery) and helmet (side-on, six designs) art, as SVG. |
+| `js/ui/trophies.js` | The trophy room, the career chart and the results strip. |
 | `js/ui/cutscene-pick.js`, `js/ui/cutscene.js` | Which moment gets a cutscene, and the player that shows it. |
 | `js/scenes/` | The 3D cutscenes: `kit.js` (props and effects), `moments.js`, `places.js`. |
 | `js/vendor/three.module.min.js` | three.js r170, for the cutscenes. |

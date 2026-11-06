@@ -15,6 +15,7 @@ import { todayKey, dailySetup, dailyGoalText } from '../engine/daily.js';
 import { checkDisplayName, NAME_MIN, NAME_MAX } from '../core/displayname.js';
 import { fetchBoard, submitCareer, localizeError } from '../api.js';
 import { setSound } from './sfx.js';
+import { trophyRoom, careerChart } from './trophies.js';
 import { t, tn, LANGS, getLang, statName, statHint, seriesName, trainingText } from '../i18n.js';
 
 export function openDialog(title, body, { onClose } = {}) {
@@ -143,7 +144,7 @@ const SPONSOR_LIFE = {
   kr: () => t('Sponsored by Halmae Chicken since age 14'),
 };
 
-export function openProfile(app) {
+export function openProfile(app, { tab = 0 } = {}) {
   const s = app.s;
   const d = s.driver;
   const c = s.career;
@@ -166,6 +167,7 @@ export function openProfile(app) {
       h('div', { class: 'kv', style: 'margin-top:6px' }, ...[
         [t('Junior starts'), j.starts], [t('Junior wins'), j.wins], [t('Junior titles'), j.titles], [t('Superlicence points (3 yrs)'), slPoints(s)],
       ].map(([k, v]) => h('span', null, `${k} `, h('b', null, v)))),
+      careerChart(c.hist),
       h('div', { class: 'sec' }, t('Season by season')),
       c.hist.length
         ? h(
@@ -205,7 +207,7 @@ export function openProfile(app) {
       life.map((line) => h('div', { class: 'life-row' }, h('span', { class: 't' }, line), h('span'))),
     );
   };
-  openDialog(`${d.name} ${nation(d.nat).flag}`, tabs([[t('Stats'), statsTab], [t('Career'), careerTab], [t('Life'), lifeTab]]));
+  openDialog(`${d.name} ${nation(d.nat).flag}`, tabs([[t('Stats'), statsTab], [t('Career'), careerTab], [t('Trophies'), () => trophyRoom(s)], [t('Life'), lifeTab]], tab));
 }
 
 // ------------------------------------------------------------ achievements & hall of fame

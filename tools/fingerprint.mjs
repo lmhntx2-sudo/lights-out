@@ -52,7 +52,9 @@ const all = createHash('sha256');
 let parents = 0;
 for (let i = 0; i < N; i++) {
   const s = play(newGame(setup(i)), i);
-  all.update(JSON.stringify(s, (k, v) => (k === 'at' ? undefined : v)));
+  // 'rounds' and 'cups' are display-only records (results strip, trophy room)
+  // added later; leaving them out lets old and new copies hash the same.
+  all.update(JSON.stringify(s, (k, v) => (k === 'at' || k === 'rounds' || k === 'cups' ? undefined : v)));
   if (s.flags.parent) parents++;
 }
 console.log(`${N} careers (${lang}, ${parents} ending with a kid): ${all.digest('hex')}`);

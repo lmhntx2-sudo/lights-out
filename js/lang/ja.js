@@ -638,4 +638,22 @@ export const JA = {
   'Skip': 'スキップ',
   'Cutscenes': 'カットシーン',
   'Short 3D scenes for the biggest moments: your debut, a first win, a title, your home crowd and your family.': 'キャリアの大きな瞬間に短い3Dシーンを再生します：デビュー、初優勝、タイトル、地元の観客、そして家族。',
+
+  // ------------------------------------------------------------ trophy room, career chart, helmet designs
+  Trophies: 'トロフィー',
+  Stripe: 'ストライプ',
+  Chevron: 'シェブロン',
+  Halves: 'ツートン',
+  Stars: 'スター',
+  Flames: 'ファイヤー',
+  Checks: 'チェッカー',
+  'Helmet design': 'ヘルメットのデザイン',
+  'Did not race': '出走せず',
+  'Results by round': 'ラウンドごとの結果',
+  'Round {n}: {result}': '第{n}戦：{result}',
+  'No trophies yet. Win a race and the cup goes on this shelf.': 'トロフィーはまだありません。レースに勝てば、この棚にカップが並びます。',
+  'World titles': 'ワールドタイトル',
+  'Grand Prix wins': 'グランプリ優勝',
+  'Junior race wins': 'ジュニアでのレース優勝',
+  'Championship position by season': 'シーズンごとのランキング',
 };

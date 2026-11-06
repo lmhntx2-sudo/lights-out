@@ -593,6 +593,10 @@ function finishRace(s, r) {
 
     me = { pos, grid: pe.grid, dnf: pe.dnf, why: pe.dnfWhy, pts, pole, fl: isFl };
     se.lastMe = { pos, dnf: pe.dnf, track: track.short, trackId: track.id };
+    // Display-only records for the results strip and the trophy room. They take
+    // no dice and change nothing, so replays and the leaderboard are unaffected.
+    (se.rounds ||= []).push({ t: track.id, p: pos, ...(pe.dnf ? { d: 1 } : {}), ...(pole ? { q: 1 } : {}) });
+    if (!pe.dnf && pos === 1) (s.career.cups ||= []).push({ y: s.year, s: series, t: track.id });
     x = { series, pos, dnf: pe.dnf, grid: pe.grid, pole, fl: isFl, wet: race.wet, trackId: track.id, home: nation(d.nat).home.includes(track.id), standin: race.mode === 'standin', pts, team: pe.team };
 
     const at = { track: trackShort(track), gp: trackName(track), pos };
@@ -633,6 +637,7 @@ function finishRace(s, r) {
   }
   if (race.mode === 'injured' || race.mode === 'watch') d.injured = Math.max(0, d.injured - 1);
 
+  if (pi < 0) (se.rounds ||= []).push({ t: track.id, p: 0 });
   pushFeed(s, raceCard(s, race, track, grid, order, me));
   if (x) checkAch(s, 'race', x);
 
@@ -771,6 +776,7 @@ function endSeason(s, r) {
     income: prize + sponsor + family, tm: tmId ? nameOf(s, tmId) : null, tmPos, beatTm,
     goal: goal?.text || null, gs: goal ? { type: goal.type, n: goal.n } : null, goalMet: met, goalBonus,
     car: champion && team ? { color: team.color, accent: team.accent || '#FFFFFF', number: raceNumber(s) } : null,
+    rounds: se.rounds ? se.rounds.slice() : null,
     f1Champ: series !== 'F1' ? `${nameOf(s, f1Champ)}${champTeam ? ` (${champTeam.short})` : ''}` : null,
   });
   if (academyNote) story(s, academyNote, { title: tr('Dropped'), tone: 'red' });

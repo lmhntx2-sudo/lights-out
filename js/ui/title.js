@@ -1,5 +1,5 @@
 import { h } from './dom.js';
-import { helmet } from './helmet.js';
+import { helmet, HELMET_DESIGNS } from './helmet.js';
 import { NATIONS, REGIONS, nation } from '../data/nations.js';
 import { NAME_POOLS } from '../data/names.js';
 import { STYLES, BACKGROUNDS, HELMET_COLORS, SUPPORTER_COLORS } from '../engine/constants.js';
@@ -23,6 +23,15 @@ const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const HAN_GIVEN = ['卓言', '子朗', '心悅', '浩然', '曉晴', '天佑', '詠恩', '俊希', '嘉怡', '朗晴', '樂軒', '芷澄'];
 const JA_GIVEN = ['翔太', '結衣', '蓮', '陽菜', '大翔', '美咲', '悠真', '葵', '颯', '凛', '湊', '結菜'];
 const KO_GIVEN = ['민준', '서연', '도윤', '지우', '하준', '서윤', '시우', '하은', '주원', '지민', '예준', '수아'];
+
+const DESIGN_NAMES = {
+  stripe: () => t('Stripe'),
+  chevron: () => t('Chevron'),
+  halves: () => t('Halves'),
+  stars: () => t('Stars'),
+  flames: () => t('Flames'),
+  checks: () => t('Checks'),
+};
 
 function givenIn(family = '') {
   if (/[\uac00-\ud7af]/.test(family)) return pick(KO_GIVEN);
@@ -90,7 +99,7 @@ export function renderTitle(app, { seed, daily, form: kept, heir } = {}) {
     nat,
     style: 'fighter',
     bg: 'prodigy',
-    helmet: { c1: '#F2F2F2', c2: '#E8002D' },
+    helmet: { c1: '#F2F2F2', c2: '#E8002D', p: 'stripe' },
     number: 2 + Math.floor(Math.random() * 98),
     seed: cleanSeed(seed) || newSeed(),
   };
@@ -162,8 +171,22 @@ export function renderTitle(app, { seed, daily, form: kept, heir } = {}) {
   // ---------------------------------------------------------------- builder
   const preview = h('div');
   const carPreview = h('div', { class: 'car-preview' });
+  const designRow = h('div', { class: 'designs', role: 'group', 'aria-label': t('Helmet design') });
+  const drawDesigns = () =>
+    designRow.replaceChildren(
+      ...HELMET_DESIGNS.map((p) => {
+        const name = DESIGN_NAMES[p]();
+        const b = h('button', { class: 'design', type: 'button', 'aria-pressed': (form.helmet.p || 'stripe') === p ? 'true' : 'false', title: name, 'aria-label': name }, helmet({ ...form.helmet, p }));
+        b.addEventListener('click', () => {
+          form.helmet.p = p;
+          updatePreview();
+        });
+        return b;
+      }),
+    );
   const updatePreview = () => {
     preview.replaceChildren(helmet(form.helmet, { gold: app.supporter, label: t('Your helmet') }));
+    drawDesigns();
     carPreview.replaceChildren(car({ color: form.helmet.c1, accent: form.helmet.c2, number: form.number, helmet: form.helmet.c1 }, { label: t('Your car, number {n}', { n: form.number }) }));
   };
 
@@ -291,7 +314,7 @@ export function renderTitle(app, { seed, daily, form: kept, heir } = {}) {
     h('div', { class: 'field' }, h('span', { class: 'lbl' }, t('Nationality')), h('p', { class: 'hint' }, t('Sets your home Grand Prix and how much sponsors pay.')), natFilter, natGrid),
     h('div', { class: 'field' }, h('span', { class: 'lbl' }, t('Driving style')), styles),
     h('div', { class: 'field' }, h('span', { class: 'lbl' }, t('Background')), bgs),
-    h('div', { class: 'field' }, h('span', { class: 'lbl' }, t('Helmet and personal livery')), h('div', { class: 'helmet-pick' }, preview, h('div', null, swatchRow('c1'), swatchRow('c2'))), carPreview, app.supporter ? null : h('p', { class: 'hint', style: 'margin-top:6px' }, t('Gold and chrome are supporter colours.'))),
+    h('div', { class: 'field' }, h('span', { class: 'lbl' }, t('Helmet and personal livery')), h('div', { class: 'helmet-pick' }, preview, h('div', null, swatchRow('c1'), swatchRow('c2'))), h('p', { class: 'hint', style: 'margin:12px 0 6px' }, t('Helmet design')), designRow, carPreview, app.supporter ? null : h('p', { class: 'hint', style: 'margin-top:6px' }, t('Gold and chrome are supporter colours.'))),
     h('div', { class: 'field seed-row' }, h('span', { class: 'lbl' }, t('World seed')), h('p', { class: 'hint' }, t('The same seed and the same choices replay the same life. Send it to a friend.')), h('div', { class: 'row' }, seedIn, seedDice)),
     h('div', { class: 'start-row' }, start),
   ].filter(Boolean));

@@ -27,6 +27,7 @@ import { pickCutscene, snapshot } from './cutscene-pick.js';
 import { playCutscene, cutscenesOn, sceneContext, prefetchCutscenes } from './cutscene.js';
 import { sfx } from './sfx.js';
 import { openShare } from './share.js';
+import { resultStrip, seasonRounds, careerChart } from './trophies.js';
 import { t, tn, cat, gap, statName, seriesName, trackShortById } from '../i18n.js';
 
 const ROW = 26;
@@ -322,6 +323,7 @@ const R = {
       { class: `f-season${e.champion ? ' champ' : ''}` },
       h('h3', null, t('{year} {series}', { year: e.year, series })),
       verdict,
+      e.rounds?.length ? resultStrip(e.rounds.map((r) => r.t), e.rounds) : null,
       table,
       e.goal
         ? h(
@@ -445,9 +447,10 @@ function retireCard(app, e) {
     h('div', { class: 'grid4' }, stats.map(([k, v]) => h('div', { class: 'big-stat' }, h('b', null, v), h('span', null, k)))),
     rankLine,
     h('ul', null, e.lines.map((l) => h('li', null, l))),
+    app.s ? careerChart(app.s.career.hist) : null,
     h('div', { class: 'kv' }, h('span', null, t('Net worth '), h('b', null, money(e.worth))), h('span', null, t('Legacy score '), h('b', null, e.score)), h('span', null, t('Seed '), h('b', null, e.seed))),
     e.daily ? h('div', { class: 'kv', style: 'margin-top:6px' }, h('span', null, t('Daily goal: {goal} ', { goal: daily }), h('b', null, e.daily.done ? t('Completed') : t('Not completed')))) : null,
-    h('div', { class: 'row', style: 'flex-wrap:wrap;margin-top:14px' }, shareBtn, copyBtn, f.starts ? h('button', { class: 'btn', onClick: () => openRecords(app) }, t('All-time records')) : null, h('button', { class: 'btn', onClick: () => openHallOfFame(app) }, t('Hall of fame'))),
+    h('div', { class: 'row', style: 'flex-wrap:wrap;margin-top:14px' }, shareBtn, copyBtn, app.s ? h('button', { class: 'btn', onClick: () => openProfile(app, { tab: 2 }) }, t('Trophies')) : null, f.starts ? h('button', { class: 'btn', onClick: () => openRecords(app) }, t('All-time records')) : null, h('button', { class: 'btn', onClick: () => openHallOfFame(app) }, t('Hall of fame'))),
     heirBox(app),
     boardBox(app, e),
     app.supporter
@@ -569,6 +572,7 @@ function renderSide(app) {
       h('h3', null, t('{year} {series}', { year: se.year, series: seriesName(se.series) })),
       h('div', { class: 'meta' }, se.round >= se.cal.length ? t('Final standings') : t('After round {round} of {of}', { round: se.round, of: se.cal.length })),
       goalBox,
+      resultStrip(se.cal, seasonRounds(s)),
       h(
         'ol',
         { class: 'stand' },
