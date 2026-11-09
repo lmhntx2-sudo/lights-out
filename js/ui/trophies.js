@@ -4,6 +4,7 @@
 // s.career.hist (finished seasons). Careers from before those records existed
 // fall back to what the history and the feed still hold.
 import { h } from './dom.js';
+import { circuitInset } from './circuit.js';
 import { TRACKS } from '../data/tracks.js';
 import { flagOf } from '../data/nations.js';
 import { t, seriesName, trackShortById, trackName } from '../i18n.js';
@@ -95,8 +96,9 @@ function titleCup(metal, label) {
   </svg>`);
 }
 
-// A race-winner's cup, smaller and plainer. Macau's has a red base.
-function winCup(metal, label, base = '#241a12') {
+// A race-winner's cup, smaller and plainer, with the circuit engraved on the
+// bowl when the win's track is known. Macau's has a red base.
+function winCup(metal, label, base = '#241a12', track = null) {
   const id = `tw${++uid}`;
   return svgEl(`<svg class="cup" viewBox="0 0 40 58" xmlns="${SVG}" role="img" aria-label="${label}">
     <defs>${metalDefs(id, metal)}</defs>
@@ -109,6 +111,7 @@ function winCup(metal, label, base = '#241a12') {
     <path d="M7.5 8c0 17 5.6 26 12.5 27.5C26.9 34 32.5 25 32.5 8z" fill="url(#${id})"/>
     <ellipse cx="20" cy="8" rx="12.5" ry="3" fill="url(#${id})"/>
     <ellipse cx="20" cy="8.2" rx="10" ry="1.8" fill="rgba(0,0,0,.35)"/>
+    ${track ? circuitInset(track, { x: 12.5, y: 12, w: 15, h: 15 }) : ''}
     <path d="M12 12c0 9 2.4 16 5.6 19.6" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.5" stroke-linecap="round"/>
   </svg>`);
 }
@@ -149,7 +152,7 @@ export function trophyRoom(s) {
     const tr = w.t && TRACKS[w.t];
     const place = tr ? trackShortById(w.t, tr.short) : seriesName(w.s);
     const label = tr ? `${roundTitle(tr, w.s)} ${w.y}` : `${seriesName(w.s)} ${w.y}`;
-    return h('figure', { class: 'trophy', title: label }, winCup(metal, label), h('figcaption', null, h('b', null, tr ? `${flagOf(tr.nat)} ${place}` : place), h('span', null, w.y)));
+    return h('figure', { class: 'trophy', title: label }, winCup(metal, label, undefined, tr ? w.t : null), h('figcaption', null, h('b', null, tr ? `${flagOf(tr.nat)} ${place}` : place), h('span', null, w.y)));
   };
   const f1Titles = titles.filter((x) => x.series === 'F1');
   const jrTitles = titles.filter((x) => x.series !== 'F1');
@@ -158,7 +161,7 @@ export function trophyRoom(s) {
     { class: 'trophies' },
     shelf(t('World titles'), f1Titles.map(titleItem)),
     shelf(t('Grand Prix wins'), f1.map((w) => cupItem(w, 'gold'))),
-    shelf(trackName(TRACKS.macau), macau.map((m) => h('figure', { class: 'trophy', title: `${trackName(TRACKS.macau)} ${m.year}` }, winCup('gold', `${trackName(TRACKS.macau)} ${m.year}`, '#9c1420'), h('figcaption', null, h('b', null, `${flagOf('MO')} ${trackShortById('macau', 'Macau')}`), h('span', null, m.year))))),
+    shelf(trackName(TRACKS.macau), macau.map((m) => h('figure', { class: 'trophy', title: `${trackName(TRACKS.macau)} ${m.year}` }, winCup('gold', `${trackName(TRACKS.macau)} ${m.year}`, '#9c1420', 'macau'), h('figcaption', null, h('b', null, `${flagOf('MO')} ${trackShortById('macau', 'Macau')}`), h('span', null, m.year))))),
     shelf(t('Junior titles'), jrTitles.map(titleItem)),
     shelf(t('Junior race wins'), junior.map((w) => cupItem(w, 'silver'))),
   );

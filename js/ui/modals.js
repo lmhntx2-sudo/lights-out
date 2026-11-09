@@ -494,6 +494,10 @@ export function openAbout() {
       link: h('a', { href: 'https://github.com/jdecked/twemoji', target: '_blank', rel: 'noopener' }, 'Twemoji'),
       version: GAME.version,
     })),
+    h('p', { class: 'credits' }, ...tn('Circuit maps from {f1c} (MIT) and {osm}.', {
+      f1c: h('a', { href: 'https://github.com/bacinger/f1-circuits', target: '_blank', rel: 'noopener' }, 'f1-circuits'),
+      osm: h('a', { href: 'https://www.openstreetmap.org/copyright', target: '_blank', rel: 'noopener' }, '© OpenStreetMap contributors'),
+    })),
   );
   openDialog(t('About Lights Out'), body);
 }

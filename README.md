@@ -10,9 +10,11 @@ entirely in the browser and works offline. The only backend is two small Netlify
 Functions: the optional global leaderboard and an anonymous play counter.
 
 What's in it: a race number you pick, a helmet in your colours and one of six designs,
-team liveries, an F1-broadcast-style timing tower, a round-by-round results strip,
+team liveries, a map of every circuit (with night and rain skies on the race cards and a
+look at the next round), an F1-broadcast-style timing tower, a round-by-round results strip,
 Race Control banners, team targets each season, podium and championship celebrations,
-short 3D cutscenes for the biggest moments, a trophy room with a cup for every win,
+a podium with each driver's helmet, short 3D cutscenes for the biggest moments, a trophy
+room with a cup for every win (engraved with its circuit),
 a chart of your championship finishes season by season,
 an all-time records table against fictional legends, shareable career-card images,
 achievements, a daily challenge, seeds you can share, a global leaderboard, optional
@@ -230,6 +232,7 @@ Where things live:
 | `js/ui/` | Title screen, game screen, dialogs, donations. |
 | `js/ui/car.js`, `js/ui/helmet.js` | The car (top-down, in any livery) and helmet (side-on, six designs) art, as SVG. |
 | `js/ui/trophies.js` | The trophy room, the career chart and the results strip. |
+| `js/data/circuits.js`, `js/ui/circuit.js` | Circuit maps (one SVG path per track) and how they're drawn. `tools/circuits.mjs` rebuilds the data; see the top of that file. |
 | `js/ui/cutscene-pick.js`, `js/ui/cutscene.js` | Which moment gets a cutscene, and the player that shows it. |
 | `js/scenes/` | The 3D cutscenes: `kit.js` (props and effects), `moments.js`, `places.js`. |
 | `js/vendor/three.module.min.js` | three.js r170, for the cutscenes. |
@@ -269,7 +272,11 @@ through the local dev server's `/__save/` endpoint, which only exists in `tools/
 
 Flag emoji are from [Twemoji](https://github.com/jdecked/twemoji), licensed CC-BY 4.0,
 packaged as a font by [country-flag-emoji-polyfill](https://github.com/talkjs/country-flag-emoji-polyfill)
-(MIT). The typeface is Saira, served by Google Fonts. The cutscenes use
+(MIT). The typeface is Saira, served by Google Fonts. Circuit outlines are from
+[f1-circuits](https://github.com/bacinger/f1-circuits) (MIT, Copyright 2019-2025 Tomislav
+Bacinger); the Yeongam, Misano and Vallelunga outlines are derived from
+[OpenStreetMap](https://www.openstreetmap.org/copyright) data, © OpenStreetMap
+contributors, available under the Open Database Licence. Macau's is drawn by hand. The cutscenes use
 [three.js](https://github.com/mrdoob/three.js) (MIT, Copyright 2010-2024 three.js authors).
 
 All teams, drivers and sponsors are fictional. This is a fan-made game and isn't affiliated

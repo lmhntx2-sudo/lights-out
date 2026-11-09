@@ -656,4 +656,13 @@ export const JA = {
   'Grand Prix wins': 'グランプリ優勝',
   'Junior race wins': 'ジュニアでのレース優勝',
   'Championship position by season': 'シーズンごとのランキング',
+  'Podium: {names}': '表彰台：{names}',
+  'Night race': 'ナイトレース',
+  'Often wet': '雨が多い',
+  'Safety cars likely': 'セーフティカー多め',
+  'Next up': '次戦',
+  'Map of {track}': '{track}のコース図',
+  'Round {round} of {of}': '第{round}戦（全{of}戦）',
+  '{n} laps': '{n}周',
+  'Circuit maps from {f1c} (MIT) and {osm}.': 'コース図は {f1c}（MIT）と {osm} より。',
 };

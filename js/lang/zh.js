@@ -656,4 +656,13 @@ export const ZH = {
   'Grand Prix wins': '大獎賽勝場',
   'Junior race wins': '青年組分站勝場',
   'Championship position by season': '每季總排名',
+  'Podium: {names}': '頒獎台：{names}',
+  'Night race': '夜賽',
+  'Often wet': '經常下雨',
+  'Safety cars likely': '安全車常出動',
+  'Next up': '下一站',
+  'Map of {track}': '{track}賽道圖',
+  'Round {round} of {of}': '第 {round} 站，共 {of} 站',
+  '{n} laps': '{n} 圈',
+  'Circuit maps from {f1c} (MIT) and {osm}.': '賽道圖來自 {f1c}（MIT）及 {osm}。',
 };

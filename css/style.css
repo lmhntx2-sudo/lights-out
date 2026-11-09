@@ -143,6 +143,22 @@ a { color: var(--yellow); }
   font-size: clamp(64px, 10.5vw, 148px); line-height: .84; letter-spacing: -.035em; text-transform: uppercase;
 }
 .wordmark span { display: block; }
+.word-wrap { position: relative; }
+.word-wrap .wordmark { position: relative; z-index: 1; }
+/* A circuit beside "Out", lapped by a light. */
+.hero-lap {
+  position: absolute; right: 0; bottom: 0; width: 33%; height: 54%; display: grid; grid-template-rows: 1fr auto;
+  justify-items: center; color: rgba(255, 255, 255, .2); pointer-events: none;
+}
+.hero-lap .circuit { width: 100%; height: 100%; min-height: 0; }
+.hero-lap .ck-edge { stroke: rgba(0, 0, 0, .4); }
+.hero-lap .ck-sf { stroke: rgba(255, 255, 255, .6); }
+.hero-lap small { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; margin-top: 4px; }
+.ck-trail {
+  stroke: var(--red-hot); stroke-width: 4px !important; stroke-dasharray: 70 930; stroke-dashoffset: 1000;
+  filter: drop-shadow(0 0 3px rgba(255, 42, 31, .9)); animation: ck-lap 6.5s linear infinite;
+}
+@keyframes ck-lap { to { stroke-dashoffset: 0; } }
 .wordmark span + span { color: transparent; -webkit-text-stroke: 2px var(--red); }
 .wordmark.wait { opacity: 0; transform: translateX(-24px); }
 .wordmark.go { opacity: 1; transform: none; transition: opacity .18s ease-out, transform .35s cubic-bezier(.2, .9, .2, 1); }
@@ -323,7 +339,38 @@ a { color: var(--yellow); }
 
 /* race result: broadcast lower-third + timing tower */
 .f-race { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-.f-race .hd { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 0 14px 0 0; min-height: 50px; }
+.f-race .hd { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 0 14px 0 0; min-height: 50px; position: relative; }
+.f-race:not(.compact) .hd { min-height: 66px; }
+.f-race .hd > :not(.map) { position: relative; z-index: 1; }
+/* The circuit, drawn faintly behind the header, left of the result. */
+.f-race .hd .map { position: absolute; top: 5px; bottom: 5px; right: 104px; width: 130px; color: rgba(255, 255, 255, .26); pointer-events: none; }
+.f-race .hd .map svg { width: 100%; height: 100%; }
+.f-race .hd .map .ck-edge { stroke: rgba(0, 0, 0, .35); }
+.f-race .hd .map .ck-sf { stroke: rgba(255, 255, 255, .7); }
+/* Night races: a deep blue sky with a few stars. */
+.f-race.night .hd {
+  background:
+    radial-gradient(1.2px 1.2px at 58% 22%, rgba(255, 255, 255, .9) 50%, transparent 100%),
+    radial-gradient(1px 1px at 66% 70%, rgba(255, 255, 255, .7) 50%, transparent 100%),
+    radial-gradient(1.4px 1.4px at 74% 38%, rgba(255, 255, 255, .85) 50%, transparent 100%),
+    radial-gradient(1px 1px at 81% 16%, rgba(200, 220, 255, .8) 50%, transparent 100%),
+    radial-gradient(1px 1px at 88% 58%, rgba(255, 255, 255, .6) 50%, transparent 100%),
+    radial-gradient(1.2px 1.2px at 93% 28%, rgba(255, 255, 255, .8) 50%, transparent 100%),
+    linear-gradient(90deg, transparent 20%, rgba(36, 54, 130, .45) 70%, rgba(48, 70, 160, .55));
+}
+.f-race.night .hd .map { color: rgba(170, 196, 255, .42); }
+/* Wet races: rain streaks and a cold tint. */
+.f-race.wet .hd {
+  background:
+    repeating-linear-gradient(104deg, transparent 0 7px, rgba(170, 200, 255, .09) 7px 8px),
+    linear-gradient(90deg, transparent 20%, rgba(40, 80, 140, .35));
+}
+.f-race.night.wet .hd {
+  background:
+    repeating-linear-gradient(104deg, transparent 0 7px, rgba(170, 200, 255, .09) 7px 8px),
+    linear-gradient(90deg, transparent 20%, rgba(36, 54, 130, .5) 70%, rgba(48, 70, 160, .6));
+}
+.f-race.wet .hd .map { color: rgba(170, 205, 255, .36); }
 .f-race .rnd {
   align-self: stretch; display: grid; place-items: center; padding: 0 16px 0 12px; background: var(--red); color: #fff;
   font-family: var(--display); font-weight: 900; font-style: italic; font-size: 16px; font-variant-numeric: tabular-nums;
@@ -346,13 +393,21 @@ a { color: var(--yellow); }
 .f-race:not(.compact) .toggle { display: none; }
 .f-race.compact .tower-wrap, .f-race.compact .podium { display: none; }
 .f-race.compact.show .tower-wrap { display: block; }
-.podium { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; align-items: end; padding: 4px 14px 12px; max-width: 360px; }
-.podium div { text-align: center; font-weight: 700; font-size: 13px; }
-.podium span { display: block; border-radius: 4px 4px 0 0; color: #111; font-family: var(--display); font-style: italic; font-weight: 900; font-size: 18px; padding-top: 4px; }
-.podium .p1 span { height: 54px; background: var(--gold); }
-.podium .p2 span { height: 40px; background: #c9ced6; }
-.podium .p3 span { height: 30px; background: #cd8b5a; }
-.podium .me-p { color: var(--yellow); }
+.podium { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; align-items: end; padding: 6px 14px 14px; max-width: 330px; position: relative; }
+.podium > div { text-align: center; display: grid; justify-items: center; }
+.podium svg { width: 46px; height: auto; margin-bottom: -1px; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .5)); }
+.podium .p1 svg { width: 54px; }
+.podium b { font-size: 13px; font-weight: 800; letter-spacing: .05em; margin: 3px 0 4px; }
+.podium span {
+  display: block; width: 100%; border-radius: 3px 3px 0 0; color: rgba(0, 0, 0, .7); padding-top: 3px;
+  font-family: var(--display); font-style: italic; font-weight: 900; font-size: 20px;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .55), inset 0 -6px 10px rgba(0, 0, 0, .18);
+}
+.podium .p1 span { height: 58px; background: linear-gradient(90deg, #b8901f, #f3d36a 45%, #c9a032); }
+.podium .p2 span { height: 42px; background: linear-gradient(90deg, #8f97a3, #e6eaef 45%, #a9b1bc); }
+.podium .p3 span { height: 30px; background: linear-gradient(90deg, #8d5631, #e0a173 45%, #a8683e); }
+.podium .me-p b { color: var(--yellow); }
+.podium::after { content: ''; position: absolute; left: 10px; right: 10px; bottom: 13px; height: 1px; background: rgba(255, 255, 255, .12); }
 .tower-wrap { background: var(--black); border-top: 1px solid var(--line); padding: 8px 10px 10px; }
 .tower-status { font-size: 12px; color: var(--ink-3); margin: 0 4px 6px; font-variant-numeric: tabular-nums; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
 .tower { position: relative; }
@@ -505,7 +560,11 @@ a { color: var(--yellow); }
 .ring.mid { --c: var(--yellow); }
 .ring.lo { --c: var(--red-hot); }
 .race-next { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
-.race-next .btn-go { justify-content: space-between; text-align: left; }
+.race-next .btn-go { justify-content: space-between; text-align: left; gap: 12px; }
+.race-next .nr-txt { display: grid; gap: 2px; }
+.race-next .nr-map { flex: none; width: 52px; height: 40px; color: #fff; opacity: .9; }
+.race-next .nr-map svg { width: 100%; height: 100%; }
+.race-next .nr-map .ck-edge { stroke: rgba(80, 0, 0, .45); }
 .race-next .btn-go small { font-family: var(--font); font-style: normal; font-weight: 600; opacity: .9; font-size: 14px; }
 .dock-more { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 .offer {
@@ -678,7 +737,7 @@ div.tier { cursor: default; }
 }
 .cs-skip:hover, .cs-skip:focus-visible { background: rgba(255, 255, 255, .18); outline: none; border-color: #fff; }
 .cutscene.still, .cutscene.still .cs-bar, .cutscene.still .cs-cap { transition: none; }
-@media (prefers-reduced-motion: reduce) { .cutscene, .cs-bar, .cs-cap { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .cutscene, .cs-bar, .cs-cap { transition: none; } .ck-trail { display: none; } }
 
 /* toasts */
 .toasts { position: fixed; right: 16px; bottom: 16px; z-index: 80; display: grid; gap: 8px; max-width: min(380px, calc(100vw - 32px)); }
@@ -712,7 +771,39 @@ div.tier { cursor: default; }
   .trow { grid-template-columns: 30px 4px 46px 1fr 46px; gap: 6px; }
   .statbar { grid-template-columns: 96px 1fr 30px; }
   .offer .mini-car { width: 64px; }
+  .f-race .hd .map { right: 84px; width: 92px; }
+  .race-next .nr-map { width: 40px; height: 34px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; }
 }
+
+/* ---------------------------------------------------------------- circuit maps */
+.circuit { display: block; overflow: visible; }
+.circuit path { fill: none; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
+.circuit .ck-edge { stroke: rgba(0, 0, 0, .55); stroke-width: 6px; }
+.circuit .ck-line { stroke: currentColor; stroke-width: 2.4px; }
+.circuit .ck-sf { stroke: #fff; stroke-width: 3px; stroke-linecap: butt; }
+.ck-mini .ck-edge { stroke-width: 4px; }
+.ck-mini .ck-line { stroke-width: 1.6px; }
+.ck-big .ck-edge { stroke-width: 9px; }
+.ck-big .ck-line { stroke-width: 3.4px; }
+
+/* Sidebar: the next round. */
+.next-up {
+  margin: 0 0 14px; padding: 10px 12px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: linear-gradient(160deg, #22222b, #15151c); display: grid; gap: 2px 10px;
+  grid-template-columns: 1fr 78px; grid-auto-rows: min-content; align-content: start;
+}
+.next-up > :not(.circuit) { grid-column: 1; }
+.next-up.night { background: linear-gradient(160deg, #1d2348, #10121f); border-color: #2c3566; }
+.next-up small { color: var(--ink-3); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.next-up b { font-size: 14px; line-height: 1.25; }
+.next-up .circuit { grid-column: 2; grid-row: 1 / span 5; width: 78px; height: 88px; align-self: center; color: var(--ink); }
+.next-up.night .circuit { color: #dfe7ff; }
+.nu-facts { font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+.nu-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.nu-tag { font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: .03em; }
+.nu-tag.night { background: #2e3b85; color: #fff; }
+.nu-tag.wet { background: var(--blue); color: #fff; }
+.nu-tag.sc { background: var(--yellow); color: #111; }

@@ -12,6 +12,9 @@ import { store } from '../store.js';
 import { coffeeButton } from './donate.js';
 import { openHallOfFame, openAchievements, openSettings, openBackup, openAbout, allUnlocked, openLeaderboard, confirmDialog } from './modals.js';
 import { car } from './car.js';
+import { circuit } from './circuit.js';
+import { TRACKS, CALENDARS } from '../data/tracks.js';
+import { flagOf } from '../data/nations.js';
 import { sfx } from './sfx.js';
 import { t, getLang, getVariant, LANGS, loc, natName, styleName, styleDesc, bgText, gap } from '../i18n.js';
 
@@ -114,6 +117,9 @@ export function renderTitle(app, { seed, daily, form: kept, heir } = {}) {
   const builder = h('section', { class: 'builder', 'aria-labelledby': 'build-h' });
   const g = gantry();
   const word = h('h1', { class: `wordmark ${anim ? 'wait' : ''}` }, h('span', null, 'Lights'), h('span', null, 'Out'));
+  // Beside "Out", a light laps a circuit from the calendar, a different one each visit.
+  const lapId = CALENDARS.F1[Math.floor(Math.random() * CALENDARS.F1.length)];
+  const lap = h('div', { class: 'hero-lap', 'aria-hidden': 'true' }, circuit(lapId, { size: 'big', trail: anim }), h('small', null, `${flagOf(TRACKS[lapId].nat)} ${TRACKS[lapId].place}`));
   const launch = h('div', { class: 'launch', 'aria-hidden': 'true' }, h('div', { class: 'grid-box' }), h('div', { class: 'marks' }), car({ color: '#E10600', accent: '#FFFFFF', number: form.number }));
   const ach = allUnlocked(app);
   const actions = h('div', { class: 'hero-actions' });
@@ -146,7 +152,7 @@ export function renderTitle(app, { seed, daily, form: kept, heir } = {}) {
     { class: 'hero' },
     g.el,
     launch,
-    word,
+    h('div', { class: 'word-wrap' }, word, lap),
     h('p', { class: 'tagline' }, t('A racing life, from a battered kart at eight to your final lap in Formula 1. '), h('strong', null, t('Every call on the pit wall is yours.'))),
     actions,
     h(

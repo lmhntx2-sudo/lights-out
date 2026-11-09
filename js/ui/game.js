@@ -1,5 +1,6 @@
 import { h, toast, copyText } from './dom.js';
-import { helmet } from './helmet.js';
+import { helmet, HELMET_DESIGNS } from './helmet.js';
+import { circuit, isNight, hasCircuit } from './circuit.js';
 import { prompt, advance, choose, pickOffer, skipToDecision, simToSeasonEnd, retireNow, roundName, goalText } from '../engine/game.js';
 import { PROLOGUE_AGE } from '../engine/events.js';
 import { standingsOrder, offerNote, offerLabel } from '../engine/market.js';
@@ -9,7 +10,7 @@ import { ACH_BY_ID, achWords } from '../engine/achievements.js';
 import { shareText, summaryWords, heirOf, familyLine } from '../engine/legacy.js';
 import { dailyGoalText } from '../engine/daily.js';
 import { TRACKS } from '../data/tracks.js';
-import { nation } from '../data/nations.js';
+import { nation, flagOf } from '../data/nations.js';
 import { money, plural, stars } from '../core/fmt.js';
 import { store } from '../store.js';
 import {
@@ -259,10 +260,16 @@ const R = {
     const podium = me && !me.dnf && me.pos <= 3 && e.rows.length >= 3
       ? h(
           'div',
-          { class: 'podium', 'aria-label': t('Podium') },
+          { class: 'podium', role: 'img', 'aria-label': t('Podium: {names}', { names: [1, 2, 3].map((p) => e.rows.find((x) => x.pos === p)?.name).filter(Boolean).join(', ') }) },
           [1, 0, 2].map((i) => {
             const r = e.rows.find((x) => x.pos === i + 1);
-            return h('div', { class: `p${i + 1}${r?.me ? ' me-p' : ''}` }, r?.code || '', h('span', null, i + 1));
+            return h(
+              'div',
+              { class: `p${i + 1}${r?.me ? ' me-p' : ''}` },
+              r ? helmet(r.me ? app.s.driver.helmet : rivalHelmet(r)) : null,
+              h('b', null, r?.code || ''),
+              h('span', null, i + 1),
+            );
           }),
         )
       : null;
@@ -274,13 +281,15 @@ const R = {
     if (e.mode === 'standin') sumBits.push(t('Stand-in drive.'));
     if (e.special) sumBits.push(t('Non-championship race.'));
     if (e.champ) sumBits.push(t('Championship: P{pos}, {pts}.', { pos: e.champ.pos, pts: plural(e.champ.pts, 'point') }));
-    const wrap = h('article', { class: `f-race${latest ? '' : ' compact'}` });
+    const sky = `${isNight(e.trackId) ? ' night' : ''}${e.wet ? ' wet' : ''}`;
+    const wrap = h('article', { class: `f-race${latest ? '' : ' compact'}${sky}` });
     const tw = tower(e, animate, app.settings.anim === 'fast' ? 0.5 : 1);
     const toggle = h('div', { class: 'toggle' }, h('button', { type: 'button', onClick: () => wrap.classList.toggle('show') }, t('Classification')));
     wrap.append(...[
       h(
         'div',
         { class: 'hd' },
+        hasCircuit(e.trackId) ? h('span', { class: 'map' }, circuit(e.trackId)) : null,
         h('span', { class: 'rnd' }, e.special ? 'GP' : `R${e.round}`),
         h('span', { class: 'trk' }, `${e.flag} ${trackShortById(e.trackId, e.short)}`, rc),
         h('span', { class: `res-pos ${cls}` }, pos, h('small', null, small)),
@@ -572,6 +581,7 @@ function renderSide(app) {
       h('h3', null, t('{year} {series}', { year: se.year, series: seriesName(se.series) })),
       h('div', { class: 'meta' }, se.round >= se.cal.length ? t('Final standings') : t('After round {round} of {of}', { round: se.round, of: se.cal.length })),
       goalBox,
+      nextUp(s),
       resultStrip(se.cal, seasonRounds(s)),
       h(
         'ol',
@@ -641,8 +651,8 @@ function renderDock(app) {
         h(
           'button',
           { class: 'btn btn-go', onClick: () => act(app, advance, { animate: true }) },
-          t('Next race'),
-          h('small', null, cat(t('{flag} {next}, round {round} of {of}', p), p.kind && t('({kind})', p))),
+          h('span', { class: 'nr-txt' }, t('Next race'), h('small', null, cat(t('{flag} {next}, round {round} of {of}', p), p.kind && t('({kind})', p)))),
+          hasCircuit(nextTrackId(s)) ? h('span', { class: 'nr-map' }, circuit(nextTrackId(s), { size: 'mini' })) : null,
         ),
         h('button', { class: 'btn', onClick: () => act(app, skipToDecision), title: t('Race on until something needs your decision') }, t('Skip to next call')),
       ),
@@ -663,6 +673,43 @@ function renderDock(app) {
     inner.append(h('button', { class: 'btn btn-go', onClick: () => act(app, advance) }, p.label));
   }
   dock.replaceChildren(inner);
+}
+
+// The track the next race is at, while the season still has rounds to run.
+function nextTrackId(s) {
+  const se = s.season;
+  return se && se.round < se.cal.length ? se.cal[se.round] : null;
+}
+
+// The sidebar's look at the next round: its circuit, laps and what to expect.
+function nextUp(s) {
+  const id = nextTrackId(s);
+  const tr = id && TRACKS[id];
+  if (!tr || !hasCircuit(id)) return null;
+  const se = s.season;
+  const tags = [
+    isNight(id) ? h('span', { class: 'nu-tag night' }, t('Night race')) : null,
+    tr.rain >= 0.3 ? h('span', { class: 'nu-tag wet' }, t('Often wet')) : null,
+    tr.sc >= 0.55 ? h('span', { class: 'nu-tag sc' }, t('Safety cars likely')) : null,
+  ].filter(Boolean);
+  return h(
+    'div',
+    { class: `next-up${isNight(id) ? ' night' : ''}` },
+    h('small', null, t('Next up')),
+    h('b', null, `${flagOf(tr.nat)} ${roundName(tr, se.series)}`),
+    circuit(id, { size: 'big', label: t('Map of {track}', { track: tr.place }) }),
+    h('div', { class: 'nu-facts' }, t('Round {round} of {of}', { round: se.round + 1, of: se.cal.length }), h('br'), t('{n} laps', { n: tr.laps }), ' · ', tr.place),
+    tags.length ? h('div', { class: 'nu-tags' }, tags) : null,
+  );
+}
+
+// Rivals wear their team's colour, with a design that stays the same for each driver.
+function rivalHelmet(r) {
+  let hash = 0;
+  for (const ch of r.name || r.code || '') hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  const c1 = r.color || '#8a8a96';
+  const light = parseInt(c1.slice(1, 3), 16) * 0.3 + parseInt(c1.slice(3, 5), 16) * 0.59 + parseInt(c1.slice(5, 7), 16) * 0.11 > 150;
+  return { c1, c2: light ? '#15151c' : '#f4f4f6', p: HELMET_DESIGNS[hash % HELMET_DESIGNS.length] };
 }
 
 const TAGS = { promo: () => t('Promotion'), stay: () => t('Same series'), renew: () => t('Renewal'), buyout: () => t('Buyout'), signed: () => t('Pre-signed') };

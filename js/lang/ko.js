@@ -658,4 +658,13 @@ export const KO = {
   'Grand Prix wins': '그랑프리 우승',
   'Junior race wins': '주니어 레이스 우승',
   'Championship position by season': '시즌별 챔피언십 순위',
+  'Podium: {names}': '포디움: {names}',
+  'Night race': '나이트 레이스',
+  'Often wet': '비가 잦음',
+  'Safety cars likely': '세이프티카 잦음',
+  'Next up': '다음 경기',
+  'Map of {track}': '{track} 서킷 지도',
+  'Round {round} of {of}': '{of}라운드 중 {round}라운드',
+  '{n} laps': '{n}랩',
+  'Circuit maps from {f1c} (MIT) and {osm}.': '서킷 지도 출처: {f1c} (MIT), {osm}.',
 };
