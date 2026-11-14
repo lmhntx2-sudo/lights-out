@@ -30,6 +30,9 @@ import { sfx } from './sfx.js';
 import { openShare } from './share.js';
 import { resultStrip, seasonRounds, careerChart } from './trophies.js';
 import { t, tn, cat, gap, statName, seriesName, trackShortById } from '../i18n.js';
+import { isOneSeason, daySquares, dayNumber } from '../engine/oneseason.js';
+import { dayShareText, dayChallengeText, careerChallengeUrl, siteUrl } from './day.js';
+import { todayKey } from '../engine/daily.js';
 
 const ROW = 26;
 
@@ -65,8 +68,9 @@ function act(app, fn, { animate = false } = {}) {
   }
   if (s.stage === 'retired' && s.retired && !s.retired.saved) {
     s.retired.saved = true;
-    store.addLife(s.retired);
-    ping('finish');
+    if (s.retired.day) store.markDay(s.retired.day);
+    else store.addLife(s.retired);
+    ping(s.retired.day ? 'dfinish' : 'finish');
   }
   const freshAch = app.save();
   const prevN = app.view.lastN;
@@ -360,7 +364,7 @@ const R = {
 
   news: (app, e) => h('section', { class: 'f-news' }, h('h4', null, e.title), h('ul', null, e.lines.map((l) => h('li', null, l)))),
 
-  retire: (app, e) => retireCard(app, e),
+  retire: (app, e) => (e.day ? dayCard(app, e) : retireCard(app, e)),
 };
 
 function radioIcon() {
@@ -439,10 +443,17 @@ function retireCard(app, e) {
   const copyBtn = h('button', {
     class: 'btn',
     onClick: async () => {
-      const ok = await copyText(shareText(e, location.origin + location.pathname));
+      const ok = await copyText(shareText(e, siteUrl(), careerChallengeUrl(e)));
       toast(ok ? t('Career summary copied. Paste it anywhere.') : t('Copy failed. Your browser blocked the clipboard.'));
     },
   }, t('Copy as text'));
+  const dareBtn = h('button', {
+    class: 'btn',
+    onClick: async () => {
+      const ok = await copyText(shareText(e, siteUrl(), careerChallengeUrl(e)));
+      toast(ok ? t('Challenge link copied. Send it to a friend.') : t('Copy failed. Your browser blocked the clipboard.'));
+    },
+  }, t('Challenge a friend'));
   const rankLine = e.ranks && (f.titles || f.wins)
     ? h('p', { style: 'margin:0 0 12px;color:var(--ink)' }, t('All-time: #{titles} for world titles and #{wins} for wins, out of {of} Grand Prix drivers in history.', e.ranks))
     : null;
@@ -459,13 +470,85 @@ function retireCard(app, e) {
     app.s ? careerChart(app.s.career.hist) : null,
     h('div', { class: 'kv' }, h('span', null, t('Net worth '), h('b', null, money(e.worth))), h('span', null, t('Legacy score '), h('b', null, e.score)), h('span', null, t('Seed '), h('b', null, e.seed))),
     e.daily ? h('div', { class: 'kv', style: 'margin-top:6px' }, h('span', null, t('Daily goal: {goal} ', { goal: daily }), h('b', null, e.daily.done ? t('Completed') : t('Not completed')))) : null,
-    h('div', { class: 'row', style: 'flex-wrap:wrap;margin-top:14px' }, shareBtn, copyBtn, app.s ? h('button', { class: 'btn', onClick: () => openProfile(app, { tab: 2 }) }, t('Trophies')) : null, f.starts ? h('button', { class: 'btn', onClick: () => openRecords(app) }, t('All-time records')) : null, h('button', { class: 'btn', onClick: () => openHallOfFame(app) }, t('Hall of fame'))),
+    h('div', { class: 'row', style: 'flex-wrap:wrap;margin-top:14px' }, shareBtn, copyBtn, dareBtn, app.s ? h('button', { class: 'btn', onClick: () => openProfile(app, { tab: 2 }) }, t('Trophies')) : null, f.starts ? h('button', { class: 'btn', onClick: () => openRecords(app) }, t('All-time records')) : null, h('button', { class: 'btn', onClick: () => openHallOfFame(app) }, t('Hall of fame'))),
+    vsBox(app, e),
     heirBox(app),
     boardBox(app, e),
     app.supporter
       ? h('div', { class: 'thanks-box' }, h('p', { style: 'margin:0' }, t('☕ Thank you for being in the pit crew. You keep this free for everyone.')))
       : h('div', { class: 'thanks-box' }, h('p', null, t('Enjoyed that career? Lights Out is free with no ads. A coffee keeps new teams, tracks and stories coming.')), coffeeButton(app, { reason: 'retire' })),
   );
+}
+
+// ------------------------------------------------------------------ daily season
+
+// The end of a daily season: the result, its squares to copy, the streak and the day's board.
+function dayCard(app, e) {
+  const d = e.day;
+  const streak = store.streak(todayKey());
+  const text = () => dayShareText(e, { streak: store.streak(todayKey()), tier: d.tier });
+  const copied = (ok, msg) => toast(ok ? msg : t('Copy failed. Your browser blocked the clipboard.'));
+  const copyBtn = h('button', { class: 'btn btn-go', style: 'font-size:16px;padding:10px 18px', onClick: async () => copied(await copyText(text()), t('Result copied. Paste it anywhere.')) }, t('Copy result'));
+  const shareBtn = typeof navigator !== 'undefined' && navigator.share
+    ? h('button', { class: 'btn', onClick: () => navigator.share({ text: text() }).catch(() => {}) }, t('Share'))
+    : null;
+  const dareBtn = h('button', { class: 'btn', onClick: async () => copied(await copyText(dayChallengeText(e)), t('Challenge link copied. Send it to a friend.')) }, t('Challenge a friend'));
+  const stats = [[t('Points'), d.pts], [t('Wins'), d.wins], [t('Podiums'), d.podiums], [t('Poles'), d.poles]];
+  const where = cat(
+    t('Daily season #{n}, {date}.', { n: dayNumber(d.date), date: d.date }),
+    t('A rookie season at {team}.', { team: d.team }),
+    d.done < d.of ? t('Stopped after round {done} of {of}.', { done: d.done, of: d.of }) : '',
+  );
+  return h(
+    'section',
+    { class: 'f-retire f-day' },
+    h('div', { class: 'head' }, helmet(e.helmet, { gold: app.supporter }), h('div', null, h('b', null, `#${e.number ?? ''} ${e.name} ${e.flag}`), h('div', { style: 'color:var(--ink-3);font-size:14px' }, where))),
+    h('div', { class: 'tier' }, d.pos ? t('P{pos} in the championship', { pos: d.pos }) : t('No race started')),
+    h('div', { class: 'grid4' }, stats.map(([k, v]) => h('div', { class: 'big-stat' }, h('b', null, v), h('span', null, k)))),
+    h('pre', { class: 'day-squares', 'aria-label': t('Results by round') }, daySquares(d.rounds, d.of).join('\n')),
+    d.goal
+      ? h('div', { class: 'goal-line day-goal' }, h('span', { class: `res ${d.met ? 'ok' : 'ko'}` }, d.met ? t('Target met') : t('Target missed')), h('span', null, t('Team target: {goal}', { goal: goalText(d.goal) })))
+      : null,
+    streak > 0 ? h('p', { class: 'day-streak' }, `🔥 ${t('{n}-day streak', { n: streak })}`) : null,
+    vsBox(app, e),
+    h('div', { class: 'row', style: 'flex-wrap:wrap;margin-top:14px' }, copyBtn, shareBtn, dareBtn),
+    boardBox(app, e),
+    h('p', { class: 'day-next' }, t('A new car, a new grid and a new rookie arrive at midnight.')),
+    app.supporter
+      ? h('div', { class: 'thanks-box' }, h('p', { style: 'margin:0' }, t('☕ Thank you for being in the pit crew. You keep this free for everyone.')))
+      : h('div', { class: 'thanks-box' }, h('p', null, t('Enjoyed that season? Lights Out is free with no ads. A coffee keeps new teams, tracks and stories coming.')), coffeeButton(app, { reason: 'retire' })),
+  );
+}
+
+// A challenge link's target against what you did: points for a daily season, legacy score for a career.
+function vsBox(app, e) {
+  const v = app.s?.vs;
+  if (!v) return null;
+  const day = v.kind === 'day';
+  if (day !== !!e.day || (day && v.date !== e.day.date)) return null;
+  const mine = day ? e.day.pts : e.score;
+  const theirs = day ? v.pts : v.score;
+  const diff = mine - theirs;
+  const verdict = diff > 0
+    ? t('You beat {name} by {n}.', { name: v.name, n: diff })
+    : diff < 0 ? t('{name} stays ahead by {n}.', { name: v.name, n: -diff }) : t('A dead heat with {name}.', { name: v.name });
+  return h(
+    'div',
+    { class: `vs-box${diff > 0 ? ' won' : diff < 0 ? ' lost' : ''}` },
+    h('h4', null, t('Head to head')),
+    h('div', { class: 'vs-row' }, h('div', null, h('b', null, mine), h('span', null, t('You'))), h('i', null, day ? t('points') : t('legacy score')), h('div', null, h('b', null, theirs), h('span', null, v.name))),
+    h('p', null, verdict, ' ', t('Send your result back and see if they can answer it.')),
+  );
+}
+
+// While the career runs, the sidebar keeps the target in view.
+function chaseBox(s) {
+  const v = s.vs;
+  if (!v) return null;
+  const text = v.kind === 'day'
+    ? t('Beat {pts} (P{pos}).', { pts: plural(v.pts, 'point'), pos: v.pos })
+    : t('Beat a legacy score of {score} ({titles}, {wins}).', { score: v.score, titles: plural(v.titles, 'title'), wins: plural(v.wins, 'win') });
+  return h('div', { class: 'goal-box chase' }, h('b', null, t('Challenge from {name}', { name: v.name })), text);
 }
 
 // A career that ended with a kid can carry on through them.
@@ -488,15 +571,17 @@ function boardBox(app, e) {
   const draw = () => {
     const s = app.s;
     const b = s?.retired?.board;
-    const view = h('button', { class: 'btn', onClick: () => openLeaderboard(app, { tab: e.daily ? 'daily' : 'all' }) }, t('View leaderboard'));
+    const view = h('button', { class: 'btn', onClick: () => openLeaderboard(app, { tab: e.day ? 'day' : 'all' }) }, e.day ? t('View today’s board') : t('View leaderboard'));
     let text;
     let submit = null;
     if (b) text = cat(boardResultText(b), t('Submitted as {name}.', { name: b.name }));
     else if (canSubmit(s)) {
-      text = t('See how this career ranks against everyone else’s. The server replays it from the seed to check it.');
-      submit = h('button', { class: 'btn btn-go', onClick: () => openSubmitDialog(app, draw) }, t('Submit to the global leaderboard'));
+      text = e.day
+        ? t('See where your points put you among everyone who drove this car today. The server replays the season to check it.')
+        : t('See how this career ranks against everyone else’s. The server replays it from the seed to check it.');
+      submit = h('button', { class: 'btn btn-go', onClick: () => openSubmitDialog(app, draw) }, e.day ? t('Submit to today’s board') : t('Submit to the global leaderboard'));
     } else text = t('This career began before the global leaderboard existed, so it cannot be verified. Your next one can.');
-    box.replaceChildren(h('h4', null, t('Global leaderboard')), h('p', null, text), h('div', { class: 'row', style: 'flex-wrap:wrap' }, submit, view));
+    box.replaceChildren(h('h4', null, e.day ? t('Today’s board') : t('Global leaderboard')), h('p', null, text), h('div', { class: 'row', style: 'flex-wrap:wrap' }, submit, view));
   };
   draw();
   return box;
@@ -601,7 +686,7 @@ function renderSide(app) {
     );
   }
   parts.push(h('h3', { style: 'margin-top:22px' }, t('Your driver')), h('div', { class: 'meta' }, t('Overall {n}', { n: ovr(s) })), statBars(s));
-  side.replaceChildren(...parts.filter(Boolean));
+  side.replaceChildren(...[chaseBox(s), ...parts].filter(Boolean));
 }
 
 // ------------------------------------------------------------------ dock
@@ -660,6 +745,18 @@ function renderDock(app) {
     );
   } else if (p.type === 'offers') {
     inner.append(h('p', { class: 'dock-q' }, t('Your options for {year}', { year: s.year + 1 })), h('div', { class: 'offers-wrap' }, p.offers.map((o, i) => offerButton(app, o, i))));
+  } else if (p.type === 'retired' && isOneSeason(s)) {
+    const career = store.loadGame();
+    inner.append(
+      h(
+        'div',
+        { class: 'row', style: 'flex-wrap:wrap' },
+        career && career.stage !== 'retired'
+          ? h('button', { class: 'btn btn-go', onClick: () => app.continueGame() }, t('Continue career'))
+          : h('button', { class: 'btn btn-go', onClick: () => app.showTitle() }, t('Play a full career')),
+        h('button', { class: 'btn', onClick: () => app.showTitle() }, t('Title screen')),
+      ),
+    );
   } else if (p.type === 'retired') {
     inner.append(
       h(
@@ -766,7 +863,9 @@ function openMenu(app) {
     item(t('Backup'), () => openBackup(app)),
     item(t('About'), () => openAbout()),
     app.s.stage !== 'retired'
-      ? item(t('Retire now'), () => confirmDialog(t('Retire now?'), t('Your career ends here and your legacy is written.'), t('Retire'), () => act(app, retireNow)), 'btn btn-ghost')
+      ? isOneSeason(app.s)
+        ? item(t('End the season now'), () => confirmDialog(t('End the season now?'), t('The points you have so far become your result for today.'), t('End the season'), () => act(app, retireNow)), 'btn btn-ghost')
+        : item(t('Retire now'), () => confirmDialog(t('Retire now?'), t('Your career ends here and your legacy is written.'), t('Retire'), () => act(app, retireNow)), 'btn btn-ghost')
       : null,
     h('p', { class: 'credits' }, t('Seed {seed}', { seed: app.s.seed })),
   );

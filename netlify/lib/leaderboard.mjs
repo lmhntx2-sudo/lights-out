@@ -10,6 +10,7 @@
 // Keys:
 //   boards/all-time        top 100 by legacy score
 //   boards/daily/<date>    top 100 for that daily challenge: goal met first, then score
+//   boards/day/<date>      top 100 for that daily season, by points (never on the all-time board)
 //   entries/<id>           every accepted career in full (private: holds the IP hash)
 //   rate/<ip hash>         recent submission times, for rate limiting
 //   config/salt            random secret for the IP hash, made on first use
@@ -33,12 +34,13 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 export const KEYS = {
   all: 'boards/all-time',
   daily: (date) => `boards/daily/${date}`,
+  day: (date) => `boards/day/${date}`,
   entry: (id) => `entries/${id}`,
   rate: (hash) => `rate/${hash}`,
   salt: 'config/salt',
 };
 
-export const TAGS = { all: 'lb-all', daily: (date) => `lb-daily-${date}` };
+export const TAGS = { all: 'lb-all', daily: (date) => `lb-daily-${date}`, day: (date) => `lb-day-${date}` };
 
 const byScore = (a, b) => b.score - a.score || (a.at < b.at ? -1 : a.at > b.at ? 1 : 0);
 const byDaily = (a, b) => Number(!!b.daily?.done) - Number(!!a.daily?.done) || byScore(a, b);
@@ -143,6 +145,7 @@ function publicEntry(id, displayName, sum, at) {
     how: sum.how,
     seed: sum.seed,
     daily: sum.daily ? { date: sum.daily.date, done: !!sum.daily.done } : null,
+    ...(sum.day ? { day: { date: sum.day.date, pos: sum.day.pos, pts: sum.day.pts, wins: sum.day.wins, podiums: sum.day.podiums, met: !!sum.day.met, team: sum.day.team, color: sum.day.color } } : {}),
     at,
   };
 }
@@ -199,6 +202,10 @@ async function submit(req, { store, ip, now, envSalt, purge }) {
     throw new HttpError(422, 'This career did not replay to the same result. That happens when the game is updated while a career is in progress, or when a save has been edited.', { code: 'mismatch' });
   }
 
+  if (sum.day && (!isDate(sum.day.date) || !dailyOpen(sum.day.date, now))) {
+    throw new HttpError(422, 'That daily season has closed. Today has a new one.', { code: 'closed' });
+  }
+
   // The same career always gets the same id, so sending it twice is harmless.
   const id = sha(JSON.stringify([s.setup, body.actions])).slice(0, 20);
   const at = new Date(now).toISOString();
@@ -220,6 +227,12 @@ async function submit(req, { store, ip, now, envSalt, purge }) {
   }
 
   const entry = record.entry;
+  // A daily season is scored in points, so it only ever goes on its own day's board.
+  if (entry.day) {
+    const rank = await place(store, KEYS.day(entry.day.date), entry, byScore);
+    await purge?.([TAGS.day(entry.day.date)]);
+    return json({ entry, ranks: { all: null, daily: null, day: rank }, duplicate, dayBoard: entry.day.date }, duplicate ? 200 : 201);
+  }
   const ranks = { all: await place(store, KEYS.all, entry, byScore), daily: null };
   const tags = [TAGS.all];
   const daily = entry.daily && isDate(entry.daily.date) && dailyOpen(entry.daily.date, now) ? entry.daily.date : null;
@@ -246,6 +259,12 @@ async function getBoard(req, { store }) {
     key = KEYS.daily(date);
     tag = TAGS.daily(date);
     extra = { date, goal: dailySetup(date).goalText };
+  } else if (board === 'day') {
+    const date = url.searchParams.get('date');
+    if (!isDate(date)) throw new HttpError(400, 'Pick a date as YYYY-MM-DD.');
+    key = KEYS.day(date);
+    tag = TAGS.day(date);
+    extra = { date };
   } else {
     throw new HttpError(400, 'Unknown leaderboard.');
   }
@@ -258,7 +277,7 @@ async function getBoard(req, { store }) {
   });
 }
 
-// GET  ?board=all | ?board=daily&date=YYYY-MM-DD   ->  { entries }
+// GET  ?board=all | ?board=daily&date=YYYY-MM-DD | ?board=day&date=YYYY-MM-DD   ->  { entries }
 // POST { setup, actions, displayName, score }      ->  { entry, ranks }
 export async function handleLeaderboard(req, { store, ip, now = Date.now(), salt, purge } = {}) {
   try {
@@ -285,5 +304,6 @@ export async function removeEntry(store, id) {
   const drop = (cur) => (cur?.entries?.some((e) => e.id === id) ? { ...cur, entries: cur.entries.filter((e) => e.id !== id) } : undefined);
   await update(store, KEYS.all, drop);
   if (record.entry.daily) await update(store, KEYS.daily(record.entry.daily.date), drop);
+  if (record.entry.day) await update(store, KEYS.day(record.entry.day.date), drop);
   return true;
 }

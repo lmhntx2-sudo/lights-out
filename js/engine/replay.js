@@ -10,6 +10,7 @@ import { cleanSeed } from '../core/rng.js';
 import { NATIONS } from '../data/nations.js';
 import { STYLES, BACKGROUNDS, START_YEAR, CONTENT_VERSION } from './constants.js';
 import { dailySetup } from './daily.js';
+import { ONE_SEASON, daySetup } from './oneseason.js';
 import { TIERS, tierFromRecord, inheritance, MAX_GEN } from './legacy.js';
 
 // A long career is about 1,500 calls; this leaves plenty of room.
@@ -29,12 +30,13 @@ const fail = (code, message) => {
 const own = (obj, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(obj, k);
 const HEX = /^#[0-9a-f]{6}$/i;
 const DAILY_SEED = /^daily-(\d{4}-\d{2}-\d{2})$/;
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 // Check a setup as the title screen builds it, and return a clean copy with only
 // the fields newGame reads. Anything the title screen could not produce is refused.
 export function validateSetup(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) fail('setup', 'The career setup is missing.');
-  const { seed, first, last, nat, style, bg, helmet, number, daily, legacy } = raw;
+  const { seed, first, last, nat, style, bg, helmet, number, daily, legacy, mode, day } = raw;
   // Careers from before content versions have no cv: they replay on version 1.
   const cv = raw.cv ?? 1;
   if (!Number.isInteger(cv) || cv < 1 || cv > CONTENT_VERSION) fail('setup', 'The content version is not valid.');
@@ -59,6 +61,18 @@ export function validateSetup(raw) {
       fail('setup', 'This daily challenge does not match the one for its date.');
     }
     setup.daily = { date: want.date, goal: want.goal, goalText: want.goalText };
+  }
+  // A daily season has to be exactly the one handed out for its date. Ordinary
+  // careers have no mode key at all.
+  if (mode != null) {
+    if (mode !== ONE_SEASON || typeof day !== 'string' || !DAY.test(day) || Number.isNaN(Date.parse(`${day}T00:00:00Z`))) fail('setup', 'The game mode is not valid.');
+    if (daily != null || legacy != null) fail('setup', 'A daily season cannot be a daily challenge or a second-generation career.');
+    // The mode arrived with content version 3; no earlier career can be one.
+    if (cv < 3) fail('setup', 'The content version is too old for a daily season.');
+    const want = daySetup(day);
+    if (seed !== want.seed || nat !== want.nat || style !== want.style || bg !== want.bg) fail('setup', 'This daily season does not match the one for its date.');
+    setup.mode = ONE_SEASON;
+    setup.day = day;
   }
   // Ordinary careers have no legacy key at all, so their setups stay byte for byte as they were.
   if (legacy != null) {

@@ -42,12 +42,12 @@
       <h2>By day (Hong Kong time)</h2>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Date</th><th>Visitors</th><th>Players</th><th>Careers started</th><th>Careers finished</th></tr></thead>
+          <thead><tr><th>Date</th><th>Visitors</th><th>Players</th><th>Careers started</th><th>Careers finished</th><th>Daily seasons started</th><th>Daily seasons finished</th></tr></thead>
           <tbody id="rows"></tbody>
         </table>
       </div>
       <p class="note">
-        Visitors: different browsers that opened the game. Players: different browsers that started at least one career.
+        Visitors: different browsers that opened the game. Players: different browsers that started at least one career or daily season.
         Counting is anonymous: each browser sends a random id and nothing else, and browsers set to "do not track" are not counted.
       </p>
     </main>
@@ -75,11 +75,13 @@
           card(totals.players, 'Players, all time', `${fmt(today.players)} today`),
           card(totals.starts, 'Careers started', `${fmt(today.starts)} today`),
           card(totals.finishes, 'Careers finished', `${fmt(today.finishes)} today`),
+          card(totals.dstarts, 'Daily seasons started', `${fmt(today.dstarts)} today`),
+          card(totals.dfinishes, 'Daily seasons finished', `${fmt(today.dfinishes)} today`),
         );
         const top = Math.max(1, ...days.map((d) => d.visitors));
         for (const d of days) {
           const tr = document.createElement('tr');
-          const cells = [d.date, d.visitors, d.players, d.starts, d.finishes];
+          const cells = [d.date, d.visitors, d.players, d.starts, d.finishes, d.dstarts || 0, d.dfinishes || 0];
           cells.forEach((v, i) => {
             const td = document.createElement('td');
             if (i === 0) td.textContent = v;

@@ -81,6 +81,34 @@ export const store = {
   lastNudge: () => get('nudgeAt', 0),
   setNudge: () => set('nudgeAt', Date.now()),
 
+  // The daily season has its own save, so it never replaces a career in progress.
+  loadDay: () => get('day', null),
+  saveDay: (s) => set('day', s),
+  // Finished daily seasons by date: { pos, pts, wins, met }.
+  days: () => get('days', {}),
+  markDay(day) {
+    const all = get('days', {});
+    all[day.date] = { pos: day.pos, pts: day.pts, wins: day.wins, met: !!day.met };
+    const keep = Object.keys(all).sort().slice(-400);
+    set('days', Object.fromEntries(keep.map((k) => [k, all[k]])));
+  },
+  // Days in a row with a finished daily season. Today counts once it is done;
+  // until then the run up to yesterday still stands.
+  streak(today) {
+    const all = get('days', {});
+    const back = (key) => new Date(Date.parse(`${key}T00:00:00Z`) - 86400000).toISOString().slice(0, 10);
+    let key = all[today] ? today : back(today);
+    let n = 0;
+    while (all[key]) {
+      n++;
+      key = back(key);
+    }
+    return n;
+  },
+  // The name, number and helmet used in the last daily season, to start the next one with.
+  dayDriver: () => get('dayDriver', null),
+  setDayDriver: (v) => set('dayDriver', v),
+
   dailyDone: () => get('daily', {}),
   markDaily(date) {
     const d = get('daily', {});
@@ -112,6 +140,8 @@ export const store = {
     settings: get('settings', {}),
     supporter: get('supporter', false),
     daily: get('daily', {}),
+    days: get('days', {}),
+    dayDriver: get('dayDriver', null),
   }),
   importAll(data) {
     if (!data || data.app !== 'lights-out') throw new Error('This file is not a Lights Out backup.');
@@ -121,5 +151,7 @@ export const store = {
     if (data.settings) set('settings', data.settings);
     if (data.supporter) set('supporter', true);
     if (data.daily) set('daily', { ...get('daily', {}), ...data.daily });
+    if (data.days && typeof data.days === 'object') set('days', { ...get('days', {}), ...data.days });
+    if (data.dayDriver) set('dayDriver', data.dayDriver);
   },
 };

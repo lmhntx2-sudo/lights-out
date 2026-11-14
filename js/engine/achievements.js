@@ -100,6 +100,8 @@ export function f1Seasons(s) {
 
 export function unlock(s, id) {
   if (!ACH_BY_ID[id] || s.ach.includes(id)) return false;
+  // The daily season is a set scenario, so it earns none of the career achievements.
+  if (s.setup?.mode === 'oneseason' && id !== 'daily') return false;
   s.ach.push(id);
   pushFeed(s, { k: 'ach', id, ...achWords(ACH_BY_ID[id], s.driver?.nat) });
   return true;

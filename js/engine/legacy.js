@@ -6,6 +6,7 @@ import { SINFO, BACKGROUNDS, START_YEAR, START_AGE } from './constants.js';
 import { netWorth } from './achievements.js';
 import { overall, fullName } from './player.js';
 import { legacyOf, sponsorKind } from './helpers.js';
+import { isOneSeason, dayResult } from './oneseason.js';
 import { money, plural } from '../core/fmt.js';
 import { t as tr, loc, bgText, styleName, seriesName, macauGreats } from '../i18n.js';
 
@@ -237,6 +238,8 @@ export function buildSummary(s, how) {
   const score = Math.round(f1.titles * 1000 + f1.wins * 50 + f1.podiums * 15 + f1.poles * 20 + f1.starts * 2 + jr.titles * 120 + jr.wins * 10 + d.fame * 3);
   const best = [...c.hist].sort((a, b) => SINFO[b.series].lvl - SINFO[a.series].lvl || (a.pos || 99) - (b.pos || 99))[0];
   const lg = legacyOf(s);
+  // A daily season is scored on its points, not on a legacy.
+  const day = isOneSeason(s) ? dayResult(s) : null;
   return {
     name: d.name,
     code: d.code,
@@ -257,7 +260,8 @@ export function buildSummary(s, how) {
     junior: jr,
     teams: c.f1Teams.map((id) => s.teams[id]?.name).filter(Boolean),
     worth,
-    score,
+    score: day ? day.score : score,
+    ...(day ? { day } : {}),
     tier: loc('tier', tierOf(s, how), null, TIERS[tierOf(s, how)]),
     tierKey: tierOf(s, how),
     lines: epilogue(s, how),
@@ -271,7 +275,8 @@ export function buildSummary(s, how) {
   };
 }
 
-export function shareText(sum, url) {
+// link: a challenge link to send instead of the plain seed link (see ui/day.js).
+export function shareText(sum, url, link) {
   const f = sum.f1;
   const n = { titles: plural(f.titles, 'world title'), wins: plural(f.wins, 'win'), podiums: plural(f.podiums, 'podium'), starts: plural(f.starts, 'start') };
   const stats = !f.starts
@@ -285,7 +290,7 @@ export function shareText(sum, url) {
     stats,
     tr('Net worth {money}. Legacy score {score}.', { money: money(sum.worth), score: sum.score }),
     tr('Seed: {seed}', { seed: sum.seed }),
-    url ? tr('Play Lights Out: {url}', { url: `${url}?seed=${encodeURIComponent(sum.seed)}` }) : '',
+    link ? tr('Same world, same rivals. Beat my score: {url}', { url: link }) : url ? tr('Play Lights Out: {url}', { url: `${url}?seed=${encodeURIComponent(sum.seed)}` }) : '',
   ]
     .filter(Boolean)
     .join('\n');

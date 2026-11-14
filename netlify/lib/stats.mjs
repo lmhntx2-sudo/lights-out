@@ -3,15 +3,17 @@
 // Netlify Blobs interface.
 //
 // The browser sends { e, id }: e is 'open' (the game was opened), 'start' (a
-// career started) or 'finish' (a career ended in retirement), and id is a
-// random id made in that browser. The id lets us count people instead of page
+// career started), 'finish' (a career ended in retirement), 'dstart' or
+// 'dfinish' (a daily season started or finished), and id is a random id made
+// in that browser. The id lets us count people instead of page
 // loads. Only a salted hash of it is kept, and nothing else about the player.
 //
 // Days are Hong Kong days (UTC+8, no daylight saving): that is where the
 // players are, so "today" matches theirs.
 //
 // Keys:
-//   days/<date>                    { visitors, players, starts, finishes } for that day
+//   days/<date>                    { visitors, players, starts, finishes } for that day, plus
+//                                  dstarts and dfinishes once a daily season has been played
 //   totals                         the same, all time, with the first day counted
 //   seen/<date>/<v|p>/<id hash>    marks an id as already counted as a visitor or player that day
 //   seen/all/<v|p>/<id hash>       the same, all time
@@ -37,7 +39,7 @@ export const KEYS = {
   salt: 'config/salt',
 };
 
-const EVENTS = new Set(['open', 'start', 'finish']);
+const EVENTS = new Set(['open', 'start', 'finish', 'dstart', 'dfinish']);
 // crypto.randomUUID(), or 32 hex digits from older browsers.
 const ID = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{32})$/i;
 
@@ -134,18 +136,22 @@ async function record(req, { store, ip, now, envSalt }) {
   if (e === 'open') {
     if (await firstTime(store, date, 'v', idHash)) add.visitors = 1;
     if (await firstTime(store, 'all', 'v', idHash)) addAll.visitors = 1;
-  } else if (e === 'start') {
-    add.starts = addAll.starts = 1;
+  } else if (e === 'start' || e === 'dstart') {
+    // A daily season makes a player of you just as a career does.
+    if (e === 'start') add.starts = addAll.starts = 1;
+    else add.dstarts = addAll.dstarts = 1;
     if (await firstTime(store, date, 'p', idHash)) add.players = 1;
     if (await firstTime(store, 'all', 'p', idHash)) addAll.players = 1;
-  } else {
+  } else if (e === 'finish') {
     add.finishes = addAll.finishes = 1;
+  } else {
+    add.dfinishes = addAll.dfinishes = 1;
   }
 
   const bump = (cur, inc, extra = {}) => {
     if (!Object.values(inc).some(Boolean)) return undefined;
     const next = { ...empty(), ...extra, ...cur };
-    for (const k of Object.keys(inc)) next[k] += inc[k];
+    for (const k of Object.keys(inc)) next[k] = (next[k] || 0) + inc[k];
     return next;
   };
   await update(store, KEYS.day(date), (cur) => bump(cur, add));
@@ -170,7 +176,7 @@ async function report(req, { store, now }) {
 }
 
 // GET  ?days=30                       ->  { tz, today, days: [newest first], totals }
-// POST { e: 'open'|'start'|'finish', id }  ->  204
+// POST { e: 'open'|'start'|'finish'|'dstart'|'dfinish', id }  ->  204
 export async function handleStats(req, { store, ip, now = Date.now(), salt } = {}) {
   try {
     if (req.method === 'GET') return await report(req, { store, now });

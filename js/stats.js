@@ -38,7 +38,7 @@ function playerId() {
   return cached;
 }
 
-// e: 'open' | 'start' | 'finish'
+// e: 'open' | 'start' | 'finish' | 'dstart' | 'dfinish' (the last two are daily seasons)
 export function ping(e) {
   try {
     if (optedOut()) return;

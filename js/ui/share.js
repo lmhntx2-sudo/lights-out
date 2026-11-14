@@ -5,6 +5,7 @@ import { carSvg } from './car.js';
 import { helmetSvg } from './helmet.js';
 import { shareText, summaryWords } from '../engine/legacy.js';
 import { money } from '../core/fmt.js';
+import { siteUrl, careerChallengeUrl } from './day.js';
 import { t, getLang } from '../i18n.js';
 
 const W = 1080;
@@ -227,7 +228,7 @@ export async function openShare(sum) {
   const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
   const slug = sum.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'career';
   const file = blob ? new File([blob], `lights-out-${slug}.png`, { type: 'image/png' }) : null;
-  const text = shareText(sum, location.origin + location.pathname);
+  const text = shareText(sum, siteUrl(), careerChallengeUrl(sum));
   const canShareFile = !!(file && navigator.canShare && navigator.canShare({ files: [file] }));
 
   const buttons = [

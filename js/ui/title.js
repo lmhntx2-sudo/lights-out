@@ -4,10 +4,12 @@ import { NATIONS, REGIONS, nation } from '../data/nations.js';
 import { NAME_POOLS } from '../data/names.js';
 import { STYLES, BACKGROUNDS, HELMET_COLORS, SUPPORTER_COLORS } from '../engine/constants.js';
 import { newSeed, cleanSeed } from '../core/rng.js';
-import { todayKey, dailySetup, dailyGoalText } from '../engine/daily.js';
+import { todayKey } from '../engine/daily.js';
+import { dayBrief } from '../engine/game.js';
+import { ONE_SEASON, dayNumber } from '../engine/oneseason.js';
 import { ACHIEVEMENTS } from '../engine/achievements.js';
 import { familyLine, heirOf } from '../engine/legacy.js';
-import { money } from '../core/fmt.js';
+import { money, plural } from '../core/fmt.js';
 import { store } from '../store.js';
 import { coffeeButton } from './donate.js';
 import { openHallOfFame, openAchievements, openSettings, openBackup, openAbout, allUnlocked, openLeaderboard, confirmDialog } from './modals.js';
@@ -86,11 +88,18 @@ function langButton(app) {
 
 // heir: a retired parent's kid (legacy.js heirOf). Surname, nationality and
 // background come from the family; the helmet starts in the family colours.
-export function renderTitle(app, { seed, daily, form: kept, heir } = {}) {
+// daily: today's daily season. vs: a friend's result to beat, from a challenge
+// link. missed: the link was for another day's season.
+export function renderTitle(app, { seed, daily, form: kept, heir, vs = null, missed = false } = {}) {
   const root = document.getElementById('app');
   const save = store.loadGame();
-  const dly = daily && !heir ? dailySetup(todayKey()) : null;
-  const doneToday = store.dailyDone()[todayKey()];
+  const today = todayKey();
+  const dly = daily && !heir ? dayBrief(today) : null;
+  // Today's daily season, if this browser has started or finished it.
+  const daySave = store.loadDay();
+  const dayNow = daySave?.setup?.day === today ? daySave : null;
+  const dayDone = store.days()[today] || null;
+  const streak = store.streak(today);
   // A language switch redraws the title with the same form, and without the intro again.
   const anim = app.settings.anim !== 'off' && !kept;
 
@@ -106,12 +115,11 @@ export function renderTitle(app, { seed, daily, form: kept, heir } = {}) {
     number: 2 + Math.floor(Math.random() * 98),
     seed: cleanSeed(seed) || newSeed(),
   };
-  if (dly && !kept) Object.assign(form, { nat: dly.nat, style: dly.style, bg: dly.bg, seed: dly.seed });
+  if (dly && !kept) Object.assign(form, { ...(store.dayDriver() || {}), nat: dly.nat, style: dly.style, bg: dly.bg, seed: dly.seed });
   if (heir && !kept) Object.assign(form, { first: randomName(heir.nat, heir.last).first, last: heir.last, nat: heir.nat, bg: heir.bg, helmet: { ...heir.helmet } });
-  app.title = { opts: { seed, daily, heir }, form };
+  app.title = { opts: { seed, daily, heir, vs, missed }, form };
   // Fields the family decides, like the daily challenge decides its own.
   const fixed = !!dly || !!heir;
-  const goal = dly ? dailyGoalText(dly.goal, dly.goalText) : '';
 
   // ---------------------------------------------------------------- hero
   const builder = h('section', { class: 'builder', 'aria-labelledby': 'build-h' });
@@ -145,7 +153,17 @@ export function renderTitle(app, { seed, daily, form: kept, heir } = {}) {
   actions.append(
     dly || heir
       ? h('button', { class: 'btn', onClick: () => app.showTitle() }, t('Back to free play'))
-      : h('button', { class: 'btn', onClick: () => app.showTitle({ daily: true }) }, doneToday ? t('Daily challenge (done)') : t('Daily challenge')),
+      : h(
+          'button',
+          { class: `btn btn-day${dayDone ? ' done' : ''}`, onClick: () => app.openDaily() },
+          t('Daily season'),
+          h('small', null, dayDone
+            ? `✓ ${dayDone.pos ? t('P{pos} · {pts}', { pos: dayDone.pos, pts: plural(dayDone.pts, 'point') }) : plural(dayDone.pts, 'point')}`
+            : dayNow?.season
+              ? t('Round {round} of {of}', { round: Math.min(dayNow.season.round + 1, dayNow.season.cal.length), of: dayNow.season.cal.length })
+              : t('5 minutes')),
+          streak > 0 ? h('span', { class: 'streak', title: t('{n}-day streak', { n: streak }) }, `🔥 ${streak}`) : null,
+        ),
   );
   const hero = h(
     'section',
@@ -158,7 +176,7 @@ export function renderTitle(app, { seed, daily, form: kept, heir } = {}) {
     h(
       'nav',
       { class: 'title-links', 'aria-label': t('More') },
-      h('button', { class: 'btn btn-ghost', onClick: () => openLeaderboard(app, { tab: dly ? 'daily' : 'all' }) }, `🏆 ${t('Global leaderboard')}`),
+      h('button', { class: 'btn btn-ghost', onClick: () => openLeaderboard(app, { tab: dly ? 'day' : 'all' }) }, `🏆 ${t('Global leaderboard')}`),
       h('button', { class: 'btn btn-ghost', onClick: () => openHallOfFame(app) }, t('Hall of fame')),
       h('button', { class: 'btn btn-ghost', onClick: () => openAchievements(app) }, t('Achievements {got}/{all}', { got: ach.size, all: ACHIEVEMENTS.length })),
       h('button', { class: 'btn btn-ghost', onClick: () => openBackup(app) }, t('Backup')),
@@ -297,7 +315,7 @@ export function renderTitle(app, { seed, daily, form: kept, heir } = {}) {
   seedIn.addEventListener('input', () => (form.seed = cleanSeed(seedIn.value)));
   const seedDice = h('button', { class: 'btn icon-btn', type: 'button', title: t('New seed'), 'aria-label': t('New seed'), disabled: !!dly, onClick: () => { form.seed = seedIn.value = newSeed(); } }, '🎲');
 
-  const start = h('button', { class: 'btn btn-go', type: 'button' }, dly ? t('Start the daily challenge') : t('Start your engine'));
+  const start = h('button', { class: 'btn btn-go', type: 'button' }, dly ? t('Start the daily season') : t('Start your engine'));
   start.addEventListener('click', () => {
     if (!form.first.trim() && !form.last.trim()) {
       const n = randomName(form.nat, heir && form.last);
@@ -305,23 +323,30 @@ export function renderTitle(app, { seed, daily, form: kept, heir } = {}) {
       if (!heir) form.last = n.last;
     }
     if (!form.seed) form.seed = newSeed();
-    const go = () => app.startGame({ ...form, helmet: { ...form.helmet }, daily: dly ? { date: dly.date, goal: dly.goal, goalText: dly.goalText } : null, ...(heir ? { legacy: heir.legacy } : {}) });
+    if (dly) {
+      // Its own save, so a career in progress is safe. Remember the driver for tomorrow.
+      store.setDayDriver({ first: form.first, last: form.last, number: form.number, helmet: { ...form.helmet } });
+      return app.startGame({ ...form, helmet: { ...form.helmet }, daily: null, mode: ONE_SEASON, day: dly.date }, { vs });
+    }
+    const go = () => app.startGame({ ...form, helmet: { ...form.helmet }, daily: null, ...(heir ? { legacy: heir.legacy } : {}) }, { vs });
     if (save && save.stage !== 'retired') confirmDialog(t('Start a new career?'), t("Starting a new career replaces {name}'s unfinished one. Continue?", { name: save.driver.name }), t('Start a new career'), go);
     else go();
   });
 
   builder.append(...[
-    h('h2', { id: 'build-h' }, dly ? t('Daily challenge') : heir ? t('Your kid') : t('Build your driver')),
-    h('p', { class: 'sub' }, dly ? t('Everyone gets the same driver and the same world today.') : heir ? t('Same surname, same flag, and the family helmet colours to start from. The rest is up to you.') : t('Who are you, where are you from, and how do you drive?')),
-    dly ? h('div', { class: 'daily-banner' }, h('b', null, t('Goal for {date}: ', { date: dly.date })), goal, doneToday ? t(' You have already completed it today.') : '') : null,
+    h('h2', { id: 'build-h' }, dly ? t('Daily season #{n}', { n: dayNumber(dly.date) }) : heir ? t('Your kid') : t('Build your driver')),
+    h('p', { class: 'sub' }, dly ? t('One Formula 1 season in about five minutes. Everyone gets the same driver, the same car and the same luck today. Most points wins the day.') : heir ? t('Same surname, same flag, and the family helmet colours to start from. The rest is up to you.') : t('Who are you, where are you from, and how do you drive?')),
+    dly ? dayBanner(dly) : null,
+    missed ? h('div', { class: 'daily-banner' }, t('That challenge was for an earlier day. Here is today’s season instead.')) : null,
+    vs ? vsBanner(vs) : null,
     heir ? heirBanner(heir) : null,
     h('div', { class: 'field' }, h('span', { class: 'lbl' }, t('Name')), h('div', { class: 'row' }, first, last, dice)),
     h('div', { class: 'field' }, h('span', { class: 'lbl' }, t('Race number')), h('p', { class: 'hint' }, t('From 2 to 99. Win the world title and you can run the #1.')), h('div', { class: 'row', style: 'align-items:center' }, numIn, numDice)),
-    h('div', { class: 'field' }, h('span', { class: 'lbl' }, t('Nationality')), h('p', { class: 'hint' }, t('Sets your home Grand Prix and how much sponsors pay.')), natFilter, natGrid),
-    h('div', { class: 'field' }, h('span', { class: 'lbl' }, t('Driving style')), styles),
-    h('div', { class: 'field' }, h('span', { class: 'lbl' }, t('Background')), bgs),
+    dly ? null : h('div', { class: 'field' }, h('span', { class: 'lbl' }, t('Nationality')), h('p', { class: 'hint' }, t('Sets your home Grand Prix and how much sponsors pay.')), natFilter, natGrid),
+    dly ? null : h('div', { class: 'field' }, h('span', { class: 'lbl' }, t('Driving style')), styles),
+    dly ? null : h('div', { class: 'field' }, h('span', { class: 'lbl' }, t('Background')), bgs),
     h('div', { class: 'field' }, h('span', { class: 'lbl' }, t('Helmet and personal livery')), h('div', { class: 'helmet-pick' }, preview, h('div', null, swatchRow('c1'), swatchRow('c2'))), h('p', { class: 'hint', style: 'margin:12px 0 6px' }, t('Helmet design')), designRow, carPreview, app.supporter ? null : h('p', { class: 'hint', style: 'margin-top:6px' }, t('Gold and chrome are supporter colours.'))),
-    h('div', { class: 'field seed-row' }, h('span', { class: 'lbl' }, t('World seed')), h('p', { class: 'hint' }, t('The same seed and the same choices replay the same life. Send it to a friend.')), h('div', { class: 'row' }, seedIn, seedDice)),
+    dly ? null : h('div', { class: 'field seed-row' }, h('span', { class: 'lbl' }, t('World seed')), h('p', { class: 'hint' }, t('The same seed and the same choices replay the same life. Send it to a friend.')), h('div', { class: 'row' }, seedIn, seedDice)),
     h('div', { class: 'start-row' }, start),
   ].filter(Boolean));
 
@@ -337,6 +362,32 @@ export function renderTitle(app, { seed, daily, form: kept, heir } = {}) {
       },
     });
   }
+}
+
+// What today's daily season hands out: the car, in its livery, and the rookie.
+function dayBanner(d) {
+  const n = nation(d.nat);
+  const stars = '★'.repeat(d.tier) + '☆'.repeat(5 - d.tier);
+  return h(
+    'div',
+    { class: 'day-brief' },
+    car({ color: d.color, accent: d.accent, number: '' }, { label: t('Today’s car: {team}', { team: d.team }) }),
+    h(
+      'div',
+      null,
+      h('b', null, `${n.flag} ${t('A rookie season at {team}', { team: d.team })}`),
+      h('span', null, t('Car {stars}. Driver rated {ovr}, age {age}, {style}.', { stars, ovr: d.ovr, age: d.age, style: styleName(d.style).toLowerCase() })),
+      h('span', null, t('Teammate: {name}.', { name: d.teammate }), ' ', t('Rival: {name}.', { name: d.rival })),
+    ),
+  );
+}
+
+// A friend's result to beat, from a challenge link.
+function vsBanner(vs) {
+  const text = vs.kind === 'day'
+    ? t('{name} scored {pts} (P{pos}) in today’s season. Beat it.', { name: vs.name, pts: plural(vs.pts, 'point'), pos: vs.pos })
+    : t('{name} retired with a legacy score of {score} ({titles}, {wins}) in this same world. Beat it.', { name: vs.name, score: vs.score, titles: plural(vs.titles, 'title'), wins: plural(vs.wins, 'win') });
+  return h('div', { class: 'daily-banner vs-banner' }, h('b', null, t('Challenge: ')), text);
 }
 
 // What the family hands down, in words.

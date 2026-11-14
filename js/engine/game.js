@@ -27,6 +27,7 @@ import {
 import { pushFeed, story, legacyOf, contentVersion, sponsorKind } from './helpers.js';
 import { buildSummary, parentName, tierName } from './legacy.js';
 import { checkDaily } from './daily.js';
+import { ONE_SEASON, isOneSeason, seatRookie, daySetup } from './oneseason.js';
 import { money, plural } from '../core/fmt.js';
 import { t as tr, cat, natName, bgText, seriesName, trackName, trackShort, macauGreats } from '../i18n.js';
 
@@ -102,6 +103,7 @@ export function newGame(setup) {
       junior: { starts: 0, wins: 0, podiums: 0, poles: 0, titles: 0 },
     },
   };
+  if (setup.mode === ONE_SEASON) return startOneSeason(s, r);
   const rival = makeAIDriver(s, r, { series: 'F4', age: START_AGE, skill: overall(s.driver.stats) + r.range(-1, 3), pot: r.range(86, 96), nat: lg?.rival?.nat });
   // The kid of your parent's old rival, with the same surname and flag.
   if (lg?.rival) {
@@ -125,6 +127,32 @@ export function newGame(setup) {
   });
   presentPrologue(s);
   return s;
+}
+
+// The daily season: no karting years and no junior ladder. The rookie is in a
+// Formula 1 seat and the season is about to start (see oneseason.js).
+function startOneSeason(s, r) {
+  const t = seatRookie(s, r);
+  const n = nation(s.driver.nat);
+  s.stage = 'preseason';
+  pushFeed(s, {
+    k: 'chapter',
+    year: s.year,
+    big: tr('Daily season'),
+    title: tr('{name}, {adj}, {age} and a rookie at {team}', { name: s.driver.name, adj: n.adj, nation: natName(n), age: s.driver.age, team: t.name }),
+    sub: tr('One Formula 1 season. Everyone playing today has this seat, this grid and this luck. The calls are yours, and the most points wins the day.'),
+    color: t.color,
+  });
+  return s;
+}
+
+// What today's daily season hands out, for the title screen: the team, how good
+// the car is and how good the rookie is. Names and helmets change no dice.
+export function dayBrief(date) {
+  const day = daySetup(date);
+  const s = newGame({ seed: day.seed, first: 'A', last: 'B', nat: day.nat, style: day.style, bg: day.bg, helmet: { c1: '#F2F2F2', c2: '#E8002D' }, number: 7, daily: null, mode: ONE_SEASON, day: date });
+  const t = s.teams[s.career.team];
+  return { ...day, team: t.name, short: t.short, color: t.color, accent: t.accent || '#FFFFFF', tier: carTier(s, t), ovr: ovr(s), rival: nameOf(s, s.rivalId), teammate: nameOf(s, teammateOf(s)) };
 }
 
 function placeStart(s, r) {
@@ -324,6 +352,14 @@ function startSeason(s, r) {
 
   const ctx = contextBase(s, r);
   s.stage = 'race';
+  if (isOneSeason(s)) {
+    // Training pays off at the end of a season, and this career has only the one.
+    if (tmId) s.queue.push({ id: 'teammate', c: ctx, after: null });
+    s.queue.push({ id: 'car_launch', c: ctx, after: null });
+    const q = s.queue.shift();
+    present(s, EVENTS[q.id], q.c, q.after);
+    return;
+  }
   present(s, EVENTS.training, ctx, null);
   if (reigning) s.queue.push({ id: 'number_one', c: { ...ctx, number: s.driver.number }, after: null });
   if (tmId && s.flags.lastTm !== tmId) {
@@ -343,6 +379,8 @@ function seasonGoal(s, t, series) {
   const rank = carRank(s, t);
   const f1 = series === 'F1';
   const goal = (type, n) => ({ type, n, text: goalText({ type, n }) });
+  // A rookie in the daily season gets a target a good season can reach in any car.
+  if (isOneSeason(s)) return goal('top', Math.max(3, Math.min(14, Math.round(rank * 1.5 + 1.5))));
   if (rank === 1) return goal('top', 1);
   if (rank <= 3) return goal('top', rank * 2);
   if (f1 && rank >= 9) return goal('points', 10);
@@ -780,6 +818,8 @@ function endSeason(s, r) {
     f1Champ: series !== 'F1' ? `${nameOf(s, f1Champ)}${champTeam ? ` (${champTeam.short})` : ''}` : null,
   });
   if (academyNote) story(s, academyNote, { title: tr('Dropped'), tone: 'red' });
+  // A one-season career stops here: no winter, no contracts.
+  if (isOneSeason(s)) return retire(s, ONE_SEASON);
   const lg = legacyOf(s);
   if (lg && champion && series === 'F1' && c.tot.F1.titles === lg.titles + 1) {
     const text = lg.titles ? tr('World title number {n}. Nobody in the family has won more.', { n: c.tot.F1.titles }) : tr('{parent} never won the world title. You just did.', { parent: parentName(lg) });
@@ -942,11 +982,13 @@ function retire(s, how) {
   checkAch(s, 'retire', {});
   checkDaily(s);
   s.retired = buildSummary(s, how);
+  if (s.retired.day?.met) unlock(s, 'daily');
   pushFeed(s, { k: 'retire', ...s.retired });
 }
 
 export function retireNow(s) {
   if (s.stage === 'retired') return;
   s.log?.push('r');
-  retire(s, 'retired');
+  // Stopping a daily season early banks the points scored so far.
+  retire(s, isOneSeason(s) ? ONE_SEASON : 'retired');
 }

@@ -17,7 +17,8 @@ a podium with each driver's helmet, short 3D cutscenes for the biggest moments, 
 room with a cup for every win (engraved with its circuit),
 a chart of your championship finishes season by season,
 an all-time records table against fictional legends, shareable career-card images,
-achievements, a daily challenge, seeds you can share, a global leaderboard, optional
+achievements, a five-minute daily season with streaks, "beat my score" challenge links,
+seeds you can share, a global leaderboard, optional
 sound effects, and a "Fuel the dev" tip jar.
 
 ## Play locally
@@ -30,18 +31,47 @@ npm start
 Then open http://localhost:5173. Opening `index.html` straight from disk won't work,
 because browsers block JavaScript modules on `file://` pages.
 
+## Daily season
+
+One Formula 1 season in about five minutes (around 45 presses), new every day. The date
+picks a rookie (nationality, driving style, how good they are) and a seat, from the best
+car down to the ninth best; a slower car comes with a better driver. Everyone gets the
+same grid and the same dice, so only their calls differ. Most points wins the day.
+
+- It is an ordinary career with `s.setup.mode = 'oneseason'` and `s.setup.day` set
+  (`js/engine/oneseason.js`). The engine skips karting and the junior ladder, and ends
+  after the season review. Careers without a mode are untouched: `node tools/fingerprint.mjs`
+  gives the same hash as before.
+- It has its own save, so it never replaces a career in progress, and it earns no career
+  achievements (only "Daily driver", for meeting the team target).
+- The result card has coloured squares to copy (one per round, no spoilers), a streak
+  counter for days played in a row, and a board for the day.
+- `/?daily` opens today's season.
+
+The older "daily challenge" (a whole career with a goal) is no longer offered. Ones
+already in progress still finish and still count on their old board.
+
+## Challenge links
+
+A shared result can carry a score to beat: `/?seed=abc123&vs=12340~3~41~Name` for a
+career (legacy score, titles, wins) and `/?daily=2026-11-14&vs=86~7~Name` for a daily
+season (points, position). The friend sees the target while they play and a head-to-head
+at the end. It is only ever shown as text; nothing in it is trusted or sent to the server
+(`js/core/vs.js`).
+
 ## Global leaderboard
 
 At retirement, players can submit their career under a display name. There are two
-boards: the top 100 careers of all time by legacy score, and one board per daily
-challenge, where meeting the day's goal ranks above any score that missed it.
+kinds of board: the top 100 careers of all time by legacy score, and one board per daily
+season, by points. A daily season never goes on the all-time board, and its day's board
+closes two days later.
 
 Nobody can just post a score. The game records the setup and every button press in the
 save (`s.setup` and `s.log`, about 800 short entries per career). The function at
 `/api/leaderboard` replays the whole career with the same engine and only accepts it if
 it ends in retirement with the score the player claimed. It also rejects anything the
-game's buttons couldn't have done, like buying a seat the driver can't afford or forging
-a daily challenge.
+game's buttons couldn't have done, like buying a seat the driver can't afford or playing
+a daily season with any driver but the day's.
 
 Abuse protection:
 
@@ -79,16 +109,16 @@ started with (`s.setup.cv`, missing means 1), and the server replays it with tha
 
 ## Play stats
 
-To show how many people play, the game sends three events to `/api/stats`: the game
-was opened, a career started, a career finished. Each event carries only a random id
+To show how many people play, the game sends a few events to `/api/stats`: the game
+was opened, a career started or finished, a daily season started or finished. Each event carries only a random id
 made in that browser (kept in localStorage, never in backups), so the counter can count
 people rather than page loads. The server keeps a salted hash of that id and nothing
 else about the player. Browsers with Global Privacy Control or Do Not Track turned on
 send nothing.
 
 Counts are kept per Hong Kong day (UTC+8): visitors (browsers that opened the game),
-players (browsers that started a career), careers started and careers finished, plus
-all-time totals. One connection can send at most 120 events an hour. See them at
+players (browsers that started a career or a daily season), careers started and finished,
+daily seasons started and finished, plus all-time totals. One connection can send at most 120 events an hour. See them at
 `/stats.html` (not linked from the game, and kept out of search engines), or as JSON from
 `GET /api/stats?days=30`.
 
@@ -232,6 +262,8 @@ Where things live:
 | `js/ui/` | Title screen, game screen, dialogs, donations. |
 | `js/ui/car.js`, `js/ui/helmet.js` | The car (top-down, in any livery) and helmet (side-on, six designs) art, as SVG. |
 | `js/ui/trophies.js` | The trophy room, the career chart and the results strip. |
+| `js/engine/oneseason.js`, `js/ui/day.js` | The daily season: what each date hands out, its result and score, and the text to share. |
+| `js/core/vs.js` | Challenge links: packing and reading the score to beat. |
 | `js/data/circuits.js`, `js/ui/circuit.js` | Circuit maps (one SVG path per track) and how they're drawn. `tools/circuits.mjs` rebuilds the data; see the top of that file. |
 | `js/ui/cutscene-pick.js`, `js/ui/cutscene.js` | Which moment gets a cutscene, and the player that shows it. |
 | `js/scenes/` | The 3D cutscenes: `kit.js` (props and effects), `moments.js`, `places.js`. |

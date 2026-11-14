@@ -11,7 +11,9 @@ import { ACHIEVEMENTS, netWorth, achWords } from '../engine/achievements.js';
 import { nation } from '../data/nations.js';
 import { GAME } from '../config.js';
 import { allTime, summaryWords, familyLine } from '../engine/legacy.js';
-import { todayKey, dailySetup, dailyGoalText } from '../engine/daily.js';
+import { todayKey } from '../engine/daily.js';
+import { dayBrief } from '../engine/game.js';
+import { dayNumber } from '../engine/oneseason.js';
 import { checkDisplayName, NAME_MIN, NAME_MAX } from '../core/displayname.js';
 import { fetchBoard, submitCareer, localizeError } from '../api.js';
 import { setSound } from './sfx.js';
@@ -296,6 +298,35 @@ export function openRecords(app) {
 
 // ------------------------------------------------------------ global leaderboard
 
+// Today's daily season: everyone drove the same car, so the points are the whole story.
+function dayTable(entries, mine) {
+  return h(
+    'table',
+    { class: 'table lb-table' },
+    h('thead', null, h('tr', null, h('th', { class: 'r' }, '#'), h('th', null, t('Driver')), h('th', { class: 'r' }, t('Points')))),
+    h(
+      'tbody',
+      null,
+      entries.map((e, i) => {
+        const d = e.day || {};
+        const record = [e.driver, d.pos ? t('P{pos} in the championship', { pos: d.pos }) : null, plural(d.wins || 0, 'win')].filter(Boolean).join(' · ');
+        return h(
+          'tr',
+          { class: mine.has(e.id) ? 'me' : '' },
+          h('td', { class: 'r lb-pos' }, i + 1),
+          h(
+            'td',
+            null,
+            h('div', { class: 'lb-name' }, e.name, mine.has(e.id) ? h('span', { class: 'lb-you' }, t('You')) : null),
+            h('div', { class: 'lb-sub' }, h('span', { class: `lb-goal${d.met ? ' ok' : ''}` }, d.met ? t('Target met') : t('Target missed')), [e.flag, record].filter(Boolean).join(' ')),
+          ),
+          h('td', { class: 'r lb-score' }, d.pts ?? 0),
+        );
+      }),
+    ),
+  );
+}
+
 function boardTable(entries, mine, daily) {
   return h(
     'table',
@@ -331,14 +362,13 @@ function boardTable(entries, mine, daily) {
 export function openLeaderboard(app, { tab = 'all' } = {}) {
   const mine = store.boardMine();
   const date = todayKey();
-  const canPlay = !app.s || app.s.stage === 'retired';
   let dlg;
   const load = (board) => {
     const box = h('div', { 'aria-busy': 'true' }, h('p', { class: 'empty' }, t('Loading the leaderboard…')));
-    fetchBoard(board, board === 'daily' ? date : null)
+    fetchBoard(board, board === 'day' ? date : null)
       .then((data) => {
-        const empty = board === 'daily' ? t('Nobody has submitted today’s challenge yet. Be the first.') : t('No careers on the board yet. Finish one and be the first.');
-        box.replaceChildren(data.entries.length ? boardTable(data.entries, mine, board === 'daily') : h('p', { class: 'empty' }, empty));
+        const empty = board === 'day' ? t('Nobody has posted today’s season yet. Be the first.') : t('No careers on the board yet. Finish one and be the first.');
+        box.replaceChildren(data.entries.length ? (board === 'day' ? dayTable(data.entries, mine) : boardTable(data.entries, mine, false)) : h('p', { class: 'empty' }, empty));
       })
       .catch((e) => {
         box.replaceChildren(h('p', { class: 'empty' }, t('The leaderboard could not be loaded.')));
@@ -348,20 +378,25 @@ export function openLeaderboard(app, { tab = 'all' } = {}) {
     return box;
   };
   const allTab = () => h('div', null, h('p', { class: 'lb-intro' }, t('The top 100 careers by legacy score. The server replays every one from its seed before it goes on the board.')), load('all'));
-  const dailyTab = () => {
-    const d = dailySetup(date);
+  const dayTab = () => {
+    const b = dayBrief(date);
+    const done = !!store.days()[date];
     return h(
       'div',
       null,
-      h('p', { class: 'lb-intro' }, h('b', null, t('Goal for {date}: ', { date })), dailyGoalText(d.goal, d.goalText), ' ', t('Meeting it puts you above everyone who missed it, then legacy score decides.')),
-      canPlay ? h('button', { class: 'btn btn-sm', style: 'margin-bottom:12px', onClick: () => { dlg.close(); app.showTitle({ daily: true }); } }, t('Play today’s challenge')) : null,
-      load('daily'),
+      h('p', { class: 'lb-intro' }, h('b', null, t('Daily season #{n}: ', { n: dayNumber(date) })), t('a rookie season at {team}. Most points wins the day. The server replays every season before it goes on the board.', { team: b.team })),
+      h('button', { class: 'btn btn-sm', style: 'margin-bottom:12px', onClick: () => { dlg.close(); app.openDaily(); } }, done ? t('See your result') : t('Play today’s season')),
+      load('day'),
     );
   };
-  dlg = openDialog(t('Global leaderboard'), tabs([[t('All-time'), allTab], [t('Today’s daily challenge'), dailyTab]], tab === 'daily' ? 1 : 0));
+  dlg = openDialog(t('Global leaderboard'), tabs([[t('All-time'), allTab], [t('Today’s daily season'), dayTab]], tab === 'day' || tab === 'daily' ? 1 : 0));
 }
 
 export function boardResultText(b, duplicate = false) {
+  if (b.dayBoard) {
+    if (duplicate) return t('This season is already on today’s board.');
+    return b.day ? t('You are #{rank} on today’s board.', { rank: b.day }) : t('Season verified. It did not make today’s top 100.');
+  }
   if (duplicate) return t('This career is already on the global leaderboard.');
   if (b.rank && b.daily) return t('You are #{rank} on the global leaderboard and #{daily} in the daily challenge.', { rank: b.rank, daily: b.daily });
   if (b.rank) return t('You are #{rank} on the global leaderboard.', { rank: b.rank });
@@ -377,11 +412,15 @@ export function openSubmitDialog(app, onDone) {
   const input = h('input', { class: 'input', id: 'lb-name', maxlength: NAME_MAX, autocomplete: 'nickname', spellcheck: 'false', 'aria-describedby': 'lb-name-hint' });
   input.value = store.boardName() || '';
   const msg = h('p', { class: 'hint', id: 'lb-name-hint' }, hint);
-  const go = h('button', { class: 'btn btn-go', type: 'submit' }, t('Submit career'));
+  const day = sum.day || null;
+  const goLabel = day ? t('Submit season') : t('Submit career');
+  const go = h('button', { class: 'btn btn-go', type: 'submit' }, goLabel);
   const form = h(
     'form',
     { class: 'lb-form', novalidate: true },
-    h('p', { style: 'margin-top:0;color:var(--ink-2)' }, t('{name}, legacy score {score}. The server replays the whole career from its seed to check it.', { name: sum.name, score: sum.score })),
+    h('p', { style: 'margin-top:0;color:var(--ink-2)' }, day
+      ? t('{name}, {pts} in today’s season. The server replays the whole season to check it.', { name: sum.name, pts: plural(day.pts, 'point') })
+      : t('{name}, legacy score {score}. The server replays the whole career from its seed to check it.', { name: sum.name, score: sum.score })),
     sum.daily
       ? h('p', { style: 'color:var(--ink-2)' }, sum.daily.done ? t('It also goes on the daily challenge board for {date}, goal met.', { date: sum.daily.date }) : t('It also goes on the daily challenge board for {date}, goal missed.', { date: sum.daily.date }))
       : null,
@@ -404,12 +443,12 @@ export function openSubmitDialog(app, onDone) {
       return;
     }
     go.disabled = true;
-    go.textContent = t('Checking your career…');
+    go.textContent = day ? t('Checking your season…') : t('Checking your career…');
     try {
       const res = await submitCareer(s, c.name);
       store.setBoardName(c.name);
       store.addBoardMine(res.entry.id);
-      sum.board = { id: res.entry.id, name: res.entry.name, rank: res.ranks.all, daily: res.ranks.daily, dailyDate: res.dailyBoard };
+      sum.board = { id: res.entry.id, name: res.entry.name, rank: res.ranks.all, daily: res.ranks.daily, dailyDate: res.dailyBoard, ...(res.dayBoard ? { day: res.ranks.day, dayBoard: res.dayBoard } : {}) };
       app.save();
       dlg.close();
       toast(boardResultText(sum.board, res.duplicate));
@@ -417,10 +456,10 @@ export function openSubmitDialog(app, onDone) {
     } catch (e) {
       toast(e.message);
       go.disabled = false;
-      go.textContent = t('Submit career');
+      go.textContent = goLabel;
     }
   });
-  dlg = openDialog(t('Submit to the global leaderboard'), form);
+  dlg = openDialog(day ? t('Submit to today’s board') : t('Submit to the global leaderboard'), form);
   input.focus();
   input.select();
 }
