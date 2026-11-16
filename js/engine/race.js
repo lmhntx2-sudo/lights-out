@@ -1,4 +1,5 @@
-import { SINFO, POINTS } from './constants.js';
+import { SINFO, POINTS, LEGEND } from './constants.js';
+import { isLegend } from './helpers.js';
 import { teamsOf } from './world.js';
 import { playerRatings } from './player.js';
 
@@ -19,6 +20,10 @@ export function prepareRace(s, r, track, series, swap = {}) {
       let cons;
       if (id === 'P') {
         ({ q, r: rr } = playerRatings(s, wet));
+        if (isLegend(s)) {
+          q -= LEGEND.pace;
+          rr -= LEGEND.pace;
+        }
         cons = s.driver.stats.consistency;
       } else {
         const d = s.drivers[id];

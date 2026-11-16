@@ -5,6 +5,8 @@ import { teamsOf, seatsOf, newJunior, makeAIDriver, removeFromSeats, carTier, na
 import { developAI, overall } from './player.js';
 import { quickRace, pointsFor } from './race.js';
 import { clamp, plural } from '../core/fmt.js';
+import { LEGEND } from './constants.js';
+import { isLegend } from './helpers.js';
 import { t as tr, seriesName } from '../i18n.js';
 
 export const newStand = () => ({ pts: 0, w: 0, pod: 0, pole: 0, best: 99, starts: 0 });
@@ -65,6 +67,7 @@ export function playerValue(s) {
     if (h.beatTm) v += 0.8;
   }
   v += (d.fame - 50) / 40;
+  if (isLegend(s)) v -= LEGEND.value;
   return v;
 }
 

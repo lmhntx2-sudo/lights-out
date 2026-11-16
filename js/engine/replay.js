@@ -36,7 +36,7 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/;
 // the fields newGame reads. Anything the title screen could not produce is refused.
 export function validateSetup(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) fail('setup', 'The career setup is missing.');
-  const { seed, first, last, nat, style, bg, helmet, number, daily, legacy, mode, day } = raw;
+  const { seed, first, last, nat, style, bg, helmet, number, daily, legacy, mode, day, diff } = raw;
   // Careers from before content versions have no cv: they replay on version 1.
   const cv = raw.cv ?? 1;
   if (!Number.isInteger(cv) || cv < 1 || cv > CONTENT_VERSION) fail('setup', 'The content version is not valid.');
@@ -73,6 +73,13 @@ export function validateSetup(raw) {
     if (seed !== want.seed || nat !== want.nat || style !== want.style || bg !== want.bg) fail('setup', 'This daily season does not match the one for its date.');
     setup.mode = ONE_SEASON;
     setup.day = day;
+  }
+  // Legend is the only other difficulty. Ordinary careers have no diff key at all.
+  if (diff != null) {
+    if (diff !== 'legend') fail('setup', 'The difficulty is not valid.');
+    if (setup.mode || setup.daily) fail('setup', 'A daily season or challenge has no difficulty setting.');
+    if (cv < 3) fail('setup', 'The content version is too old for Legend difficulty.');
+    setup.diff = 'legend';
   }
   // Ordinary careers have no legacy key at all, so their setups stay byte for byte as they were.
   if (legacy != null) {

@@ -1,4 +1,5 @@
-import { STATS, STYLES, BACKGROUNDS, TRAINING } from './constants.js';
+import { STATS, STYLES, BACKGROUNDS, TRAINING, LEGEND } from './constants.js';
+import { isLegend } from './helpers.js';
 import { driverCode } from '../data/names.js';
 import { clamp } from '../core/fmt.js';
 
@@ -64,12 +65,13 @@ export function growPlayer(s, r) {
   const d = s.driver;
   const age = d.age;
   const f = age <= 18 ? 0.19 : age <= 21 ? 0.21 : age <= 24 ? 0.2 : age <= 27 ? 0.16 : age <= 30 ? 0.08 : age <= 31 ? 0.03 : 0;
+  const slow = isLegend(s) ? LEGEND.growth : 1;
   const focus = TRAINING[d.training]?.stats || [];
   const deltas = {};
   for (const k of STATS) {
     const v = d.stats[k];
     const room = d.caps[k] - v;
-    let g = room > 0 ? room * f * (focus.includes(k) ? 1.45 : 1) + r.normal(0, 0.5) : Math.min(0, room * 0.15);
+    let g = room > 0 ? room * f * slow * (focus.includes(k) ? 1.45 : 1) + r.normal(0, 0.5) : Math.min(0, room * 0.15);
     if (age >= 31) {
       const physical = k === 'pace' || k === 'consistency' || k === 'racecraft' || k === 'wet';
       g = physical ? -(age - 30) * r.range(0.35, 0.8) : r.range(0, 0.4);

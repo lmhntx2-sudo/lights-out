@@ -18,13 +18,8 @@ export const isOneSeason = (s) => s?.setup?.mode === ONE_SEASON;
 // Nationalities added after this mode shipped stay out, so the pick for any date never changes.
 const DAY_NATIONS = NATIONS.filter((n) => (n.cv ?? 1) <= 3);
 
-// Day 1 of the daily season. The number in "Daily #12" counts from here.
-const FIRST_DAY = Date.UTC(2026, 10, 14);
-
-export function dayNumber(date) {
-  const [y, m, d] = date.split('-').map(Number);
-  return Math.round((Date.UTC(y, m - 1, d) - FIRST_DAY) / 86400000) + 1;
-}
+// Day numbering lives in core/days.js, so the link previews can use it too.
+export { dayNumber } from '../core/days.js';
 
 // Car stars by rank, the same split carTier makes of an eleven-team grid.
 const TIER = [5, 5, 4, 4, 3, 3, 3, 2, 2, 1, 1];
@@ -113,9 +108,11 @@ export function dayResult(s) {
 }
 
 // One square per round, the way the results strip colours them.
-export function daySquares(rounds, of = rounds.length) {
+export function dayCells(rounds, of = rounds.length) {
   const sq = (x) => (!x ? '▫️' : x.p === 0 ? '➖' : x.d ? '🟥' : x.p === 1 ? '🟪' : x.p <= 3 ? '🟩' : x.p <= 10 ? '⬜' : '⬛');
   const all = Array.from({ length: of }, (_, i) => sq(rounds[i]));
   const half = Math.ceil(all.length / 2);
-  return all.length > 14 ? [all.slice(0, half).join(''), all.slice(half).join('')] : [all.join('')];
+  return all.length > 14 ? [all.slice(0, half), all.slice(half)] : [all];
 }
+
+export const daySquares = (rounds, of = rounds.length) => dayCells(rounds, of).map((row) => row.join(''));

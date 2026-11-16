@@ -18,7 +18,7 @@ import { checkDisplayName, NAME_MIN, NAME_MAX } from '../core/displayname.js';
 import { fetchBoard, submitCareer, localizeError } from '../api.js';
 import { setSound } from './sfx.js';
 import { trophyRoom, careerChart } from './trophies.js';
-import { t, tn, LANGS, getLang, statName, statHint, seriesName, trainingText } from '../i18n.js';
+import { t, tn, cat, LANGS, getLang, statName, statHint, seriesName, trainingText } from '../i18n.js';
 
 export function openDialog(title, body, { onClose } = {}) {
   const dlg = h('dialog', { 'aria-label': title });
@@ -349,6 +349,7 @@ function boardTable(entries, mine, daily) {
               'div',
               { class: 'lb-sub' },
               daily ? h('span', { class: `lb-goal${e.daily?.done ? ' ok' : ''}` }, e.daily?.done ? t('Goal met') : t('Goal missed')) : null,
+              e.diff === 'legend' ? h('span', { class: 'lb-goal legend' }, t('Legend')) : null,
               [e.flag, [e.driver, summaryWords(e).tier, record].filter(Boolean).join(' · ')].filter(Boolean).join(' '),
             ),
           ),
@@ -367,7 +368,10 @@ export function openLeaderboard(app, { tab = 'all' } = {}) {
     const box = h('div', { 'aria-busy': 'true' }, h('p', { class: 'empty' }, t('Loading the leaderboard…')));
     fetchBoard(board, board === 'day' ? date : null)
       .then((data) => {
-        const empty = board === 'day' ? t('Nobody has posted today’s season yet. Be the first.') : t('No careers on the board yet. Finish one and be the first.');
+        const empty = board === 'day'
+          ? t('Nobody has posted today’s season yet. Be the first.')
+          : board === 'month' ? t('Nobody is on this month’s board yet. Finish a career and be the first.')
+            : board === 'legend' ? t('No Legend careers yet. Pick Legend when you build your driver and be the first.') : t('No careers on the board yet. Finish one and be the first.');
         box.replaceChildren(data.entries.length ? (board === 'day' ? dayTable(data.entries, mine) : boardTable(data.entries, mine, false)) : h('p', { class: 'empty' }, empty));
       })
       .catch((e) => {
@@ -389,7 +393,10 @@ export function openLeaderboard(app, { tab = 'all' } = {}) {
       load('day'),
     );
   };
-  dlg = openDialog(t('Global leaderboard'), tabs([[t('All-time'), allTab], [t('Today’s daily season'), dayTab]], tab === 'day' || tab === 'daily' ? 1 : 0));
+  const monthTab = () => h('div', null, h('p', { class: 'lb-intro' }, t('The best careers submitted this month, by legacy score. It starts again on the first of every month.')), load('month'));
+  const legendTab = () => h('div', null, h('p', { class: 'lb-intro' }, t('Careers on Legend difficulty only: quicker rivals, shorter odds, harder teams. Pick Legend when you build your driver.')), load('legend'));
+  const order = ['all', 'month', 'legend', 'day'];
+  dlg = openDialog(t('Global leaderboard'), tabs([[t('All-time'), allTab], [t('This month'), monthTab], [t('Legend'), legendTab], [t('Today’s daily season'), dayTab]], Math.max(0, order.indexOf(tab === 'daily' ? 'day' : tab))));
 }
 
 export function boardResultText(b, duplicate = false) {
@@ -398,6 +405,9 @@ export function boardResultText(b, duplicate = false) {
     return b.day ? t('You are #{rank} on today’s board.', { rank: b.day }) : t('Season verified. It did not make today’s top 100.');
   }
   if (duplicate) return t('This career is already on the global leaderboard.');
+  // The month and Legend boards, when the career made them.
+  const more = cat(b.legend ? t('#{n} on the Legend board.', { n: b.legend }) : '', b.month ? t('#{n} this month.', { n: b.month }) : '');
+  if (more) return cat(b.rank ? t('You are #{rank} on the global leaderboard.', { rank: b.rank }) : t('Career verified. It did not make the all-time top 100.'), more);
   if (b.rank && b.daily) return t('You are #{rank} on the global leaderboard and #{daily} in the daily challenge.', { rank: b.rank, daily: b.daily });
   if (b.rank) return t('You are #{rank} on the global leaderboard.', { rank: b.rank });
   if (b.daily) return t('Career verified. It did not make the all-time top 100, but you are #{daily} in the daily challenge.', { daily: b.daily });
@@ -448,7 +458,7 @@ export function openSubmitDialog(app, onDone) {
       const res = await submitCareer(s, c.name);
       store.setBoardName(c.name);
       store.addBoardMine(res.entry.id);
-      sum.board = { id: res.entry.id, name: res.entry.name, rank: res.ranks.all, daily: res.ranks.daily, dailyDate: res.dailyBoard, ...(res.dayBoard ? { day: res.ranks.day, dayBoard: res.dayBoard } : {}) };
+      sum.board = { id: res.entry.id, name: res.entry.name, rank: res.ranks.all, daily: res.ranks.daily, dailyDate: res.dailyBoard, ...(res.ranks.month ? { month: res.ranks.month } : {}), ...(res.ranks.legend ? { legend: res.ranks.legend } : {}), ...(res.dayBoard ? { day: res.ranks.day, dayBoard: res.dayBoard } : {}) };
       app.save();
       dlg.close();
       toast(boardResultText(sum.board, res.duplicate));

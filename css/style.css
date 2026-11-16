@@ -823,6 +823,11 @@ div.tier { cursor: default; }
 .f-day { border-color: #6a52a8; }
 .day-squares { margin: 0 0 14px; padding: 12px 14px; background: var(--black); border: 1px solid var(--line); border-radius: 8px; font-family: inherit; font-size: clamp(15px, 3.6vw, 22px); line-height: 1.35; letter-spacing: .06em; white-space: pre; overflow-x: auto; }
 .day-streak { margin: 0 0 10px; font-weight: 800; }
+.day-squares .gp { outline: 2px solid var(--purple); outline-offset: 1px; border-radius: 3px; }
+.day-gp { margin: -6px 0 12px; font-size: 15px; color: var(--ink-2); }
+.day-gp b { color: var(--ink); }
+.gp-banner { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; }
+.gp-banner svg { width: 100%; height: auto; }
 .day-next { margin: 14px 0 0; color: var(--ink-3); font-size: 14px; }
 .vs-box { margin: 0 0 4px; padding: 12px 14px; border-radius: 10px; background: var(--black); border: 1px solid var(--line); border-left: 3px solid var(--yellow); }
 .vs-box.won { border-left-color: var(--green); }
@@ -842,3 +847,10 @@ div.tier { cursor: default; }
 .day-goal { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 10px; font-size: 15px; }
 .day-goal .res { padding: 1px 8px; border-radius: 4px; font-weight: 700; font-size: 13px; }
 .f-retire:not(.f-day) .vs-box { margin-top: 16px; }
+.day-preview img { width: min(100%, 300px); }
+
+/* ---------------------------------------------------------------- Legend difficulty */
+.legend-tag { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 3px; background: var(--purple); color: #fff; font-family: var(--font); font-size: 11px; font-weight: 800; font-style: normal; font-stretch: normal; letter-spacing: .05em; text-transform: uppercase; line-height: 1.6; vertical-align: middle; }
+.legend-tag.big { font-size: 13px; margin-left: 12px; padding: 1px 8px; }
+.lb-goal.legend { background: var(--purple); color: #fff; }
+.tabs { flex-wrap: wrap; }

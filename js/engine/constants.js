@@ -10,6 +10,15 @@
 //      show events. Anything new after it is version 4.
 export const CONTENT_VERSION = 3;
 
+// Legend difficulty (setup.diff === 'legend'), for players who have run out of
+// records to break. A career without it never reads these, so it plays exactly
+// as before.
+//   pace    taken off the driver's own speed in qualifying and the race
+//   odds    percentage points taken off every decision that depends on a stat
+//   value   how much less teams think of you when they decide on offers
+//   growth  how much of the usual yearly improvement you get
+export const LEGEND = { pace: 3, odds: 8, value: 1.5, growth: 0.88 };
+
 export const START_YEAR = 2026;
 export const START_AGE = 15;
 export const RETIRE_AGE = 42;

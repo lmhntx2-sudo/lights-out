@@ -18,9 +18,9 @@ const CJK_FONTS = {
   ja: '"Hiragino Sans", "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif',
   ko: '"Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif',
 };
-const cjk = () => CJK_FONTS[getLang()] || CJK_FONTS.zh;
+export const cjk = () => CJK_FONTS[getLang()] || CJK_FONTS.zh;
 
-function svgImage(markup) {
+export function svgImage(markup) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => resolve(img);
@@ -29,13 +29,13 @@ function svgImage(markup) {
   });
 }
 
-function setFont(g, font, stretch = 'normal') {
+export function setFont(g, font, stretch = 'normal') {
   g.font = font;
   if ('fontStretch' in g) g.fontStretch = stretch;
 }
 
 // Shrink a font until the text fits.
-function fit(g, text, base, maxW, make) {
+export function fit(g, text, base, maxW, make) {
   let size = base;
   setFont(g, make(size), 'expanded');
   while (g.measureText(text).width > maxW && size > 20) {
@@ -51,7 +51,7 @@ const CJK_CHAR = '\u2E80-\u2FFF\u3000-\u9FFF\uF900-\uFAFF\uFF00-\uFFEF';
 const CLOSING = '、。，．：；！？」』）〉》】';
 const TOKENS = new RegExp(`[${CJK_CHAR}][${CLOSING}]*|[^\\s${CJK_CHAR}]+[${CLOSING}]*\\s*|\\s+`, 'g');
 
-function wrap(g, text, maxW) {
+export function wrap(g, text, maxW) {
   const lines = [];
   let line = '';
   for (const tok of text.match(TOKENS) || []) {
@@ -65,7 +65,7 @@ function wrap(g, text, maxW) {
   return lines;
 }
 
-function roundRect(g, x, y, w, hh, r) {
+export function roundRect(g, x, y, w, hh, r) {
   g.beginPath();
   g.moveTo(x + r, y);
   g.arcTo(x + w, y, x + w, y + hh, r);
@@ -149,6 +149,17 @@ export async function renderCard(sum) {
   g.fillStyle = '#b9b9c6';
   const words = summaryWords(sum);
   g.fillText(`#${sum.number ?? ''}  ${t('{bg}, {style}', { bg: words.bg, style: words.style.toLowerCase() })}`, 182, 606);
+  if (sum.diff === 'legend') {
+    const x = 182 + g.measureText(`#${sum.number ?? ''}  ${t('{bg}, {style}', { bg: words.bg, style: words.style.toLowerCase() })}`).width + 18;
+    setFont(g, `700 22px "Titillium Web", ${cjk()}`);
+    const label = t('Legend').toUpperCase();
+    const w = g.measureText(label).width + 20;
+    g.fillStyle = '#b05cff';
+    roundRect(g, x, 580, w, 34, 6);
+    g.fill();
+    g.fillStyle = '#ffffff';
+    g.fillText(label, x + 10, 604);
+  }
 
   g.fillStyle = champ ? '#d4af37' : '#ffffff';
   setFont(g, `italic 900 86px Saira, ${cjk()}`, 'expanded');

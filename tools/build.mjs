@@ -14,7 +14,8 @@ const LIVE = 'https://lights-out-racing.netlify.app';
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const portal = process.argv.includes('--portal');
 const out = join(root, portal ? 'dist-portal' : 'dist');
-const include = ['index.html', ...(portal ? [] : ['stats.html']), 'manifest.webmanifest', 'css', 'js', 'assets'];
+// robots.txt and sitemap.xml are for the real site only; a portal has its own.
+const include = ['index.html', ...(portal ? [] : ['stats.html', 'robots.txt', 'sitemap.xml']), 'manifest.webmanifest', 'css', 'js', 'assets'];
 
 await rm(out, { recursive: true, force: true });
 await mkdir(out, { recursive: true });

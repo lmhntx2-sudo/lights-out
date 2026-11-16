@@ -170,7 +170,7 @@ test('the function verifies, stores and ranks careers', async () => {
   assert.equal(first.entry.score, a.retired.score);
   assert.equal(first.entry.name, 'Ayrton Fan');
   assert.equal(first.entry.driver, 'Test Driver');
-  assert.deepEqual(purged, ['lb-all']);
+  assert.deepEqual(purged, ['lb-all', 'lb-month-2026-10']);
 
   res = await handleLeaderboard(post(submission(b, 'Bee')), ctx);
   assert.equal(res.status, 201);

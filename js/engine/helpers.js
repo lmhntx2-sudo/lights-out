@@ -11,6 +11,9 @@ export function pay(s, f1Amount) {
 // The content version a career started with (see CONTENT_VERSION).
 export const contentVersion = (s) => s.setup?.cv ?? 1;
 
+// Legend difficulty: see LEGEND in constants.js.
+export const isLegend = (s) => s?.setup?.diff === 'legend';
+
 export const firstName = (full) => String(full || '').split(' ')[0];
 
 // Second-generation careers carry the parent's story in s.setup.legacy (see

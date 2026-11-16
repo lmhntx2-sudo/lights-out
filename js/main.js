@@ -112,7 +112,7 @@ if (params.has('daily')) {
   app.openDaily({ vs: day === todayKey() ? parseVs(params.get('vs'), day) : null, missed: !!day && day !== todayKey() && params.has('vs') });
 } else {
   const seed = params.get('seed') || undefined;
-  renderTitle(app, { seed, vs: seed ? parseVs(params.get('vs')) : null });
+  renderTitle(app, { seed, vs: seed ? parseVs(params.get('vs')) : null, diff: params.get('d') === 'legend' ? 'legend' : null });
 }
 // Try a cutscene on its own, on localhost only: /#cutscene=jp or /#cutscene=home:FR
 if (['localhost', '127.0.0.1'].includes(location.hostname) && location.hash.startsWith('#cutscene=')) {

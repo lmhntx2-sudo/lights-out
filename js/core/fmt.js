@@ -40,6 +40,7 @@ const UNITS = {
     start: '場出賽',
     podium: '次登台',
     'junior win': '場青年組勝利',
+    pole: '次桿位',
   },
   ja: {
     win: '勝',
@@ -51,6 +52,7 @@ const UNITS = {
     start: '戦出走',
     podium: '回の表彰台',
     'junior win': '勝（ジュニア）',
+    pole: '回のポール',
   },
   ko: {
     win: '승',
@@ -62,6 +64,7 @@ const UNITS = {
     start: '회 출전',
     podium: '회 포디움',
     'junior win': '승(주니어)',
+    pole: '회 폴',
   },
 };
 

@@ -18,7 +18,8 @@ room with a cup for every win (engraved with its circuit),
 a chart of your championship finishes season by season,
 an all-time records table against fictional legends, shareable career-card images,
 achievements, a five-minute daily season with streaks, "beat my score" challenge links,
-seeds you can share, a global leaderboard, optional
+seeds you can share, a Legend difficulty, a global leaderboard with all-time, monthly and
+Legend boards, optional
 sound effects, and a "Fuel the dev" tip jar.
 
 ## Play locally
@@ -47,6 +48,10 @@ same grid and the same dice, so only their calls differ. Most points wins the da
 - The result card has coloured squares to copy (one per round, no spoilers), a streak
   counter for days played in a row, and a board for the day.
 - `/?daily` opens today's season.
+- On a real Grand Prix weekend (`js/data/weekends.js`, Hong Kong days, Friday to Sunday)
+  the title button, the day's brief, the result card and the share text point at the
+  round of the season that is the same race. Words only: the season plays the same. Add
+  each new season's weekends to that file.
 
 The older "daily challenge" (a whole career with a goal) is no longer offered. Ones
 already in progress still finish and still count on their old board.
@@ -57,14 +62,49 @@ A shared result can carry a score to beat: `/?seed=abc123&vs=12340~3~41~Name` fo
 career (legacy score, titles, wins) and `/?daily=2026-11-14&vs=86~7~Name` for a daily
 season (points, position). The friend sees the target while they play and a head-to-head
 at the end. It is only ever shown as text; nothing in it is trusted or sent to the server
-(`js/core/vs.js`).
+(`js/core/vs.js`). Links also carry the sharer's language (`&l=zh`).
+
+The daily result card can also be saved as a 1080x1920 picture for Instagram, Threads or
+WhatsApp stories (`js/ui/dayshare.js`): one tile per round with its flag and circuit,
+the car in the day's livery, the points, the team target and the streak.
+
+## Link previews
+
+When a daily season or challenge link is pasted into WhatsApp, Threads, Discord or
+Telegram, the preview says what it is ("Alex scored 193 points (P7) in Lights Out daily
+season #7. Can you beat it?"), in the sharer's language, with `assets/og-daily.png` for
+daily links. A Netlify Edge Function (`netlify/edge-functions/preview.mjs`, logic in
+`netlify/lib/preview.mjs`) rewrites only the meta tags of the page head for links with
+`?daily` or `?seed=...&vs=...`; every other request passes straight through, and on any
+error the page is served as it is. `tmp/og-daily.html?save=1` redraws the image through the
+dev server.
+
+`robots.txt`, `sitemap.xml` and the VideoGame structured data in `index.html` are for search
+engines.
+
+## Legend difficulty
+
+A second difficulty for players who have run out of records to break, picked when the
+driver is built. A Legend career has `s.setup.diff = 'legend'`; a standard one has no
+`diff` key and plays exactly as before. Four numbers in `LEGEND`
+(`js/engine/constants.js`) make it harder: the driver's own pace in qualifying and the
+race, the odds of every decision that depends on a stat, how highly teams rate you when
+they make offers, and how fast you improve each year. Over the same 60 seeds a simple
+bot wins about a third as many races and a fifth as many titles
+(`node tmp/legend-sim.mjs`, if you keep the script). The server replays a Legend career
+with the same numbers, a kid starts on the parent's difficulty, and a challenge link from
+a Legend career (`&d=legend`) preselects it.
 
 ## Global leaderboard
 
-At retirement, players can submit their career under a display name. There are two
-kinds of board: the top 100 careers of all time by legacy score, and one board per daily
-season, by points. A daily season never goes on the all-time board, and its day's board
-closes two days later.
+At retirement, players can submit their career under a display name. The boards:
+
+- **All-time:** the top 100 careers by legacy score, standard and Legend together.
+- **This month:** the top 100 careers first submitted in the current Hong Kong month. It
+  starts again on the first, so a new player has a board they can lead.
+- **Legend:** Legend-difficulty careers only.
+- **Daily season:** one board per day, by points. A daily season never goes on the other
+  boards, and its day's board closes two days later.
 
 Nobody can just post a score. The game records the setup and every button press in the
 save (`s.setup` and `s.log`, about 800 short entries per career). The function at

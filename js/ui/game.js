@@ -28,10 +28,11 @@ import { pickCutscene, snapshot } from './cutscene-pick.js';
 import { playCutscene, cutscenesOn, sceneContext, prefetchCutscenes } from './cutscene.js';
 import { sfx } from './sfx.js';
 import { openShare } from './share.js';
+import { openDayShare } from './dayshare.js';
 import { resultStrip, seasonRounds, careerChart } from './trophies.js';
 import { t, tn, cat, gap, statName, seriesName, trackShortById } from '../i18n.js';
-import { isOneSeason, daySquares, dayNumber } from '../engine/oneseason.js';
-import { dayShareText, dayChallengeText, careerChallengeUrl, siteUrl } from './day.js';
+import { isOneSeason, dayCells, dayNumber } from '../engine/oneseason.js';
+import { dayShareText, dayChallengeText, dayWeekend, careerChallengeUrl, siteUrl } from './day.js';
 import { todayKey } from '../engine/daily.js';
 
 const ROW = 26;
@@ -462,7 +463,7 @@ function retireCard(app, e) {
   return h(
     'section',
     { class: 'f-retire' },
-    h('div', { class: 'head' }, helmet(e.helmet, { gold: app.supporter }), h('div', null, h('b', null, `#${e.number ?? ''} ${e.name} ${e.flag}`), h('div', { style: 'color:var(--ink-3);font-size:14px' }, cat(how, t('{bg}, {style}.', { bg: words.bg, style: words.style.toLowerCase() }), familyLine(e.family))))),
+    h('div', { class: 'head' }, helmet(e.helmet, { gold: app.supporter }), h('div', null, h('b', null, `#${e.number ?? ''} ${e.name} ${e.flag}`), h('div', { style: 'color:var(--ink-3);font-size:14px' }, cat(how, t('{bg}, {style}.', { bg: words.bg, style: words.style.toLowerCase() }), familyLine(e.family)), e.diff === 'legend' ? h('span', { class: 'legend-tag' }, t('Legend difficulty')) : null))),
     h('div', { class: 'tier' }, words.tier),
     h('div', { class: 'grid4' }, stats.map(([k, v]) => h('div', { class: 'big-stat' }, h('b', null, v), h('span', null, k)))),
     rankLine,
@@ -489,11 +490,13 @@ function dayCard(app, e) {
   const text = () => dayShareText(e, { streak: store.streak(todayKey()), tier: d.tier });
   const copied = (ok, msg) => toast(ok ? msg : t('Copy failed. Your browser blocked the clipboard.'));
   const copyBtn = h('button', { class: 'btn btn-go', style: 'font-size:16px;padding:10px 18px', onClick: async () => copied(await copyText(text()), t('Result copied. Paste it anywhere.')) }, t('Copy result'));
-  const shareBtn = typeof navigator !== 'undefined' && navigator.share
-    ? h('button', { class: 'btn', onClick: () => navigator.share({ text: text() }).catch(() => {}) }, t('Share'))
-    : null;
+  const shareBtn = h('button', { class: 'btn', onClick: () => openDayShare(e, { streak: store.streak(todayKey()) }) }, t('Share image'));
   const dareBtn = h('button', { class: 'btn', onClick: async () => copied(await copyText(dayChallengeText(e)), t('Challenge link copied. Send it to a friend.')) }, t('Challenge a friend'));
   const stats = [[t('Points'), d.pts], [t('Wins'), d.wins], [t('Podiums'), d.podiums], [t('Poles'), d.poles]];
+  const gp = dayWeekend(d);
+  // The squares, with the round that is this weekend's real race ringed.
+  const rows = dayCells(d.rounds, d.of);
+  const squares = rows.flatMap((row, i) => [i ? '\n' : '', ...row.map((c, j) => (gp && i * rows[0].length + j === gp.round ? h('span', { class: 'gp' }, c) : c))]);
   const where = cat(
     t('Daily season #{n}, {date}.', { n: dayNumber(d.date), date: d.date }),
     t('A rookie season at {team}.', { team: d.team }),
@@ -505,7 +508,8 @@ function dayCard(app, e) {
     h('div', { class: 'head' }, helmet(e.helmet, { gold: app.supporter }), h('div', null, h('b', null, `#${e.number ?? ''} ${e.name} ${e.flag}`), h('div', { style: 'color:var(--ink-3);font-size:14px' }, where))),
     h('div', { class: 'tier' }, d.pos ? t('P{pos} in the championship', { pos: d.pos }) : t('No race started')),
     h('div', { class: 'grid4' }, stats.map(([k, v]) => h('div', { class: 'big-stat' }, h('b', null, v), h('span', null, k)))),
-    h('pre', { class: 'day-squares', 'aria-label': t('Results by round') }, daySquares(d.rounds, d.of).join('\n')),
+    h('pre', { class: 'day-squares', 'aria-label': t('Results by round') }, squares),
+    gp?.result ? h('p', { class: 'day-gp' }, h('b', null, `🏁 ${t('{gp}: {result}', { gp: gp.name, result: gp.result })}`), ' ', t('The real one is on this weekend.')) : null,
     d.goal
       ? h('div', { class: 'goal-line day-goal' }, h('span', { class: `res ${d.met ? 'ok' : 'ko'}` }, d.met ? t('Target met') : t('Target missed')), h('span', null, t('Team target: {goal}', { goal: goalText(d.goal) })))
       : null,
@@ -571,7 +575,7 @@ function boardBox(app, e) {
   const draw = () => {
     const s = app.s;
     const b = s?.retired?.board;
-    const view = h('button', { class: 'btn', onClick: () => openLeaderboard(app, { tab: e.day ? 'day' : 'all' }) }, e.day ? t('View today’s board') : t('View leaderboard'));
+    const view = h('button', { class: 'btn', onClick: () => openLeaderboard(app, { tab: e.day ? 'day' : e.diff === 'legend' ? 'legend' : 'all' }) }, e.day ? t('View today’s board') : t('View leaderboard'));
     let text;
     let submit = null;
     if (b) text = cat(boardResultText(b), t('Submitted as {name}.', { name: b.name }));
@@ -617,6 +621,7 @@ function renderHud(app) {
           'div',
           { class: 'tm' },
           s.stage === 'prologue' ? t('Karting') : [h('span', { class: 'series' }, c.series), h('span', { class: 'dot', style: `background:${team?.color}` }), c.role === 'reserve' ? t('{team} reserve', { team: team?.short }) : team?.name],
+          s.setup?.diff === 'legend' ? h('span', { class: 'legend-tag' }, t('Legend')) : null,
           app.supporter ? h('span', { class: 'supporter' }, t('☕ Pit crew')) : null,
         ),
       ),

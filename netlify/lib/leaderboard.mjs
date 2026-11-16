@@ -11,6 +11,8 @@
 //   boards/all-time        top 100 by legacy score
 //   boards/daily/<date>    top 100 for that daily challenge: goal met first, then score
 //   boards/day/<date>      top 100 for that daily season, by points (never on the all-time board)
+//   boards/month/<month>   top 100 careers submitted in that Hong Kong month, by legacy score
+//   boards/legend          top 100 Legend-difficulty careers, by legacy score
 //   entries/<id>           every accepted career in full (private: holds the IP hash)
 //   rate/<ip hash>         recent submission times, for rate limiting
 //   config/salt            random secret for the IP hash, made on first use
@@ -35,12 +37,14 @@ export const KEYS = {
   all: 'boards/all-time',
   daily: (date) => `boards/daily/${date}`,
   day: (date) => `boards/day/${date}`,
+  month: (month) => `boards/month/${month}`,
+  legend: 'boards/legend',
   entry: (id) => `entries/${id}`,
   rate: (hash) => `rate/${hash}`,
   salt: 'config/salt',
 };
 
-export const TAGS = { all: 'lb-all', daily: (date) => `lb-daily-${date}`, day: (date) => `lb-day-${date}` };
+export const TAGS = { all: 'lb-all', daily: (date) => `lb-daily-${date}`, day: (date) => `lb-day-${date}`, month: (month) => `lb-month-${month}`, legend: 'lb-legend' };
 
 const byScore = (a, b) => b.score - a.score || (a.at < b.at ? -1 : a.at > b.at ? 1 : 0);
 const byDaily = (a, b) => Number(!!b.daily?.done) - Number(!!a.daily?.done) || byScore(a, b);
@@ -64,6 +68,9 @@ function json(body, status = 200, headers = {}) {
 
 const isDate = (d) => typeof d === 'string' && DATE.test(d) && !Number.isNaN(Date.parse(`${d}T00:00:00Z`));
 const utcDay = (ms) => new Date(ms).toISOString().slice(0, 10);
+// Months are Hong Kong months (UTC+8), where most of the players are.
+export const hkMonth = (ms) => new Date(ms + 8 * 60 * 60 * 1000).toISOString().slice(0, 7);
+const isMonth = (m) => typeof m === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(m);
 
 // A daily challenge counts for its day's board if it is submitted around that
 // day: players are in every time zone and a career can run past midnight.
@@ -145,6 +152,7 @@ function publicEntry(id, displayName, sum, at) {
     how: sum.how,
     seed: sum.seed,
     daily: sum.daily ? { date: sum.daily.date, done: !!sum.daily.done } : null,
+    ...(sum.diff === 'legend' ? { diff: 'legend' } : {}),
     ...(sum.day ? { day: { date: sum.day.date, pos: sum.day.pos, pts: sum.day.pts, wins: sum.day.wins, podiums: sum.day.podiums, met: !!sum.day.met, team: sum.day.team, color: sum.day.color } } : {}),
     at,
   };
@@ -233,18 +241,25 @@ async function submit(req, { store, ip, now, envSalt, purge }) {
     await purge?.([TAGS.day(entry.day.date)]);
     return json({ entry, ranks: { all: null, daily: null, day: rank }, duplicate, dayBoard: entry.day.date }, duplicate ? 200 : 201);
   }
-  const ranks = { all: await place(store, KEYS.all, entry, byScore), daily: null };
-  const tags = [TAGS.all];
+  // The month is the one the career was first submitted in, so sending an old
+  // career again never moves it to a newer month.
+  const month = hkMonth(Date.parse(entry.at));
+  const ranks = { all: await place(store, KEYS.all, entry, byScore), daily: null, month: await place(store, KEYS.month(month), entry, byScore), legend: null };
+  const tags = [TAGS.all, TAGS.month(month)];
+  if (entry.diff === 'legend') {
+    ranks.legend = await place(store, KEYS.legend, entry, byScore);
+    tags.push(TAGS.legend);
+  }
   const daily = entry.daily && isDate(entry.daily.date) && dailyOpen(entry.daily.date, now) ? entry.daily.date : null;
   if (daily) {
     ranks.daily = await place(store, KEYS.daily(daily), entry, byDaily);
     tags.push(TAGS.daily(daily));
   }
   await purge?.(tags);
-  return json({ entry, ranks, duplicate, dailyBoard: daily }, duplicate ? 200 : 201);
+  return json({ entry, ranks, duplicate, dailyBoard: daily, month }, duplicate ? 200 : 201);
 }
 
-async function getBoard(req, { store }) {
+async function getBoard(req, { store, now }) {
   const url = new URL(req.url);
   const board = url.searchParams.get('board') || 'all';
   let key;
@@ -259,6 +274,15 @@ async function getBoard(req, { store }) {
     key = KEYS.daily(date);
     tag = TAGS.daily(date);
     extra = { date, goal: dailySetup(date).goalText };
+  } else if (board === 'legend') {
+    key = KEYS.legend;
+    tag = TAGS.legend;
+  } else if (board === 'month') {
+    const month = url.searchParams.get('month') || hkMonth(now);
+    if (!isMonth(month)) throw new HttpError(400, 'Pick a month as YYYY-MM.');
+    key = KEYS.month(month);
+    tag = TAGS.month(month);
+    extra = { month };
   } else if (board === 'day') {
     const date = url.searchParams.get('date');
     if (!isDate(date)) throw new HttpError(400, 'Pick a date as YYYY-MM-DD.');
@@ -272,16 +296,16 @@ async function getBoard(req, { store }) {
   return json({ board, ...extra, entries: cur?.entries || [] }, 200, {
     'Cache-Control': 'public, max-age=0, must-revalidate',
     'Netlify-CDN-Cache-Control': 'public, durable, max-age=30, stale-while-revalidate=60',
-    'Netlify-Vary': 'query=board|date',
+    'Netlify-Vary': 'query=board|date|month',
     'Netlify-Cache-Tag': tag,
   });
 }
 
-// GET  ?board=all | ?board=daily&date=YYYY-MM-DD | ?board=day&date=YYYY-MM-DD   ->  { entries }
+// GET  ?board=all | ?board=legend | ?board=month[&month=YYYY-MM] | ?board=day&date=YYYY-MM-DD   ->  { entries }
 // POST { setup, actions, displayName, score }      ->  { entry, ranks }
 export async function handleLeaderboard(req, { store, ip, now = Date.now(), salt, purge } = {}) {
   try {
-    if (req.method === 'GET') return await getBoard(req, { store });
+    if (req.method === 'GET') return await getBoard(req, { store, now });
     if (req.method === 'POST') return await submit(req, { store, ip, now, envSalt: salt, purge });
     return json({ error: 'Method not allowed.' }, 405, { Allow: 'GET, POST' });
   } catch (e) {
@@ -305,5 +329,9 @@ export async function removeEntry(store, id) {
   await update(store, KEYS.all, drop);
   if (record.entry.daily) await update(store, KEYS.daily(record.entry.daily.date), drop);
   if (record.entry.day) await update(store, KEYS.day(record.entry.day.date), drop);
+  else {
+    await update(store, KEYS.month(hkMonth(Date.parse(record.entry.at))), drop);
+    if (record.entry.diff === 'legend') await update(store, KEYS.legend, drop);
+  }
   return true;
 }

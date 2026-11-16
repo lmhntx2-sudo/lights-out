@@ -24,7 +24,7 @@ import {
   newStand, addResult, tallyAI, standingsOrder, simSeriesSeason, offseasonAI, generateOffers,
   takeOffer, offseasonFill, teamDevelopment, slPoints, rivalNews, playerValue, wantF1,
 } from './market.js';
-import { pushFeed, story, legacyOf, contentVersion, sponsorKind } from './helpers.js';
+import { pushFeed, story, legacyOf, contentVersion, sponsorKind, isLegend } from './helpers.js';
 import { buildSummary, parentName, tierName } from './legacy.js';
 import { checkDaily } from './daily.js';
 import { ONE_SEASON, isOneSeason, seatRookie, daySetup } from './oneseason.js';
@@ -125,6 +125,7 @@ export function newGame(setup) {
       ? tr('Child of {parent} ({tier}). Everyone at the kart track already knows your surname.', { parent: parentName(lg), tier: tierName(lg.tier) })
       : bgText(s.driver.bg, 'desc'),
   });
+  if (isLegend(s)) story(s, tr('The rivals are quicker, the odds are shorter and the teams are harder to impress. This career goes on the Legend board.'), { title: tr('Legend difficulty'), tone: 'purple' });
   presentPrologue(s);
   return s;
 }

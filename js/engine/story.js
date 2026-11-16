@@ -3,12 +3,12 @@ import { EVENTS } from './events.js';
 import { EVENTS_ZH } from './events.zh.js';
 import { EVENTS_JA } from './events.ja.js';
 import { EVENTS_KO } from './events.ko.js';
-import { SINFO } from './constants.js';
+import { SINFO, LEGEND } from './constants.js';
 import { getLang, statName, t as tr } from '../i18n.js';
 
 // Event words in each language but English, which lives in events.js itself.
 const EVENT_WORDS = { zh: EVENTS_ZH, ja: EVENTS_JA, ko: EVENTS_KO };
-import { val, pushFeed } from './helpers.js';
+import { val, pushFeed, isLegend } from './helpers.js';
 import { overall } from './player.js';
 import { unlock } from './achievements.js';
 import { clamp, money, plural } from '../core/fmt.js';
@@ -29,7 +29,7 @@ function refLevel(s) {
 export function chanceOf(s, ch) {
   if (ch.p != null) return ch.p;
   if (!ch.stat) return 100;
-  return clamp(Math.round(ch.base + (statVal(s, ch.stat) - refLevel(s)) * 1.1), 5, 95);
+  return clamp(Math.round(ch.base + (statVal(s, ch.stat) - refLevel(s)) * 1.1) - (isLegend(s) ? LEGEND.odds : 0), 5, 95);
 }
 
 export function choicesOf(ev, s, c) {

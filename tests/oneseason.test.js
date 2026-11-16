@@ -222,3 +222,28 @@ test('daily seasons are counted on their own in the play stats', async () => {
   assert.deepEqual(data.days[1], { date: '2026-11-13', visitors: 0, players: 0, starts: 0, finishes: 0 }, 'a day without daily seasons looks as it always did');
   assert.equal(data.totals.dstarts, 2);
 });
+
+test('race weekends: the daily season points at the real Grand Prix', async () => {
+  const { raceWeekend, WEEKENDS } = await import('../js/data/weekends.js');
+  const { CALENDARS, TRACKS } = await import('../js/data/tracks.js');
+  const { dayShareText, dayWeekend } = await import('../js/ui/day.js');
+  assert.equal(raceWeekend('2026-11-19'), null);
+  assert.deepEqual(raceWeekend('2026-11-20'), { track: 'vegas', round: 21 });
+  assert.deepEqual(raceWeekend('2026-11-22'), { track: 'vegas', round: 21 });
+  assert.equal(raceWeekend('2026-11-23'), null);
+  assert.equal(raceWeekend(undefined), null);
+  for (const w of WEEKENDS) {
+    assert.ok(TRACKS[w.track] && CALENDARS.F1.includes(w.track), w.track);
+    assert.ok(w.from <= w.to);
+  }
+  for (let i = 1; i < WEEKENDS.length; i++) assert.ok(WEEKENDS[i - 1].to < WEEKENDS[i].from, 'weekends do not overlap');
+
+  const rounds = Array.from({ length: 24 }, (_, i) => ({ p: i === 21 ? 2 : 6 }));
+  const day = (date, rs = rounds) => ({ flag: '🇭🇰', day: { date, pos: 5, pts: 120, met: true, team: 'Team', rounds: rs, of: 24 } });
+  const on = dayShareText(day('2026-11-21'), { url: '' }).split('\n');
+  assert.equal(on[on.length - 1], '🏁 Las Vegas: P2');
+  assert.equal(dayShareText(day('2026-11-18'), { url: '' }).includes('🏁'), false, 'an ordinary day is unchanged');
+  assert.equal(dayShareText(day('2026-11-21', rounds.slice(0, 10)), { url: '' }).includes('🏁'), false, 'a season stopped before that round');
+  assert.equal(dayWeekend(day('2026-11-21', rounds.map((x, i) => (i === 21 ? { p: 9, d: 1 } : x))).day).result, 'DNF');
+  assert.equal(dayWeekend(day('2026-11-18').day), null);
+});

@@ -5,7 +5,7 @@ import { LEGENDS } from '../data/legends.js';
 import { SINFO, BACKGROUNDS, START_YEAR, START_AGE } from './constants.js';
 import { netWorth } from './achievements.js';
 import { overall, fullName } from './player.js';
-import { legacyOf, sponsorKind } from './helpers.js';
+import { legacyOf, sponsorKind, isLegend } from './helpers.js';
 import { isOneSeason, dayResult } from './oneseason.js';
 import { money, plural } from '../core/fmt.js';
 import { t as tr, loc, bgText, styleName, seriesName, macauGreats } from '../i18n.js';
@@ -103,7 +103,8 @@ export function heirOf(s) {
     money: inh.money,
     fame: inh.fame,
   };
-  return { legacy, last: d.last, nat: d.nat, bg: inh.bg, helmet: { c1: d.helmet.c1, c2: d.helmet.c2, ...(d.helmet.p ? { p: d.helmet.p } : {}) }, parent: d.name };
+  // The kid starts on the difficulty the parent played, and can change it.
+  return { legacy, diff: isLegend(s) ? 'legend' : null, last: d.last, nat: d.nat, bg: inh.bg, helmet: { c1: d.helmet.c1, c2: d.helmet.c2, ...(d.helmet.p ? { p: d.helmet.p } : {}) }, parent: d.name };
 }
 
 export const parentName = (lg) => fullName(lg.first, lg.last);
@@ -262,6 +263,7 @@ export function buildSummary(s, how) {
     worth,
     score: day ? day.score : score,
     ...(day ? { day } : {}),
+    ...(isLegend(s) ? { diff: 'legend' } : {}),
     tier: loc('tier', tierOf(s, how), null, TIERS[tierOf(s, how)]),
     tierKey: tierOf(s, how),
     lines: epilogue(s, how),
@@ -287,6 +289,7 @@ export function shareText(sum, url, link) {
   return [
     tr('🏁 {name} {flag} retired at {age}: {tier}.', { name: sum.name, flag: sum.flag, age: sum.age, tier: summaryWords(sum).tier }),
     familyLine(sum.family),
+    sum.diff ? tr('Legend difficulty.') : '',
     stats,
     tr('Net worth {money}. Legacy score {score}.', { money: money(sum.worth), score: sum.score }),
     tr('Seed: {seed}', { seed: sum.seed }),
