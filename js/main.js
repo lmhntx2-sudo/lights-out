@@ -9,6 +9,7 @@ import { ping } from './stats.js';
 import { isOneSeason } from './engine/oneseason.js';
 import { todayKey } from './engine/daily.js';
 import { parseVs } from './core/vs.js';
+import { applyGrid, decodeGrid } from './core/grid.js';
 
 function applyLang(lang) {
   setLang(lang, store.langVariant());
@@ -47,7 +48,7 @@ const app = {
   // vs: a friend's result to beat, from a challenge link. It is only shown, never sent anywhere.
   startGame(setup, { vs } = {}) {
     app.title = null;
-    app.s = newGame(setup);
+    app.s = applyGrid(newGame(setup), store.grid());
     if (vs) app.s.vs = vs;
     app.save();
     ping(isOneSeason(app.s) ? 'dstart' : 'start');
@@ -113,6 +114,11 @@ if (params.has('daily')) {
 } else {
   const seed = params.get('seed') || undefined;
   renderTitle(app, { seed, vs: seed ? parseVs(params.get('vs')) : null, diff: params.get('d') === 'legend' ? 'legend' : null });
+}
+// A shared grid link: offer the friend's team names, never apply them unasked.
+if (params.has('grid')) {
+  const grid = decodeGrid(params.get('grid'));
+  if (grid) import('./ui/grid.js').then((m) => m.openGrid(app, { incoming: grid }));
 }
 // Try a cutscene on its own, on localhost only: /#cutscene=jp or /#cutscene=home:FR
 if (['localhost', '127.0.0.1'].includes(location.hostname) && location.hash.startsWith('#cutscene=')) {

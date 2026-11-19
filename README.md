@@ -95,6 +95,18 @@ bot wins about a third as many races and a fifth as many titles
 with the same numbers, a kid starts on the parent's difficulty, and a challenge link from
 a Legend career (`&d=legend`) preselects it.
 
+## Custom grid
+
+"Custom grid" on the title screen lets a player give the eleven Formula 1 teams their own
+names (a full name and a short one). The names are kept in this browser only
+(`store.grid()`, and in backups) and copied into a career's `s.teams` when it starts
+(`applyGrid` in `js/core/grid.js`), so a career under way keeps the names it began with.
+Nothing else changes: colours, cars, the random draws, the setup the server replays and
+the leaderboard all stay as shipped, and the shipped grid stays fictional. "Copy share
+link" puts the names in a link (`?grid=<code>`, base64url JSON); opening one shows the
+names in the editor and keeps nothing until the player presses "Use this grid". Academy
+names in the karting years still use the shipped team names.
+
 ## Global leaderboard
 
 At retirement, players can submit their career under a display name. The boards:

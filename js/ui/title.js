@@ -13,6 +13,7 @@ import { familyLine, heirOf } from '../engine/legacy.js';
 import { money, plural } from '../core/fmt.js';
 import { store } from '../store.js';
 import { coffeeButton } from './donate.js';
+import { openGrid } from './grid.js';
 import { openHallOfFame, openAchievements, openSettings, openBackup, openAbout, allUnlocked, openLeaderboard, confirmDialog } from './modals.js';
 import { car } from './car.js';
 import { circuit } from './circuit.js';
@@ -184,6 +185,7 @@ export function renderTitle(app, { seed, daily, form: kept, heir, vs = null, mis
       h('button', { class: 'btn btn-ghost', onClick: () => openLeaderboard(app, { tab: dly ? 'day' : 'all' }) }, `🏆 ${t('Global leaderboard')}`),
       h('button', { class: 'btn btn-ghost', onClick: () => openHallOfFame(app) }, t('Hall of fame')),
       h('button', { class: 'btn btn-ghost', onClick: () => openAchievements(app) }, t('Achievements {got}/{all}', { got: ach.size, all: ACHIEVEMENTS.length })),
+      h('button', { class: 'btn btn-ghost', onClick: () => openGrid(app) }, t('Custom grid')),
       h('button', { class: 'btn btn-ghost', onClick: () => openBackup(app) }, t('Backup')),
       h('button', { class: 'btn btn-ghost', onClick: () => openSettings(app) }, t('Settings')),
       h('button', { class: 'btn btn-ghost', onClick: () => openAbout() }, t('About')),

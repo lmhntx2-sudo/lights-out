@@ -635,6 +635,12 @@ dialog::backdrop { background: rgba(5, 5, 8, .75); backdrop-filter: blur(3px); }
 .empty { color: var(--ink-3); padding: 16px 0; }
 .setting { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid #2c2c35; }
 .setting p { margin: 0; color: var(--ink-3); font-size: 13px; }
+.grid-head, .grid-row { display: grid; grid-template-columns: 12px minmax(0, 2fr) minmax(0, 1fr); gap: 8px; align-items: center; }
+.grid-head { color: var(--ink-3); font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+.grid-row { margin-bottom: 6px; }
+.grid-row .dot { width: 12px; height: 12px; border-radius: 50%; }
+.grid-row .input { padding: 8px 10px; min-width: 0; }
+.grid-note { margin-top: 0; padding: 8px 10px; border-left: 3px solid var(--yellow); background: var(--asphalt); }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .seg button { background: none; border: 0; padding: 6px 10px; color: var(--ink-2); font-weight: 600; }
 .seg button[aria-pressed='true'] { background: var(--red); color: #fff; }

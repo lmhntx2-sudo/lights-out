@@ -81,6 +81,10 @@ export const store = {
   lastNudge: () => get('nudgeAt', 0),
   setNudge: () => set('nudgeAt', Date.now()),
 
+  // Custom grid: { teamId: { name, short } }, applied to careers started from now on.
+  grid: () => get('grid', {}),
+  setGrid: (g) => (g && Object.keys(g).length ? set('grid', g) : del('grid')),
+
   // The daily season has its own save, so it never replaces a career in progress.
   loadDay: () => get('day', null),
   saveDay: (s) => set('day', s),
@@ -139,6 +143,7 @@ export const store = {
     ach: get('ach', []),
     settings: get('settings', {}),
     supporter: get('supporter', false),
+    grid: get('grid', {}),
     daily: get('daily', {}),
     days: get('days', {}),
     dayDriver: get('dayDriver', null),
@@ -150,6 +155,7 @@ export const store = {
     if (Array.isArray(data.ach)) set('ach', [...new Set([...get('ach', []), ...data.ach])]);
     if (data.settings) set('settings', data.settings);
     if (data.supporter) set('supporter', true);
+    if (data.grid && typeof data.grid === 'object' && Object.keys(data.grid).length) set('grid', data.grid);
     if (data.daily) set('daily', { ...get('daily', {}), ...data.daily });
     if (data.days && typeof data.days === 'object') set('days', { ...get('days', {}), ...data.days });
     if (data.dayDriver) set('dayDriver', data.dayDriver);
